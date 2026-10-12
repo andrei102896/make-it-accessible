@@ -1,7 +1,7 @@
-import { joinRuns } from '../pdf/runs.ts'
+import { amountOf, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
-import { parseMoney } from '../text/money.ts'
+import { currencyOf, formatMoney } from '../text/money.ts'
 
 const UI = {
   de: { skip: 'Zum Inhalt springen', page: 'Seite', previous: 'statt', table: 'Tabelle' },
@@ -43,7 +43,7 @@ const esc = (s: string): string =>
 
 export function renderDocument(doc: HtmlDocument): string {
   const ui: Strings = doc.lang.startsWith('de') ? UI.de : UI.en
-  const sections = doc.pages.map((p) => renderPage(p, ui)).join('\n')
+  const sections = doc.pages.map((p) => renderPage(p, ui, doc.lang)).join('\n')
   return `<!doctype html>
 <html lang="${esc(doc.lang)}">
 <head>
@@ -63,7 +63,7 @@ ${sections}
 `
 }
 
-function renderPage(page: HtmlPage, ui: Strings): string {
+function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
   const runs = page.extraction.runs
   const text = (t: TextValue): string => {
     if ('seen' in t) return `<span data-seen>${esc(t.seen)}</span>`
@@ -73,10 +73,15 @@ function renderPage(page: HtmlPage, ui: Strings): string {
   const flagged = (path: string): string =>
     page.flagged.some((f) => f === path || f.startsWith(`${path}.`)) ? ' data-review' : ''
 
+  const currency = currencyOf(joinRuns(runs))
   const price = (p: PriceValue): string => {
     const label = p.qualifier ? text(p.qualifier) : p.role === 'previous' ? ui.previous : ''
-    const amount = parseMoney(p.value)
-    return `<span class="price" data-role="${p.role}"${amount === null ? '' : ` data-amount="${amount}"`}>${label ? `<span class="qualifier">${label}</span> ` : ''}${esc(p.value)}</span>`
+    const cited = p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
+    const amount = amountOf(cited)
+    const shown = amount ? formatMoney(amount.cents, lang, currency) : joinRuns(cited)
+    const data = amount ? ` data-amount="${String(amount.cents)}"` : ''
+    const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
+    return `<span class="price" data-role="${p.role}"${data}>${qualifier}${esc(shown)}</span>`
   }
 
   const image = (path: string, img: ImageValue): string => {

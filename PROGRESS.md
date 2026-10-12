@@ -3,7 +3,7 @@
 Last updated: 2026-10-12. Read this first in every new session.
 
 ## Status
-Idea validated on the supply side; demand will be validated by launching. Stage 0 in progress (plan: `docs/STAGE0.md`). Days 0–3 done (log at the end of `docs/STAGE0.md`; model calls run on Andrei's Claude subscription via Claude Code headless mode; Bedrock deferred to the MVP). Day 3 result: all 6 tuning pages pass C1–C4 in 2 of the last 3 runs, 0 silent price errors, ~$0.08/page. Next: Day 4 — freeze the prompt, keys for Honda/Stone House/Bannatyne. Then SPEC rewrite, then MVP with payments from day one.
+Idea validated on the supply side; demand will be validated by launching. Stage 0 in progress (plan: `docs/STAGE0.md`). Days 0–3 done (log at the end of `docs/STAGE0.md`; model calls run on Andrei's Claude subscription via Claude Code headless mode; Bedrock deferred to the MVP). Day 3 result: all 6 tuning pages pass C1–C4 in 2 of the last 3 runs, 0 silent price errors, ~$0.08/page. Prompt frozen after a cost round (~$0.07/page, see docs/STAGE0.md). Next: Day 4 — keys for Honda/Stone House/Bannatyne, then the held-out runs. Then SPEC rewrite, then MVP with payments from day one.
 
 ## What exists in this folder
 - `AGENTS.md`, `README.md` — session bootstrap (rules, definition of done) and architecture map. Code lives in `packages/pipeline` (product) and `packages/eval` (stage-0 harness).

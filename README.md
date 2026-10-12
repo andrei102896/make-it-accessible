@@ -23,6 +23,7 @@ pnpm stage0 --pages heldout             # held-out pages (gate only)
 pnpm stage0 --only 3 01_billa           # one page of one document
 pnpm stage0 --effort high --model claude-opus-5-5
 pnpm stage0 --rescore out/<run>         # rebuild HTML and scores from a saved run, no model calls
+pnpm adhoc <file.pdf> [--pages 1-5]     # any PDF without an answer key: validator findings, axe, cost
 ```
 
 The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md) for URLs and hashes). Tests that need them are skipped when they are missing.
@@ -33,11 +34,11 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/types.ts                Box, Run, Extraction schemas and types
   pdf/poppler.ts              text runs and image positions from Poppler
   pdf/raster.ts               model image size budget, page and crop rendering
-  pdf/runs.ts                 joining words, euro/cent pairing, overprint duplicates
+  pdf/runs.ts                 joining words, euro/cent pairing, amount of cited words, overprint duplicates
   pdf/paragraphs.ts           grouping printed lines into paragraphs
   pdf/geometry.ts             box arithmetic
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
-  text/money.ts               amounts in minor units
+  text/money.ts               amounts in minor units, formatting, page currency
   model/schema.ts             page structure schema returned by the model
   model/prompt.ts             system prompt and the text inventory sent with the image
   model/client.ts             model call (Claude Code headless in stage 0)
@@ -47,8 +48,11 @@ packages/pipeline/src/        product code, reused by the MVP
 packages/eval/src/            stage-0 harness, never shipped
   keys.ts                     answer-key schema, loader and validation against the PDF
   score/metrics.ts            C1–C5 metrics (pure)
-  score/score.ts              browser scoring and axe
-  run.ts                      CLI: run, score, rescore
+  score/score.ts              browser scoring
+  score/axe.ts                axe summary for any HTML
+  process.ts                  one page through the pipeline, HTML assembly, model prices
+  run.ts                      CLI: run, score, rescore against the answer keys
+  adhoc.ts                    CLI: any PDF without a key
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log
 out/                          run outputs (local only)
@@ -60,9 +64,11 @@ out/                          run outputs (local only)
 - **`centPartner` needs cents ≥ 30 % of the euro height and picks the nearest candidate.** Without it "13" paired with "20 Flaschen". Do not loosen.
 - **Euro/cent pairs are found by position, not stream order.** BILLA p3 emits several euro digits before their cents.
 - **Scorer reads `innerText`, not `textContent`.** `textContent` glued "€ 2.99" to "2+1" and hid the amount.
+- **`amountOf` picks one amount or fails.** A euro/cent pair, else the single word with a separator, else one bare number. Joining all cited numbers turned "(1 kg 22.34)" into 122,34 (`runs.test.ts`). The model never writes amounts, so this is the only guard.
 - **The scorer must score a perfect page at 100 %** (`score.test.ts`). It caught a false "repeated sentence = invented" rule.
 
 ## Dead ends
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.
 - **`pdftohtml` image boxes as final figure boxes:** they are raster bounds, not the visible area (transparent margins, clipped photos, backgrounds). Kept only as hints for the model.
+- **Compact citations** (single word ids mixed with ranges in one `src` list): the model confused `[23,25]` with a range, wrote plain strings and broken JSON; 9 of 12 pages needed a retry. Ranges only.
 - **Model-as-judge for alt text:** rejected in planning; product alt is checked mechanically, editorial images by hand.

@@ -70,3 +70,10 @@ export async function popplerVersion(): Promise<string> {
   const { stderr } = await poppler('pdftotext', ['-v'])
   return stderr.split('\n')[0] ?? 'unknown'
 }
+
+export async function pageCount(pdf: string): Promise<number> {
+  const { stdout } = await poppler('pdfinfo', [pdf])
+  const pages = /^Pages:\s+(\d+)/m.exec(stdout)?.[1]
+  if (!pages) throw new Error(`pdfinfo returned no page count for ${pdf}`)
+  return Number(pages)
+}

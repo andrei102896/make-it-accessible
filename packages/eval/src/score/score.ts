@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
-import { AxeBuilder } from '@axe-core/playwright'
 import { chromium } from 'playwright'
 import type { KeyDoc } from '../keys.ts'
+import { axeSummary } from './axe.ts'
 import {
   altText,
   productPrices,
@@ -46,8 +46,7 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
         return { page: Number(section.dataset.page), leaves, containers, headings, rows, text: section.innerText }
       }),
     )
-    const axe = await new AxeBuilder({ page: tab }).analyze()
-    const severe = axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')
+    const axe = await axeSummary(tab)
     const pages = key.pages
       .filter((p) => keyPages.includes(p.keyPage))
       .map((p): PageScore => {
@@ -79,14 +78,7 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
           },
         }
       })
-    return {
-      pages,
-      axe: {
-        critical: severe.filter((v) => v.impact === 'critical').reduce((n, v) => n + v.nodes.length, 0),
-        serious: severe.filter((v) => v.impact === 'serious').reduce((n, v) => n + v.nodes.length, 0),
-        rules: severe.map((v) => v.id),
-      },
-    }
+    return { pages, axe }
   } finally {
     await browser.close()
   }

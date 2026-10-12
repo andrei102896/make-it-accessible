@@ -198,3 +198,23 @@ Restructured into a pnpm workspace before the prompt freeze, behaviour unchanged
 - Tests with `node:test` (7, incl. the perfect-HTML scorer check and the Poppler checks on the original PDFs, which skip when the PDFs are absent). `pnpm check` runs typecheck, lint, format check and tests.
 - Commands: `pnpm stage0 [docs] [--pages tuning|heldout|all] [--only N] [--model] [--effort]`, `pnpm stage0 --rescore out/<run>`.
 - Publishers' PDFs, renders, extracted text and competitor output stay out of git.
+
+### Cost round and prompt freeze — 2026-10-12
+Levers tried on the 6 tuning pages (Sonnet 5.5, effort medium), each confirmed with two runs:
+- **Kept: the model no longer writes price amounts.** Prices are `{src, role?, qualifier?}`; the amount comes from the cited words (`amountOf` in `pdf/runs.ts`: euro/cent pair, else the one word with a separator, else one bare number, otherwise an error) and is formatted with `Intl.NumberFormat` in the page currency. `role` defaults to `current`. A unit test caught a quantity ("(1 kg 22.34)") being glued to the price; fixed before any run used it.
+- **Reverted: compact citations** (single word ids next to ranges in one list). The model confused `[23,25]` (two words) with a range, wrote plain strings and broken JSON; 9 of 12 pages needed a retry and Pollin p7 lost 391 of 443 words.
+- **Retries:** nested product groups are flattened at parse time; a qualifier example in the prompt stopped "qualifier as plain string" (the most frequent retry after removing the amount).
+
+Result, last two runs (`out/2026-10-12T16-22…`, `16-25…`): 5/6 and 6/6 pages pass C1–C4, 0 silent price errors (one flagged on BILLA p1), axe 0, retries 1 of 6 pages per run, mean **$0.07 per page** (was $0.08), BILLA p3 $0.06–0.07, BILLA p8 still ~$0.11. The saving is ~15 %, below the 30–40 % estimate.
+
+**Prompt frozen** at SHA-256 `2db2b21f9c8dbb4cf1d6ff10c7d50728dc8efaeb5f26ce68a5aa31616132ba5a` (system prompt as sent in run `2026-10-12T16-25-34-432Z`). From here the prompt, schema and validator are not tuned; held-out pages run on this version.
+
+### Unkeyed document test — 2026-10-12
+A 28-page Romanian HR brochure (text and portraits, no product grids; the file stays local and out of git) through `pnpm adhoc` on the frozen prompt. Not part of the gate: there is no answer key, so no C1–C5 score.
+- 28/28 pages processed, 1 retry, **$1.16 in total ($0.041 per page)**, axe 0 critical / 0 serious. Text-heavy pages are about half the cost of grid pages.
+- Read by hand: headings, paragraphs, lists, contacts and portrait alt texts are correct where the text layer is readable.
+- **False alarms from the text layer's word order (15 pages, 55 findings).** The PDF uses Type 3 fonts; Poppler reports digits and punctuation ~14 pt above their line, so "pe 21 aprilie 2011," is split across lines and the word ids are out of reading order. The model writes the correct sentence from the image; the provenance check compares with the stream order and flags it. The published text is right, but every such paragraph lands in review.
+- **Real failure: a page with a corrupt text layer (p15, 54 % unreadable characters).** The rule "cite words, never type text" forced the model to copy the garbage ("º}¯}Ü¤¤…"); it marked the page uncertain, but the HTML would be unreadable to a screen reader.
+- Interface strings fall back to English ("Page 3") on a Romanian document.
+
+Proposed after the held-out runs (the pipeline is frozen until then): rebuild visual lines from geometry when the stream order contradicts it (removes the false alarms); detect an unusable text layer per page and either transcribe it from the image as AI-generated text under review or mark the page unsupported and not charged (plan item G8); interface strings follow the document language.

@@ -1,8 +1,7 @@
-import { centPartner, joinRuns } from '../pdf/runs.ts'
+import { amountOf, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { canon } from '../text/normalize.ts'
-import { moneyFromParts, parseMoney } from '../text/money.ts'
 
 const MAX_ALT_LENGTH = 250
 
@@ -17,8 +16,6 @@ export type Validation = {
 
 type Range = [number, number]
 
-const AMOUNT_PART = /^(?:[€£$]|[-\u2212]?\d[\d.,]*(?:,-)?|-,\d{2})$/
-const bare = (word: string): string => word.replace(/^\(+/, '').replace(/[)*]+$/, '')
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
 
 export function validatePage(page: PageStructure, e: Extraction): Validation {
@@ -59,26 +56,12 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   }
 
   const price = (path: string, p: PriceValue): string => {
-    const runs = runsOf(path, p.src)
-      .map((r) => ({ ...r, str: bare(r.str) }))
-      .filter((r) => AMOUNT_PART.test(r.str))
-      .sort((a, b) => a.box.x - b.box.x)
-    const [first, second] = runs
-    const paired = runs.length === 2 && first && second && centPartner(first, [second]) === second
-    const amount = paired
-      ? moneyFromParts(runs.map((r) => ({ str: r.str, height: r.box.h })))
-      : parseMoney(runs.map((r) => r.str).join(' '))
-    const declared = parseMoney(p.value)
-    if (amount === null || declared === null)
-      errors.push({
-        path,
-        problem: `price "${p.value}" or its words "${runs.map((r) => r.str).join(' ')}" is not an amount`,
-      })
-    else if (amount !== declared)
-      errors.push({ path, problem: `price "${p.value}" = ${declared} but the cited words give ${amount}` })
-    if (!paired && runs.length === 1 && /^-?\d+$/.test(first?.str ?? ''))
-      review.push({ path, problem: `price "${p.value}" read from bare digits "${first?.str}"` })
-    return [p.value, p.qualifier ? text(`${path}.qualifier`, p.qualifier) : ''].join(' ')
+    const cited = runsOf(path, p.src)
+    const amount = amountOf(cited)
+    const words = cited.map((r) => r.str).join(' ')
+    if (amount === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
+    else if (amount.fromBareDigits) review.push({ path, problem: `price read from bare digits "${words}"` })
+    return [words, p.qualifier ? text(`${path}.qualifier`, p.qualifier) : ''].join(' ')
   }
 
   const image = (path: string, img: ImageValue, context: string, strict = true): void => {

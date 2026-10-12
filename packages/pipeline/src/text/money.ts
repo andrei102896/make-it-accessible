@@ -4,6 +4,13 @@ const AMOUNT = /^(\d{1,3}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|-))?$/
 export const CENTS_HEIGHT_RATIO = 0.8
 
 export type PricePart = { str: string; height: number }
+export type Currency = 'EUR' | 'GBP'
+
+// ponytail: pound sign anywhere on the page means GBP, otherwise EUR; add currencies when a test document needs them.
+export const currencyOf = (pageText: string): Currency => (pageText.includes('£') ? 'GBP' : 'EUR')
+
+export const formatMoney = (cents: number, lang: string, currency: Currency): string =>
+  new Intl.NumberFormat(lang, { style: 'currency', currency }).format(cents / 100)
 
 // Bare digits without a currency sign follow the leaflet convention of fused euros and cents ("269" = 2,69);
 // ponytail: corpus-specific heuristic, revisit when a test document prints whole amounts without a sign.

@@ -1,18 +1,18 @@
 import { z } from 'zod'
 
 const Range = z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
+const Src = z.array(Range).min(1)
 const Text = z.union([
-  z.object({ src: z.array(Range).min(1), text: z.string().optional() }).strict(),
+  z.object({ src: Src, text: z.string().optional() }).strict(),
   z.object({ seen: z.string().min(1) }).strict(),
 ])
-const SourcedText = z.object({ src: z.array(Range).min(1), text: z.string().optional() }).strict()
+const SourcedText = z.object({ src: Src, text: z.string().optional() }).strict()
 const Box = z.tuple([z.number(), z.number(), z.number(), z.number()])
 const Image = z.object({ ref: z.string().optional(), box: Box, alt: z.string().nullable() }).strict()
 const Price = z
   .object({
-    value: z.string().min(1),
-    src: z.array(Range).min(1),
-    role: z.enum(['current', 'previous', 'unit', 'discount']),
+    src: Src,
+    role: z.enum(['current', 'previous', 'unit', 'discount']).default('current'),
     qualifier: Text.optional(),
   })
   .strict()
@@ -61,7 +61,11 @@ const Block = z.discriminatedUnion('kind', [
 ])
 
 const PageStructure = z
-  .object({ lang: z.string().min(2), blocks: z.array(Block).min(1), dropped: z.array(Range) })
+  .object({
+    lang: z.string().min(2),
+    blocks: z.array(Block).min(1),
+    dropped: z.array(Range).default([]),
+  })
   .strict()
 
 export type Range = z.infer<typeof Range>
