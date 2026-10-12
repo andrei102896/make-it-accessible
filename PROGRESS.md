@@ -55,11 +55,16 @@ Idea validated on the supply side; demand will be validated by launching. Stage 
 - M9: realistic MVP = 4–6 weeks; cut AI summaries, translation, priority queue, branding variants, PDF report download.
 - m1: OSS VAT registration is separate from Stripe Tax; marketing consent separate from sign-up (UWG §7); unbranded-embed entitlement placed consistently.
 
-## Next steps, in order
-1. **Stage 0 — quality gate (7 working days, plan in `docs/STAGE0.md`).** Build the processing pipeline prototype (parser API + vision model → structure.json → accessible HTML) and run it on the 5 test documents. Score with the answer keys at the same thresholds (C1 ≥ 95 %, C2 = 0 material errors, C3 ≤ 1, C4 ≥ 80 %). Measure cost and latency per page. Automate the scoring where possible (product/price matching against the answer-key tables). If we do not clearly beat the generic-tool baseline on product grids, stop.
-2. **SPEC.md rewrite (1 day)** applying the review findings and the decisions above.
-3. **MVP (4–6 weeks):** free checker, auth, upload, pipeline, review editor, publish (hosted + export), per-document report, Stripe subscriptions, page credits, account/billing pages, legal pages.
-4. **Launch** with kill criteria; LinkedIn + German/English SEO + agencies.
+## Next steps, in order (agreed 2026-10-12)
+Goal: an end-to-end flow that works flawlessly and is tested at every step.
+1. **Finish the stage-0 gate (2–3 days, ~$5–10 of model cost).** Answer keys for Honda (p1/9/11), Stone House and Bannatyne, hash-frozen in `validation/KEYS.md` before any run; held-out runs (grid pages ×3, others ×1, Opus check only if a silent price error appears); written verdict GO / NARROW / STOP in `docs/STAGE0.md`. The prompt is frozen (SHA in `docs/STAGE0.md`); do not tune it.
+2. **Harden the pipeline (after the verdict, so the held-out result stays valid).** Rebuild visual lines from geometry when the text stream order contradicts it (Type 3 fonts); detect an unusable text layer per page and either transcribe from the image as AI-generated text under review or mark the page unsupported and not charged; interface strings in the document language; **the per-document report** (auto-checked / AI-generated / needs review) — not built yet.
+3. **End-to-end flow with tests.** One command (`pnpm process <file.pdf>`) producing the accessible HTML, the report and `report.json`. Synthetic test documents generated from known data (HTML → PDF with Playwright): answer keys come for free, the files can live in git, and they reproduce the traps found so far (small cents, columns, corrupt text layer, Type 3 fonts). Two test tiers: deterministic with recorded model responses (CI on every push, no cost) and live with the real model (local only, before a release). GitHub Actions: typecheck, lint, tests, end-to-end on the synthetic documents.
+4. **SPEC.md rewrite (1 day)**, then the **MVP web app (4–6 weeks)** wrapping the tested flow: free checker, auth, upload, review editor, publish (hosted + export), Stripe subscriptions, page credits, account/billing, legal pages.
+5. **Launch** with kill criteria; LinkedIn + German/English SEO + agencies.
+
+## Deferred decisions
+- 2026-10-12 — **Own model for cost** (an open document model fine-tuned and hosted by us, e.g. on Vertex, instead of Claude for part of the work). Postponed by Andrei until the end-to-end flow is done. Compute would be far cheaper per page even at low volume (per-second GPUs); the open questions are labelled training data (reviewed pages from the editor are the natural source) and proven quality against the zero-silent-price-error bar.
 
 ## Working rules for this project (Andrei's preferences)
 - Announce the approach and wait for an explicit go before implementing; questions/analysis may proceed.
