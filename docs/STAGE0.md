@@ -104,7 +104,7 @@ One h1, a section per page (name = first heading + "Seite/Page N"), heading leve
 | 6 | Adjudicate every C2 event (key/scorer vs real), VoiceOver, verdict in docs/STAGE0.md |
 
 ### Gate (held-out pages only; tuning pages reported)
-- Per page: C1 ≥ 95 %, C2 = 0, C3 ≤ 1, C4 ≥ 80 %.
+- Per page: C1 ≥ 95 %, C2 = 0, C3 ≤ 1, C4 ≥ 80 %, every key table row correct (added 2026-10-12, before the held-out runs; see the Day 4 log).
 - Grid pages: 0 silent C2 errors in each of 3 runs; avg needs_review ≤ 0.5/page.
 - C8: 0 critical+serious (else renderer bug → fix, rerun).
 - Cost p90 on grids ≤ 0.05 EUR → if over, feeds decision 3, not automatic stop.
@@ -218,3 +218,47 @@ A 28-page Romanian HR brochure (text and portraits, no product grids; the file s
 - Interface strings fall back to English ("Page 3") on a Romanian document.
 
 Proposed after the held-out runs (the pipeline is frozen until then): rebuild visual lines from geometry when the stream order contradicts it (removes the false alarms); detect an unusable text layer per page and either transcribe it from the image as AI-generated text under review or mark the page unsupported and not charged (plan item G8); interface strings follow the document language.
+
+### Day 4 — held-out keys frozen (2026-10-12)
+Keys `03_honda.json`, `04_stonehouse.json`, `05_bannatyne.json` converted from the markdown keys and frozen in `validation/KEYS.md` before any model call on these pages. Every page is held-out. Both Honda tables were rebuilt from word positions and match the markdown key cell for cell (30 ■ on p9, 18 × 22 cells on p11). Harness changes needed to express them, no change to the pipeline: `alt: null` for priced items without a picture; key amounts with a currency sign attached ("£200") count as printed; table header cells are checked word by word. The perfect-HTML scorer test now covers all five keys.
+
+Found while writing the keys, before any run:
+- **The frozen pipeline reads no pound price.** Poppler emits "£1,040", "£200" and "£7500" as one word, and `amountOf` only accepts a currency sign as a separate word, so every price on Stone House p4 and Bannatyne p3 comes back unreadable (validator error, flagged). A bare amount next to a printed currency sign would also be marked "read from bare digits".
+- **The gate does not score tables.** Per-page pass is C1–C4; table rows (C5) are reported only, so Honda p3/p5 (spec tables) and Bannatyne p3 (both price lists are tables) would pass without their main content being checked. C5 compares rows as text, so a correct price cell rendered as "£7,500.00" does not match the printed "£7500", and the written-amount rule in C2 does not read "£1,225".
+
+Both fixed before any held-out run (Andrei's go, 2026-10-12); prompt unchanged (same SHA):
+- **Pipeline:** `amountOf` splits a currency sign printed on the digits ("£7500") into sign and amount; such an amount is not "read from bare digits" (a separate sign next to fused cents still is). Unit test in `runs.test.ts`.
+- **Scorer:** a page passes only if every key table row is correct. Rows as wide as the header are checked column by column on the rendered grid (merged cells repeated over their span); a price cell matches the rendered amount ("£7500" = "£7,500.00"); `""` is unchecked. The older BILLA/Pollin keys list some rows as value sets and keep the old row check. Written amounts in C2 now read "£1,225" and "€ 1.299". New scorer test: a ■ moved one column and a wrong price both fail as silent, a rowspan deck cell passes.
+- Rescoring both tuning runs (`16-22`, `16-25`) gives identical C1–C5 results and byte-identical HTML.
+
+### Day 5 — held-out runs (2026-10-12)
+Frozen prompt, Sonnet 5.5, effort medium. Run 1 (`out/2026-10-12T17-35-03-745Z`): all 11 held-out pages. Runs 2 and 3 (`17-38-47-757Z`, `17-40-38-807Z`): the four documents with prices. 27 page calls, $0.97 in total, 0 retries, 0 failed pages, axe 0 critical / 0 serious on every document. No Opus check: no silent price error appeared.
+
+| Page | Run 1 | Run 2 | Run 3 | After adjudication |
+|---|---|---|---|---|
+| BILLA p6 (grid, 11 products) | C1 94 % | C1 94 %, C2 4 flagged | C1 94 % | pass ×3 (key errors, below) |
+| Pollin p5 (grid, 14 products, 3 tables) | row 5/6 | C1 75 %, C2 1 flagged, C4 11/14, row 5/6 | row 5/6 | pass runs 1 and 3; run 2 fails C1 |
+| Stone House p4 (7 priced rooms) | pass | pass | pass | pass ×3 |
+| Bannatyne p3 (2 price tables, 20 prices) | pass | pass | pass | pass ×3 |
+| Honda p5 (spec table, 18 × 22) | pass, 22/22 rows | | | pass |
+| Honda p3 (feature matrix, 12 × 13) | C1 79 %, 12/12 rows | | | fails C1 |
+| Honda p1 (cover spread) | C1 88 % | | | fails C1 |
+| Stone House p1, p5; Bannatyne p1, p2 | pass | pass | pass | pass |
+
+**Prices: 0 silent errors in 52 priced items on 4 unseen pages, each run 3 times (156 checks); 95 % upper bound 5.8 % per item (rule of three on the 52 items).** Every table cell on the two Honda spec tables (552 cells incl. ■, ○ as "Optional extra", dashes) is in the right column.
+
+Adjudication of every failed check:
+- BILLA p6 C1 94 % (all runs): the key orders the "MILDE MUSKAT-SÜSSE" badge before Trauben rot, while its own product table assigns the badge to Trauben weiß; the render shows it on the Trauben weiß photo. The output puts it with Trauben weiß. Key error, output correct; the key is not edited (held-out).
+- BILLA p6 C2, run 2: "2€ billiger" / "1€ billiger" were rendered as discount prices (2,00 € with 11,90 → 9,90, consistent) and flagged as bare digits. The key lists them only as text. Correct content, key gap; the rendering "billiger 2,00 €" reverses the printed word order (renderer item for hardening).
+- Pollin p5 table row "Polystyrol" (all runs): printed "-,55", rendered "0,55 €" with amount 55. Scorer artifact (older value-set rows compare text, not amounts); prices correct. Marked silent in run 2 only because that table was not under review.
+- Pollin p5 C4, run 2: alt texts "Integrierter Schaltkreis PCF8574 …" and "Messgeräte-Prüfleitungen …" name the printed product; the key accepts only "Port" / "Messleitung". Key too narrow, output correct.
+- **Real:** Pollin p5 run 2 read the two product columns row by row (C1 75 %); runs 1 and 3 read them column by column. Pollin p5 run 2, Stufenbohrer: the UVP price cited together with the current price, unreadable amount, flagged. Honda p1: the back-cover tagline comes before the front-cover title. Honda p3: legend → headline → table → body copy, the body copy separated from its intro by the table. Both Honda failures are two-page spreads read across the gutter; none of them is flagged for review.
+- Manual checks: photo alt texts correct (minor slips: "fountain" for a pond, "willow" for large trees); logos not output at all (HONDA, MEMBER OF EGMF, STONE HOUSE HOTEL); a decorative holly sprig got alt text; MIN/MAX icon letters and the phantom "HRX 537 VYEA" absent.
+
+Other gate lines:
+- **Review load missed:** grid pages 2–6 items per page (target ≤ 0.5): image text with digits ("100% österreichisches Frischfleisch"), discounts read as bare digits, and Pollin "model unsure" notes. Text and price-list pages 0–1.
+- **Cost:** grid pages $0.052–0.061 (p90 ≈ $0.061 ≈ €0.056, over the €0.05 line, feeds pricing); single text/price-list pages $0.017–0.026; Honda spreads $0.02–0.15 per spread (two printed pages each).
+- **Latency:** slowest page 64 s (Honda spec spread), limit 150 s.
+
+Verdict: 0 silent price errors in 52 priced items on 4 unseen pages, 3 runs each (95 % upper bound 5.8 %).
+**Decision: GO — Andrei, 2026-10-12.** Conditions, both in the hardening step before the MVP: two-page spreads are split into single pages before processing (both Honda reading-order failures); review rules are cut to items that need a human decision (grid pages are at 2–6 per page). A strict reading of the gate would give NARROW (Pollin p5 failed reading order in one of three runs); GO was chosen because the stage-0 question, price fidelity, is answered.

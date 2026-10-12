@@ -2,7 +2,9 @@ import { parseMoney } from '@make-it-accessible/pipeline/text/money'
 import { canon, norm } from '@make-it-accessible/pipeline/text/normalize'
 import type { KeyPage, KeyProduct } from '../keys.ts'
 
-const MONEY_IN_TEXT = /[-\u2212]?\d+[.,]\d{2}(?!\d)|\d+,-|-,\d{2}/g
+const MONEY_IN_TEXT =
+  /[€£$]\s?\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?(?!\d)|[€£$]\s?\d+(?:[.,]\d{2})?(?!\d)|[-\u2212]?\d+[.,]\d{2}(?!\d)|\d+,-|-,\d{2}/g
+const MONEY_CELL = /[€£$]|^-?\d*[.,](?:\d{2}|-)$/
 const PLACEHOLDER = /placeholder|auto-?generated|^(bild|image|foto|figure|grafik)$/i
 
 export type Leaf = { text: string }
@@ -13,7 +15,8 @@ export type Container = {
   review: boolean
 }
 export type Heading = { level: number; text: string }
-export type Row = { text: string; header: boolean }
+export type Cell = { text: string; amounts: number[] }
+export type Row = { text: string; header: boolean; review: boolean; cells: Cell[] }
 export type DomPage = {
   page: number
   leaves: Leaf[]
@@ -30,8 +33,8 @@ export type PageScore = {
   c2: { products: number; errorProducts: number; silent: number; upperBound: number | null; errors: string[] }
   c3: { missing: string[]; altered: string[]; invented: string[] }
   c4: { ok: number; total: number; failures: string[] }
-  c5: { headingsOk: number; headings: number; rowsOk: number; rows: number }
-  pass: { c1: boolean; c2: boolean; c3: boolean; c4: boolean }
+  c5: { headingsOk: number; headings: number; rowsOk: number; rows: number; silentRows: number; rowErrors: string[] }
+  pass: { c1: boolean; c2: boolean; c3: boolean; c4: boolean; c5: boolean }
 }
 export type DocScore = { pages: PageScore[]; axe: { critical: number; serious: number; rules: string[] } }
 
@@ -138,7 +141,8 @@ export function textFidelity(key: KeyPage, dom: DomPage): PageScore['c3'] {
 export function altText(key: KeyPage, dom: DomPage): PageScore['c4'] {
   const failures: string[] = []
   let ok = 0
-  for (const product of key.products) {
+  const pictured = key.products.filter((p) => p.alt !== null)
+  for (const product of pictured) {
     const alts = findContainer(product, dom)?.alts ?? []
     const words = (product.alt ?? product.anchor).split('|').map(loose)
     if (alts.some((a) => words.some((w) => loose(a).includes(w)) && !PLACEHOLDER.test(a.trim()))) ok++
@@ -147,7 +151,24 @@ export function altText(key: KeyPage, dom: DomPage): PageScore['c4'] {
         `${product.anchor}${product.articleNo ? ` ${product.articleNo}` : ''}: ${alts.join(' | ') || 'no image'}`,
       )
   }
-  return { ok, total: key.products.length, failures }
+  return { ok, total: pictured.length, failures }
+}
+
+// "" is an unchecked cell; a price cell also matches the amount of a price rendered in it.
+function cellMatches(key: string, cell: Cell): boolean {
+  if (key === '' || canon(key) === canon(cell.text) || ` ${norm(cell.text)} `.includes(` ${norm(key)} `)) return true
+  const amount = parseMoney(key)
+  return MONEY_CELL.test(key) && amount !== null && cell.amounts.includes(amount)
+}
+
+// Key rows as wide as the header are checked column by column; older keys list a row's values as a set.
+function rowMatches(cells: readonly string[], positional: boolean, row: Row): boolean {
+  if (row.header) return false
+  if (!positional) return cells.every((c) => loose(row.text).includes(loose(c)))
+  return (
+    row.cells.length === cells.length &&
+    cells.every((c, i) => cellMatches(c, row.cells[i] ?? { text: '', amounts: [] }))
+  )
 }
 
 export function structureScore(key: KeyPage, dom: DomPage): PageScore['c5'] {
@@ -157,9 +178,21 @@ export function structureScore(key: KeyPage, dom: DomPage): PageScore['c5'] {
   const keyMin = Math.min(...matched.map((m) => m.key))
   const outMin = Math.min(...matched.map((m) => m.out))
   const headingsOk = matched.filter((m) => m.key - keyMin === m.out - outMin).length
-  const rows = key.tables.flatMap((t) => t.rows)
-  const rowsOk = rows.filter((cells) =>
-    dom.rows.some((r) => !r.header && cells.every((c) => loose(r.text).includes(loose(c)))),
-  ).length
-  return { headingsOk, headings: key.headings.length, rowsOk, rows: rows.length }
+  const rowErrors: string[] = []
+  let rowsOk = 0
+  let silentRows = 0
+  for (const table of key.tables) {
+    const positional = table.rows.every((r) => r.length === table.header.length)
+    for (const cells of table.rows) {
+      if (dom.rows.some((r) => rowMatches(cells, positional, r))) {
+        rowsOk++
+        continue
+      }
+      const flagged = dom.rows.some((r) => r.review && r.cells[0] && cellMatches(cells[0] ?? '', r.cells[0]))
+      if (!flagged) silentRows++
+      rowErrors.push(`${cells.filter(Boolean).slice(0, 3).join(' | ')}${flagged ? ' (flagged)' : ' (silent)'}`)
+    }
+  }
+  const rows = key.tables.reduce((n, t) => n + t.rows.length, 0)
+  return { headingsOk, headings: key.headings.length, rowsOk, rows, silentRows, rowErrors }
 }

@@ -1,0 +1,205 @@
+{
+  "doc": "04_stonehouse",
+  "pdf": "04_stonehouse_hotel_christmas_brochure_2026.pdf",
+  "lang": "en-GB",
+  "pages": [
+    {
+      "pdfPage": 1,
+      "keyPage": 1,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Tis the season",
+            "kind": "text"
+          },
+          {
+            "anchor": "CHRISTMAS PACKAGE 2026",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Tis the season",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 4,
+      "keyPage": 4,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Extend Your Stay",
+            "kind": "text"
+          },
+          {
+            "anchor": "Make the most of your visit",
+            "kind": "text"
+          },
+          {
+            "anchor": "Those joining us on 23rd December",
+            "kind": "text"
+          },
+          {
+            "anchor": "FOUR-NIGHT CHRISTMAS BREAK",
+            "kind": "text"
+          },
+          {
+            "anchor": "28TH DECEMBER",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cosy Double",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cosy King",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cosy Conservatory",
+            "kind": "text"
+          },
+          {
+            "anchor": "Superior Room",
+            "kind": "text"
+          },
+          {
+            "anchor": "Deluxe Room",
+            "kind": "text"
+          },
+          {
+            "anchor": "Junior Suite",
+            "kind": "text"
+          },
+          {
+            "anchor": "Prices per person",
+            "kind": "text"
+          },
+          {
+            "anchor": "Limited single occupancy",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Cosy Double",
+          "alt": null,
+          "money": [
+            104000
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Cosy King",
+          "alt": null,
+          "money": [
+            106000
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Cosy Conservatory",
+          "alt": null,
+          "money": [
+            108000
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Superior Room",
+          "alt": null,
+          "money": [
+            110000
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Deluxe Room",
+          "alt": null,
+          "money": [
+            118000
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Junior Suite",
+          "alt": null,
+          "money": [
+            120500
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Suite: £1,225",
+          "alt": null,
+          "money": [
+            122500
+          ],
+          "old": [],
+          "mustContain": []
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "Extend Your Stay",
+          "level": 1
+        },
+        {
+          "anchor": "FOUR-NIGHT CHRISTMAS BREAK",
+          "level": 2
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 5,
+      "keyPage": 5,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Booking Information",
+            "kind": "text"
+          },
+          {
+            "anchor": "deposit of £200 per person is required",
+            "kind": "text"
+          },
+          {
+            "anchor": "We recommend booking early",
+            "kind": "text"
+          },
+          {
+            "anchor": "We look forward to welcoming you",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Booking Information",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    }
+  ]
+}

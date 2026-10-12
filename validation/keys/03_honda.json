@@ -1,0 +1,967 @@
+{
+  "doc": "03_honda",
+  "pdf": "03_honda_uk_lawn_garden_brochure_2019.pdf",
+  "lang": "en-GB",
+  "pages": [
+    {
+      "pdfPage": 1,
+      "keyPage": 1,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Lawn & Garden",
+            "kind": "text"
+          },
+          {
+            "anchor": "ENGINEERING FOR",
+            "kind": "text"
+          },
+          {
+            "anchor": "Honda (UK)",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cain Road, Bracknell",
+            "kind": "text"
+          },
+          {
+            "anchor": "These specification details do not apply",
+            "kind": "text"
+          },
+          {
+            "anchor": "one of the features advertised",
+            "kind": "text"
+          },
+          {
+            "anchor": "Honda sources paper responsibly",
+            "kind": "text"
+          },
+          {
+            "anchor": "Please don’t bin me",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "ENGINEERING FOR",
+            "kind": "text"
+          },
+          {
+            "anchor": "Honda (UK)",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cain Road, Bracknell",
+            "kind": "text"
+          },
+          {
+            "anchor": "These specification details do not apply",
+            "kind": "text"
+          },
+          {
+            "anchor": "one of the features advertised",
+            "kind": "text"
+          },
+          {
+            "anchor": "Honda sources paper responsibly",
+            "kind": "text"
+          },
+          {
+            "anchor": "Please don’t bin me",
+            "kind": "text"
+          },
+          {
+            "anchor": "Lawn & Garden",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Lawn & Garden",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 9,
+      "keyPage": 3,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "HRX lawnmowers",
+            "kind": "text"
+          },
+          {
+            "anchor": "Enjoy the choice",
+            "kind": "text"
+          },
+          {
+            "anchor": "The HRX is a wide range",
+            "kind": "text"
+          },
+          {
+            "anchor": "The new HRX 476 and HRX 537 have been designed",
+            "kind": "text"
+          },
+          {
+            "anchor": "The new HRX has been designed",
+            "kind": "text"
+          },
+          {
+            "anchor": "For smaller gardens",
+            "kind": "text"
+          },
+          {
+            "anchor": "Auto-Choke",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rear Roller",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on selected models only",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on HRX 537 HZE model only",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on HRX 426 QXEH",
+            "kind": "text"
+          },
+          {
+            "anchor": "HRX SPECIFICATION",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available as an optional extra",
+            "kind": "text"
+          },
+          {
+            "anchor": "Model availability is dependant on country",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "Auto-Choke",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rear Roller",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on selected models only",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on HRX 537 HZE model only",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available on HRX 426 QXEH",
+            "kind": "text"
+          },
+          {
+            "anchor": "HRX SPECIFICATION",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available as an optional extra",
+            "kind": "text"
+          },
+          {
+            "anchor": "Model availability is dependant on country",
+            "kind": "text"
+          },
+          {
+            "anchor": "HRX lawnmowers",
+            "kind": "text"
+          },
+          {
+            "anchor": "Enjoy the choice",
+            "kind": "text"
+          },
+          {
+            "anchor": "The HRX is a wide range",
+            "kind": "text"
+          },
+          {
+            "anchor": "The new HRX 476 and HRX 537 have been designed",
+            "kind": "text"
+          },
+          {
+            "anchor": "The new HRX has been designed",
+            "kind": "text"
+          },
+          {
+            "anchor": "For smaller gardens",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Enjoy the choice",
+          "level": 1
+        },
+        {
+          "anchor": "HRX SPECIFICATION",
+          "level": 2
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "MODELS",
+            "CUTTER DECK SIZE (CM) & MATERIAL",
+            "PUSH",
+            "SINGLE SPEED",
+            "SMART DRIVE®",
+            "SELECT DRIVE",
+            "HYDROSTATIC DRIVE",
+            "MULCHING KIT",
+            "VERSAMOW™ SELECTIVE",
+            "VERSAMOW™ VARIABLE",
+            "ELECTRIC START",
+            "ROTO-STOP®",
+            "ROLLER TYPE"
+          ],
+          "rows": [
+            [
+              "HRX 426 PKEH",
+              "42 POLYSTRONG",
+              "■",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "HRX 426 SDEH",
+              "42 POLYSTRONG",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "HRX 426 SXEH",
+              "42 POLYSTRONG",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              ""
+            ],
+            [
+              "HRX 426 QXEH",
+              "42 POLYSTRONG",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              "■"
+            ],
+            [
+              "HRX 476 VKE",
+              "47 POLYSTRONG",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              ""
+            ],
+            [
+              "HRX 476 VYE",
+              "47 POLYSTRONG",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "■",
+              ""
+            ],
+            [
+              "HRX 476 HYE",
+              "47 POLYSTRONG",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "■",
+              "",
+              "■",
+              ""
+            ],
+            [
+              "HRX 476 QYEJ",
+              "47 POLYSTRONG",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              "■"
+            ],
+            [
+              "HRX 537 VKE",
+              "53 XENOY",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              ""
+            ],
+            [
+              "HRX 537 VYE",
+              "53 XENOY",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "■",
+              ""
+            ],
+            [
+              "HRX 537 HYE",
+              "53 XENOY",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "■",
+              "",
+              "■",
+              ""
+            ],
+            [
+              "HRX 537 HZE",
+              "53 XENOY",
+              "",
+              "",
+              "",
+              "",
+              "■",
+              "",
+              "",
+              "■",
+              "■",
+              "■",
+              ""
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": [
+        "HRX 537 VYEA"
+      ]
+    },
+    {
+      "pdfPage": 11,
+      "keyPage": 5,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Lawnmower specification",
+            "kind": "text"
+          },
+          {
+            "anchor": "Use our handy table",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cutter deck size (cm)",
+            "kind": "text"
+          },
+          {
+            "anchor": "Engine displacement (cc)",
+            "kind": "text"
+          },
+          {
+            "anchor": "Dry weight (kg)",
+            "kind": "text"
+          },
+          {
+            "anchor": "The power rating of engines in this document",
+            "kind": "text"
+          },
+          {
+            "anchor": "Guaranteed sound power level (in accordance",
+            "kind": "text"
+          },
+          {
+            "anchor": "Model availability is dependant on country",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Lawnmower specification",
+          "level": 1
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "",
+            "HRE 330 PLE",
+            "HRE 370 PLE",
+            "HRE 410 PE",
+            "HRG 416 PKEH",
+            "HRG 416 SKEH",
+            "HRG 466 PKEH",
+            "HRG 466 SKEH",
+            "HRG 466 SKEP",
+            "HRG 536 SKEH",
+            "HRG 536 VKEH",
+            "HRG 536 VLEA",
+            "HRG 536 VYEH",
+            "HRX 426 PKEH",
+            "HRX 426 SDEH",
+            "HRX 426 SXEH",
+            "HRX 426 QXEH",
+            "HRX 476 VKE",
+            "HRX 476 VYE"
+          ],
+          "rows": [
+            [
+              "Cutter deck size (cm)",
+              "33",
+              "37",
+              "41",
+              "41",
+              "41",
+              "46",
+              "46",
+              "46",
+              "53",
+              "53",
+              "53",
+              "53",
+              "42",
+              "42",
+              "42",
+              "42",
+              "47",
+              "47"
+            ],
+            [
+              "Cutter deck material",
+              "Polyprop. Plastic",
+              "Polyprop. Plastic",
+              "ABS Plastic",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Steel",
+              "Polystrong",
+              "Polystrong",
+              "Polystrong",
+              "Polystrong",
+              "Polystrong",
+              "Polystrong"
+            ],
+            [
+              "Engine",
+              "Electric 1,100 W",
+              "Electric 1,300 W",
+              "Electric 1,600 W",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke",
+              "OHC 4-stroke"
+            ],
+            [
+              "Engine displacement (cc)",
+              "-",
+              "-",
+              "-",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "160",
+              "167",
+              "167"
+            ],
+            [
+              "Engine model",
+              "-",
+              "-",
+              "-",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 160",
+              "GCV 170",
+              "GCV 170"
+            ],
+            [
+              "Engine rated power (KW/rpm)*",
+              "-",
+              "-",
+              "-",
+              "2.8/2,900",
+              "2.8/2,900",
+              "2.7/2,800",
+              "2.7/2,800",
+              "2.7/2,800",
+              "2.7/2,850",
+              "2.7/2,850",
+              "2.7/2,850",
+              "2.7/2,850",
+              "2.8/2,900",
+              "2.8/2,900",
+              "2.8/2,900",
+              "2.8/2,900",
+              "3.6/3,600",
+              "3.6/3,600"
+            ],
+            [
+              "Dual air filter",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-"
+            ],
+            [
+              "Engine bearings",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-"
+            ],
+            [
+              "Fuel tank capacity (l)",
+              "-",
+              "-",
+              "-",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.93",
+              "0.93",
+              "0.93",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.91",
+              "0.95",
+              "0.95"
+            ],
+            [
+              "Transmission",
+              "Push",
+              "Push",
+              "Push",
+              "Push",
+              "Single speed",
+              "Push",
+              "Single speed",
+              "Single speed",
+              "Single speed",
+              "Variable SMART Drive®",
+              "Variable SMART Drive®",
+              "Variable SMART Drive®",
+              "Push",
+              "Single speed",
+              "Single speed",
+              "Single speed",
+              "Variable Select Drive",
+              "Variable Select Drive"
+            ],
+            [
+              "Driving speed (m/s)",
+              "-",
+              "-",
+              "-",
+              "-",
+              "0.92",
+              "-",
+              "0.89",
+              "0.89",
+              "0.77",
+              "0-1.65 (progressive)",
+              "0-1.65 (progressive)",
+              "0-1.65 (progressive)",
+              "-",
+              "1.04",
+              "1.04",
+              "0.9",
+              "0-1.4",
+              "0-1.4"
+            ],
+            [
+              "Blade brake clutch (Roto-Stop®)",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Yes",
+              "-",
+              "-",
+              "Yes",
+              "Yes",
+              "-",
+              "Yes"
+            ],
+            [
+              "Mulching (Versamow™ selective / variable)",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Selective",
+              "-",
+              "Selective",
+              "Selective",
+              "Selective",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Variable",
+              "Variable"
+            ],
+            [
+              "Mulching kit",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Optional",
+              "Optional",
+              "Optional",
+              "-",
+              "Optional",
+              "-",
+              "-",
+              "-",
+              "Optional",
+              "Optional",
+              "Optional",
+              "-",
+              "-",
+              "-"
+            ],
+            [
+              "Positions & cutting height adjustment (mm)",
+              "3 (25-57)",
+              "5 (18-65)",
+              "5 (20-70)",
+              "6 (20-74)",
+              "6 (20-74)",
+              "6 (20-74)",
+              "6 (20-74)",
+              "6 (20-74)",
+              "6 (19-80)",
+              "6 (28-102)",
+              "6 (28-102)",
+              "6 (28-102)",
+              "6 (25-78)",
+              "6 (25-78)",
+              "6 (25-78)",
+              "5 (19-55)",
+              "7 (25-79)",
+              "7 (25-79)"
+            ],
+            [
+              "Height adjustment points",
+              "1",
+              "1",
+              "2",
+              "2",
+              "2",
+              "2",
+              "2",
+              "2",
+              "4",
+              "4",
+              "4",
+              "4",
+              "2",
+              "2",
+              "2",
+              "2",
+              "1",
+              "1"
+            ],
+            [
+              "Rear roller",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Yes",
+              "-",
+              "-"
+            ],
+            [
+              "Electric start",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "Yes",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-",
+              "-"
+            ],
+            [
+              "Grass bag capacity (l)",
+              "27",
+              "35",
+              "65",
+              "50",
+              "50",
+              "55",
+              "55",
+              "55",
+              "73",
+              "73",
+              "73",
+              "73",
+              "60",
+              "60",
+              "60",
+              "60",
+              "69",
+              "69"
+            ],
+            [
+              "Guaranteed sound level dB(A)**",
+              "87",
+              "89",
+              "94",
+              "94",
+              "95",
+              "94",
+              "95",
+              "95",
+              "98",
+              "98",
+              "98",
+              "98",
+              "94",
+              "94",
+              "94",
+              "94",
+              "95",
+              "94"
+            ],
+            [
+              "Dry weight (kg)",
+              "11",
+              "15",
+              "22",
+              "29",
+              "30",
+              "29",
+              "31",
+              "32",
+              "36.2",
+              "36.8",
+              "40.2",
+              "41.3",
+              "31",
+              "33",
+              "36",
+              "38",
+              "39",
+              "42"
+            ],
+            [
+              "Dimensions (L x W x H (mm))",
+              "1,080 x 390 x 1,000",
+              "1,110 x 430 x 1,030",
+              "1,330 x 540 x 1,090",
+              "1,415 x 453 x 980",
+              "1,440 x 453 x 980",
+              "1,445 x 497 x 980",
+              "1,470 x 497 x 980",
+              "1,470 x 497 x 980",
+              "1,637 x 585 x 970",
+              "1,534 x 582 x 1,014",
+              "1,534 x 582 x 1,014",
+              "1,534 x 582 x 1,014",
+              "1,475 x 480 x 995",
+              "1,475 x 480 x 995",
+              "1,440 x 480 x 1,030",
+              "1,440 x 480 x 1,045",
+              "1,580 x 530 x 995",
+              "1,610 x 497 x 1,035"
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": []
+    }
+  ]
+}

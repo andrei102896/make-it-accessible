@@ -42,7 +42,8 @@ function printScore(doc: string, score: DocScore): void {
         `C1 ${(p.c1.textOnly * 100).toFixed(0)}% ${mark(p.pass.c1)} | ` +
         `C2 ${String(p.c2.errorProducts)}/${String(p.c2.products)} (silent ${String(p.c2.silent)}) ${mark(p.pass.c2)} | ` +
         `C3 ${String(c3)} ${mark(p.pass.c3)} | C4 ${String(p.c4.ok)}/${String(p.c4.total)} ${mark(p.pass.c4)} | ` +
-        `C5 headings ${String(p.c5.headingsOk)}/${String(p.c5.headings)} rows ${String(p.c5.rowsOk)}/${String(p.c5.rows)}`,
+        `C5 headings ${String(p.c5.headingsOk)}/${String(p.c5.headings)} | ` +
+        `rows ${String(p.c5.rowsOk)}/${String(p.c5.rows)} (silent ${String(p.c5.silentRows)}) ${mark(p.pass.c5)}`,
     )
   }
   console.info(

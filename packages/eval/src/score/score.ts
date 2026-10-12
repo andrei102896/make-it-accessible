@@ -39,10 +39,31 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
           level: Number(h.tagName[1]),
           text: h.innerText,
         }))
-        const rows = [...section.querySelectorAll<HTMLElement>('tr')].map((tr) => ({
-          text: tr.innerText,
-          header: tr.querySelector('td') === null,
-        }))
+        // Merged cells are repeated on every row and column they span, as a screen reader announces them.
+        const rows = [...section.querySelectorAll('table')].flatMap((table) => {
+          const grid: ({ text: string; amounts: number[] } | undefined)[][] = []
+          ;[...table.rows].forEach((tr, ri) => {
+            let ci = 0
+            for (const cell of tr.cells) {
+              while (grid[ri]?.[ci]) ci++
+              const data = {
+                text: cell.innerText,
+                amounts: [...cell.querySelectorAll<HTMLElement>('.price')].flatMap((p) =>
+                  p.dataset.amount === undefined ? [] : [Number(p.dataset.amount)],
+                ),
+              }
+              for (let r = 0; r < Math.max(1, cell.rowSpan); r++)
+                for (let c = 0; c < cell.colSpan; c++) (grid[ri + r] ??= [])[ci + c] = data
+              ci += cell.colSpan
+            }
+          })
+          return [...table.rows].map((tr, ri) => ({
+            text: tr.innerText,
+            header: tr.querySelector('td') === null,
+            review: tr.closest('[data-review]') !== null,
+            cells: Array.from(grid[ri] ?? [], (c) => c ?? { text: '', amounts: [] }),
+          }))
+        })
         return { page: Number(section.dataset.page), leaves, containers, headings, rows, text: section.innerText }
       }),
     )
@@ -62,6 +83,7 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
         const c2 = productPrices(p, dom)
         const c3 = textFidelity(p, dom)
         const c4 = altText(p, dom)
+        const c5 = structureScore(p, dom)
         return {
           keyPage: p.keyPage,
           heldOut: Boolean(p.heldOut),
@@ -69,12 +91,13 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
           c2,
           c3,
           c4,
-          c5: structureScore(p, dom),
+          c5,
           pass: {
             c1: c1.textOnly >= 0.95,
             c2: c2.errorProducts === 0,
             c3: c3.missing.length + c3.altered.length + c3.invented.length <= 1,
             c4: c4.total === 0 || c4.ok / c4.total >= 0.8,
+            c5: c5.rowsOk === c5.rows,
           },
         }
       })

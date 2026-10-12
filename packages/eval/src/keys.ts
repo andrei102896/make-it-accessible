@@ -12,7 +12,8 @@ const OrderEntry = z.object({ anchor: z.string().min(1), kind: z.enum(['text', '
 const Product = z.object({
   anchor: z.string().min(1),
   articleNo: z.string().optional(),
-  alt: z.string().optional(),
+  // null: the product has no picture, so C4 does not score it.
+  alt: z.string().nullable().optional(),
   money: z.array(z.number().int()).min(1),
   old: z.array(z.number().int()),
   roleFree: z.array(z.number().int()).default([]),
@@ -49,7 +50,7 @@ function pageAmounts(runs: readonly Run[]): Set<number> {
           { str: r.str, height: r.box.h },
           { str: cents.str, height: cents.box.h },
         ])
-      : /[.,]/.test(r.str)
+      : /[.,€£$]/.test(r.str)
         ? parseMoney(r.str)
         : null
     if (value !== null) amounts.add(value)
@@ -78,8 +79,14 @@ export async function validateKey(key: KeyDoc): Promise<string[]> {
     page.headings.forEach((h) => {
       mustExist(h.anchor, 'heading anchor')
     })
+    // Header cells wrap over lines that the stream interleaves with other columns, so they are checked word by word.
     page.tables.forEach((t) => {
-      ;[...t.header, ...t.rows.flat()].forEach((c) => {
+      t.header
+        .flatMap((c) => c.split(/\s+/))
+        .forEach((w) => {
+          mustExist(w, 'table header word')
+        })
+      t.rows.flat().forEach((c) => {
         mustExist(c, 'table cell')
       })
     })

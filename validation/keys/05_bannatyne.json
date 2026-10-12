@@ -1,0 +1,384 @@
+{
+  "doc": "05_bannatyne",
+  "pdf": "05_bannatyne_hastings_wedding_brochure_2026.pdf",
+  "lang": "en-GB",
+  "pages": [
+    {
+      "pdfPage": 1,
+      "keyPage": 1,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "BANNATYNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Brochure",
+            "kind": "text"
+          },
+          {
+            "anchor": "Celebrate the beginning of your forever",
+            "kind": "text"
+          },
+          {
+            "anchor": "Whether you envision an intimate gathering",
+            "kind": "text"
+          },
+          {
+            "anchor": "From elegant event spaces",
+            "kind": "text"
+          },
+          {
+            "anchor": "wedding celebration..",
+            "kind": "text"
+          },
+          {
+            "anchor": "Let us help you create cherished memories",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Wedding Brochure",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 2,
+      "keyPage": 2,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "BANNATYNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Package",
+            "kind": "text"
+          },
+          {
+            "anchor": "WEDDING PACKAGE 2026",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available all year round",
+            "kind": "text"
+          },
+          {
+            "anchor": "Ceremony Room Hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "PA system for your ceremony music",
+            "kind": "text"
+          },
+          {
+            "anchor": "Room Partition for Montgomerie Suite (If required)",
+            "kind": "text"
+          },
+          {
+            "anchor": "Arrival drinks",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Breakfast room hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "Toasting drinks",
+            "kind": "text"
+          },
+          {
+            "anchor": "Two course seasonal wedding breakfast (alternative options",
+            "kind": "text"
+          },
+          {
+            "anchor": "Dedicated Wedding Coordinator",
+            "kind": "text"
+          },
+          {
+            "anchor": "Toastmaster",
+            "kind": "text"
+          },
+          {
+            "anchor": "White table linen and napkins",
+            "kind": "text"
+          },
+          {
+            "anchor": "Easel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Silver Cake Stand and Knife",
+            "kind": "text"
+          },
+          {
+            "anchor": "Half bottle of house wine per guest",
+            "kind": "text"
+          },
+          {
+            "anchor": "Jugs of iced water",
+            "kind": "text"
+          },
+          {
+            "anchor": "Evening Reception Room Hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "White LED Dancefloor",
+            "kind": "text"
+          },
+          {
+            "anchor": "Evening Buffet",
+            "kind": "text"
+          },
+          {
+            "anchor": "1 Nights bed and breakfast in a Superior room (including",
+            "kind": "text"
+          },
+          {
+            "anchor": "Upgrades available speak with your wedding coordinator",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "BANNATYNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Package",
+            "kind": "text"
+          },
+          {
+            "anchor": "WEDDING PACKAGE 2026",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available all year round",
+            "kind": "text"
+          },
+          {
+            "anchor": "Ceremony Room Hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "Dedicated Wedding Coordinator",
+            "kind": "text"
+          },
+          {
+            "anchor": "PA system for your ceremony music",
+            "kind": "text"
+          },
+          {
+            "anchor": "Toastmaster",
+            "kind": "text"
+          },
+          {
+            "anchor": "Room Partition for Montgomerie Suite (If required)",
+            "kind": "text"
+          },
+          {
+            "anchor": "White table linen and napkins",
+            "kind": "text"
+          },
+          {
+            "anchor": "Easel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Arrival drinks",
+            "kind": "text"
+          },
+          {
+            "anchor": "Silver Cake Stand and Knife",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Breakfast room hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "Half bottle of house wine per guest",
+            "kind": "text"
+          },
+          {
+            "anchor": "Toasting drinks",
+            "kind": "text"
+          },
+          {
+            "anchor": "Jugs of iced water",
+            "kind": "text"
+          },
+          {
+            "anchor": "Two course seasonal wedding breakfast (alternative options",
+            "kind": "text"
+          },
+          {
+            "anchor": "Evening Reception Room Hire",
+            "kind": "text"
+          },
+          {
+            "anchor": "White LED Dancefloor",
+            "kind": "text"
+          },
+          {
+            "anchor": "Evening Buffet",
+            "kind": "text"
+          },
+          {
+            "anchor": "1 Nights bed and breakfast in a Superior room (including",
+            "kind": "text"
+          },
+          {
+            "anchor": "Upgrades available speak with your wedding coordinator",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Wedding Package",
+          "level": 1
+        },
+        {
+          "anchor": "WEDDING PACKAGE 2026",
+          "level": 2
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 3,
+      "keyPage": 3,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "BANNATYNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wedding Package Price list",
+            "kind": "text"
+          },
+          {
+            "anchor": "2026/2027/2028 PRICE LIST",
+            "kind": "text"
+          },
+          {
+            "anchor": "OFF PEAK PACKAGE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available October",
+            "kind": "text"
+          },
+          {
+            "anchor": "Available April",
+            "kind": "text"
+          },
+          {
+            "anchor": "Terms & Conditions",
+            "kind": "text"
+          },
+          {
+            "anchor": "Excludes bank holiday weekends",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [],
+      "headings": [
+        {
+          "anchor": "Wedding Package Price list",
+          "level": 1
+        },
+        {
+          "anchor": "OFF PEAK PACKAGE",
+          "level": 2
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "",
+            "*Sunday - Thursday",
+            "Friday - Saturday"
+          ],
+          "rows": [
+            [
+              "2026",
+              "£7500",
+              "£8000"
+            ],
+            [
+              "2027",
+              "£8500",
+              "£9000"
+            ],
+            [
+              "2028",
+              "£9500",
+              "£10,000"
+            ],
+            [
+              "Additional Day Guests",
+              "£120",
+              "£120"
+            ],
+            [
+              "Additional Evening Guests",
+              "£25",
+              "£25"
+            ]
+          ]
+        },
+        {
+          "header": [
+            "",
+            "*Sunday - Thursday",
+            "Friday - Saturday"
+          ],
+          "rows": [
+            [
+              "2026",
+              "£8000",
+              "£8500"
+            ],
+            [
+              "2027",
+              "£9000",
+              "£9500"
+            ],
+            [
+              "2028",
+              "£10,000",
+              "£10,500"
+            ],
+            [
+              "Additional Day Guests",
+              "£120",
+              "£120"
+            ],
+            [
+              "Additional Evening Guests",
+              "£25",
+              "£25"
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": []
+    }
+  ]
+}

@@ -47,13 +47,22 @@ export function centPartner(euros: Run, runs: readonly Run[]): Run | undefined {
 }
 
 const bare = (word: string): string => word.replace(/^\(+/, '').replace(/[)*]+$/, '')
+const SIGN_FIRST = /^[€£$](?=[-\u2212]?\d)/
 
 export type Amount = { cents: number; fromBareDigits: boolean }
 
 // Amount printed by the cited words: a euro/cent pair, else the one word with a separator, else one bare number.
 export function amountOf(cited: readonly Run[]): Amount | null {
   const words = cited
-    .map((r) => ({ ...r, str: bare(r.str) }))
+    .flatMap((r) => {
+      const str = bare(r.str)
+      return SIGN_FIRST.test(str)
+        ? [
+            { ...r, str: str.slice(0, 1) },
+            { ...r, str: str.slice(1), signed: true },
+          ]
+        : [{ ...r, str }]
+    })
     .filter((r) => AMOUNT_PART.test(r.str))
     .sort((a, b) => a.box.x - b.box.x)
   const currency = words.filter((r) => CURRENCY_WORD.test(r.str)).map((r) => r.str)
@@ -67,5 +76,7 @@ export function amountOf(cited: readonly Run[]): Amount | null {
   const chosen = separated.length === 1 ? separated[0] : numbers.length === 1 ? first : undefined
   if (!chosen) return null
   const cents = parseMoney([...currency, chosen.str].join(' '))
-  return cents === null ? null : { cents, fromBareDigits: !/[.,]/.test(chosen.str) }
+  // A sign printed on the digits ("£7500") makes them a whole amount; a separate sign may sit beside fused cents.
+  const fromBareDigits = !/[.,]/.test(chosen.str) && !('signed' in chosen)
+  return cents === null ? null : { cents, fromBareDigits }
 }

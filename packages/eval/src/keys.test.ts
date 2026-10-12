@@ -7,7 +7,7 @@ import { DOCS_DIR } from './paths.ts'
 
 const local = existsSync(join(DOCS_DIR, '01_billa_plus_kw41_wien.pdf'))
 
-for (const doc of ['01_billa', '02_pollin']) {
+for (const doc of ['01_billa', '02_pollin', '03_honda', '04_stonehouse', '05_bannatyne']) {
   test(`answer key ${doc} matches the PDF text layer`, { skip: !local && 'test PDFs are local-only' }, async () => {
     assert.deepEqual(await validateKey(await loadKey(doc)), [])
   })

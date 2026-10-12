@@ -9,6 +9,16 @@ Answer keys are frozen by SHA-256 before they are used. Any later edit is logged
 | `heldout.md` | `226c25e878fbb40c0ca8b76293b55b3f4af6bcde8e3d09419344efb9674e8778` | 2026-10-12 | held-out key (BILLA p6, Pollin p5), written before any prompt existed |
 | `keys/01_billa.json` | `b29c9a6c307cd43133e87aab927e5e30195d58c31a3677f20555070842969c3d` | 2026-10-12 | tuning and held-out key in JSON, validated against the Poppler text (anchors, amounts, cells) |
 | `keys/02_pollin.json` | `67013fbd7e999d13bacce226a7ce368903b6aef1dfddf0f9bff0f4d340e28425` | 2026-10-12 | tuning and held-out key in JSON, validated against the Poppler text (anchors, amounts, cells) |
+| `keys/03_honda.json` | `234630c4e8216671682b26bdcd399101b9452cff7d8fcbf0750112372b23a60b` | 2026-10-12 | held-out (key pages 1/3/5 = PDF pages 1/9/11), from `03_honda.md`; both tables checked cell by cell against word positions |
+| `keys/04_stonehouse.json` | `f34cbe875abaa7a9e077fb5805469c18b1ddf5a98c5a6c6f1ef925ffd9238ba4` | 2026-10-12 | held-out (pages 1/4/5), from `04_stonehouse.md` |
+| `keys/05_bannatyne.json` | `ae99a29f1dc7424e509a9ad44add6fd1704136cbd65e5349cd9a3fa95810e21e` | 2026-10-12 | held-out (pages 1/2/3), from `05_bannatyne.md` |
+
+Conventions in the held-out keys (written before any model call on these pages):
+- Table rows hold every cell in printed column order; merged cells are repeated on each row they span; `""` is a cell that is not checked (empty cells and Honda's image-only ○ markers).
+- `alt: null` marks a priced item without a picture (Stone House rooms); C4 does not score it.
+- Not scorable mechanically, checked by hand after the run: logo text (HONDA, MEMBER OF EGMF, STONE HOUSE HOTEL) and editorial photo alt text; Honda ○ cells; the Honda MIN/MAX icon letters.
+- The Stone House "Suite" anchor carries its price (`Suite: £1,225`), the only unique form next to "Junior Suite".
+- Key validation proves each cell exists on the page, not that it sits in the right column; column placement was checked separately against the word positions.
 
 ## Key changes after the freeze
 

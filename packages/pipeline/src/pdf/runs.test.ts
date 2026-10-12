@@ -32,6 +32,19 @@ test('amountOf flags bare digits and rejects non-amounts', () => {
   assert.equal(amountOf([run(0, '-37%', 0, 0, 20, 9)]), null)
 })
 
+test('amountOf reads a currency sign printed on the digits', () => {
+  assert.deepEqual(amountOf([run(0, '£1,040', 0, 0, 30, 9)]), { cents: 104000, fromBareDigits: false })
+  assert.deepEqual(amountOf([run(0, '£7500', 0, 0, 30, 9)]), { cents: 750000, fromBareDigits: false })
+  assert.deepEqual(amountOf([run(0, 'Suite:', 0, 0, 20, 9), run(1, '£200', 22, 0, 20, 9)]), {
+    cents: 20000,
+    fromBareDigits: false,
+  })
+  assert.deepEqual(amountOf([run(0, '€', 0, 0, 5, 9), run(1, '399', 7, 0, 20, 9)]), {
+    cents: 39900,
+    fromBareDigits: true,
+  })
+})
+
 test('formatMoney and currencyOf', () => {
   assert.match(formatMoney(269, 'de-AT', 'EUR'), /2,69/)
   assert.match(formatMoney(269, 'de-AT', 'EUR'), /€/)
