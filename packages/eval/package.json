@@ -1,0 +1,14 @@
+{
+  "name": "@make-it-accessible/eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@make-it-accessible/pipeline": "workspace:*",
+    "playwright": "1.64.0",
+    "zod": "4.6.6"
+  }
+}

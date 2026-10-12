@@ -1,0 +1,1106 @@
+{
+  "doc": "01_billa",
+  "pdf": "01_billa_plus_kw41_wien.pdf",
+  "lang": "de-AT",
+  "pages": [
+    {
+      "pdfPage": 1,
+      "keyPage": 1,
+      "readingOrder": [
+        [
+          {
+            "anchor": "GÜLTIG VON DONNERSTAG",
+            "kind": "text"
+          },
+          {
+            "anchor": "BIS ZU 3.000 PRODUKTE",
+            "kind": "imageOnlyText"
+          },
+          {
+            "anchor": "BILLA KAUFEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "Mehr Infos siehe Seite 2",
+            "kind": "text"
+          },
+          {
+            "anchor": "WÖCHENTLICH VIELE AKTIONEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "Driscolls",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rostbraten",
+            "kind": "text"
+          },
+          {
+            "anchor": "Präsident",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wieselburger",
+            "kind": "text"
+          },
+          {
+            "anchor": "Gültig in Wien",
+            "kind": "text"
+          },
+          {
+            "anchor": "Ausgenommen Freitag",
+            "kind": "text"
+          },
+          {
+            "anchor": "gekennzeichnete Artikel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Diskontpreisniveau",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Driscolls",
+          "alt": "Himbeeren",
+          "money": [
+            269
+          ],
+          "old": [],
+          "mustContain": [
+            "13.45"
+          ]
+        },
+        {
+          "anchor": "Rostbraten",
+          "money": [
+            1999
+          ],
+          "old": [],
+          "mustContain": [
+            "per Kilo"
+          ]
+        },
+        {
+          "anchor": "Präsident",
+          "alt": "Meinl",
+          "money": [
+            799,
+            1199
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 2 PKG. JE",
+            "23.98",
+            "15.98"
+          ],
+          "roleFree": [
+            1199
+          ]
+        },
+        {
+          "anchor": "Wieselburger",
+          "money": [
+            1380
+          ],
+          "old": [],
+          "mustContain": [
+            "0.69"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "DISKONT ZAHLEN",
+          "level": 1
+        },
+        {
+          "anchor": "WÖCHENTLICH VIELE AKTIONEN",
+          "level": 2
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 3,
+      "keyPage": 3,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Choco Fresh",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Gouda",
+            "kind": "text"
+          },
+          {
+            "anchor": "Grana",
+            "kind": "text"
+          },
+          {
+            "anchor": "Buchweizenbrot",
+            "kind": "text"
+          },
+          {
+            "anchor": "Krapfen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Sandwich",
+            "kind": "text"
+          },
+          {
+            "anchor": "Karfiol-Laibchen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Erbsen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Nissin",
+            "kind": "text"
+          },
+          {
+            "anchor": "Leibniz",
+            "kind": "text"
+          },
+          {
+            "anchor": "Pischinger",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bugles",
+            "kind": "text"
+          },
+          {
+            "anchor": "Jacobs",
+            "kind": "text"
+          },
+          {
+            "anchor": "Almdudler",
+            "kind": "text"
+          },
+          {
+            "anchor": "Eistee",
+            "kind": "text"
+          },
+          {
+            "anchor": "Sahnelikör",
+            "kind": "text"
+          },
+          {
+            "anchor": "Intyre",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wieselburger",
+            "kind": "text"
+          },
+          {
+            "anchor": "TENA",
+            "kind": "text"
+          },
+          {
+            "anchor": "Dusche",
+            "kind": "text"
+          },
+          {
+            "anchor": "Medizinprodukt",
+            "kind": "text"
+          },
+          {
+            "anchor": "Angebote gültig bei BILLA PLUS",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Choco Fresh",
+          "alt": "Kinder",
+          "money": [
+            229
+          ],
+          "old": [],
+          "mustContain": [
+            "22.34"
+          ]
+        },
+        {
+          "anchor": "Bio-Gouda",
+          "alt": "Gouda",
+          "money": [
+            239
+          ],
+          "old": [],
+          "mustContain": [
+            "1.59"
+          ]
+        },
+        {
+          "anchor": "Grana",
+          "money": [
+            329
+          ],
+          "old": [],
+          "mustContain": [
+            "2.19"
+          ]
+        },
+        {
+          "anchor": "Buchweizenbrot",
+          "alt": "Brot",
+          "money": [
+            299
+          ],
+          "old": [],
+          "mustContain": [
+            "5.98"
+          ]
+        },
+        {
+          "anchor": "Krapfen",
+          "money": [
+            69
+          ],
+          "old": [],
+          "mustContain": [
+            "per Stück"
+          ]
+        },
+        {
+          "anchor": "Sandwich",
+          "money": [
+            145
+          ],
+          "old": [],
+          "mustContain": [
+            "170 g"
+          ]
+        },
+        {
+          "anchor": "Karfiol-Laibchen",
+          "alt": "Laibchen",
+          "money": [
+            489
+          ],
+          "old": [],
+          "mustContain": [
+            "16.30"
+          ]
+        },
+        {
+          "anchor": "Bio-Erbsen",
+          "alt": "Erbsen|Zarte Mischung",
+          "money": [
+            370
+          ],
+          "old": [],
+          "mustContain": [
+            "4.93"
+          ]
+        },
+        {
+          "anchor": "Nissin",
+          "alt": "Soba",
+          "money": [
+            179
+          ],
+          "old": [],
+          "mustContain": [
+            "19.46"
+          ]
+        },
+        {
+          "anchor": "Leibniz",
+          "money": [
+            249
+          ],
+          "old": [],
+          "mustContain": [
+            "1.08"
+          ]
+        },
+        {
+          "anchor": "Pischinger",
+          "money": [
+            279
+          ],
+          "old": [],
+          "mustContain": [
+            "2.30"
+          ]
+        },
+        {
+          "anchor": "Bugles",
+          "money": [
+            249
+          ],
+          "old": [],
+          "mustContain": [
+            "3.32"
+          ]
+        },
+        {
+          "anchor": "Jacobs",
+          "money": [
+            699
+          ],
+          "old": [],
+          "mustContain": [
+            "61.32"
+          ]
+        },
+        {
+          "anchor": "Almdudler",
+          "money": [
+            239
+          ],
+          "old": [],
+          "mustContain": [
+            "1.59"
+          ]
+        },
+        {
+          "anchor": "Eistee",
+          "money": [
+            79
+          ],
+          "old": [],
+          "mustContain": [
+            "0.52"
+          ]
+        },
+        {
+          "anchor": "Sahnelikör",
+          "alt": "High Mountains",
+          "money": [
+            499
+          ],
+          "old": [],
+          "mustContain": [
+            "7.13"
+          ]
+        },
+        {
+          "anchor": "Intyre",
+          "alt": "Whisky",
+          "money": [
+            899
+          ],
+          "old": [],
+          "mustContain": [
+            "12.84"
+          ]
+        },
+        {
+          "anchor": "Wieselburger",
+          "money": [
+            129
+          ],
+          "old": [],
+          "mustContain": [
+            "1.95"
+          ]
+        },
+        {
+          "anchor": "TENA",
+          "money": [
+            495
+          ],
+          "old": [],
+          "mustContain": [
+            "0.41"
+          ]
+        },
+        {
+          "anchor": "Dusche",
+          "alt": "Fa",
+          "money": [
+            225
+          ],
+          "old": [],
+          "mustContain": [
+            "0.56"
+          ]
+        }
+      ],
+      "headings": [],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 8,
+      "keyPage": 8,
+      "readingOrder": [
+        [
+          {
+            "anchor": "JEDEN DONNERSTAG",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Bachsaibling",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Karpfenfilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "Lachsfilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kabeljaufilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "fairzumtier.at",
+            "kind": "text"
+          },
+          {
+            "anchor": "TIERWOHL AUS",
+            "kind": "text"
+          },
+          {
+            "anchor": "Zu 100 % von österreichischen Bauernhöfen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Mehr Platz und Bewegungsfreiheit",
+            "kind": "text"
+          },
+          {
+            "anchor": "Verbot von Vollspaltenböden",
+            "kind": "text"
+          },
+          {
+            "anchor": "gentechnikfreie Futtermittel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bauchfleisch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Suppenfleisch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rinderpfanne",
+            "kind": "text"
+          },
+          {
+            "anchor": "Faschierte",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kalbsbrust",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kalbsleber",
+            "kind": "text"
+          },
+          {
+            "anchor": "Beispielpackungsgröße",
+            "kind": "text"
+          },
+          {
+            "anchor": "clever Hendl",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rindsschnitzel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Angebote gültig bei BILLA PLUS",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "fairzumtier.at",
+            "kind": "text"
+          },
+          {
+            "anchor": "TIERWOHL AUS",
+            "kind": "text"
+          },
+          {
+            "anchor": "Zu 100 % von österreichischen Bauernhöfen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Mehr Platz und Bewegungsfreiheit",
+            "kind": "text"
+          },
+          {
+            "anchor": "Verbot von Vollspaltenböden",
+            "kind": "text"
+          },
+          {
+            "anchor": "gentechnikfreie Futtermittel",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bauchfleisch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Suppenfleisch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rinderpfanne",
+            "kind": "text"
+          },
+          {
+            "anchor": "Faschierte",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kalbsbrust",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kalbsleber",
+            "kind": "text"
+          },
+          {
+            "anchor": "Beispielpackungsgröße",
+            "kind": "text"
+          },
+          {
+            "anchor": "clever Hendl",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rindsschnitzel",
+            "kind": "text"
+          },
+          {
+            "anchor": "JEDEN DONNERSTAG",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Bachsaibling",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bio-Karpfenfilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "Lachsfilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kabeljaufilet",
+            "kind": "text"
+          },
+          {
+            "anchor": "Angebote gültig bei BILLA PLUS",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Bio-Bachsaibling",
+          "alt": "Saibling",
+          "money": [
+            399,
+            359
+          ],
+          "old": [],
+          "mustContain": [
+            "DO"
+          ]
+        },
+        {
+          "anchor": "Bio-Karpfenfilet",
+          "alt": "Karpfen",
+          "money": [
+            399,
+            359
+          ],
+          "old": [],
+          "mustContain": [
+            "DO"
+          ]
+        },
+        {
+          "anchor": "Lachsfilet",
+          "alt": "Lachs",
+          "money": [
+            299,
+            269,
+            449,
+            404
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 250 G",
+            "BIS 250 G"
+          ],
+          "roleFree": [
+            449,
+            404
+          ]
+        },
+        {
+          "anchor": "Kabeljaufilet",
+          "alt": "Kabeljau",
+          "money": [
+            329,
+            296,
+            449,
+            404
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 250 G",
+            "BIS 250 G"
+          ],
+          "roleFree": [
+            449,
+            404
+          ]
+        },
+        {
+          "anchor": "Bauchfleisch",
+          "money": [
+            699,
+            1279
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 1 KILO",
+            "BIS 1 KILO"
+          ],
+          "roleFree": [
+            1279
+          ]
+        },
+        {
+          "anchor": "Suppenfleisch",
+          "alt": "Rind",
+          "money": [
+            1499,
+            2099
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 1 KILO",
+            "BIS 1 KILO"
+          ],
+          "roleFree": [
+            2099
+          ]
+        },
+        {
+          "anchor": "Rinderpfanne",
+          "money": [
+            1999,
+            2799
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 500 G",
+            "BIS 500 G"
+          ],
+          "roleFree": [
+            2799
+          ]
+        },
+        {
+          "anchor": "Faschierte",
+          "alt": "Laibchen",
+          "money": [
+            199,
+            299
+          ],
+          "old": [],
+          "mustContain": [
+            "BEI 3 STÜCK JE",
+            "19.93"
+          ],
+          "roleFree": [
+            299
+          ]
+        },
+        {
+          "anchor": "Kalbsbrust",
+          "money": [
+            1799
+          ],
+          "old": [],
+          "mustContain": [
+            "per Kilo"
+          ]
+        },
+        {
+          "anchor": "Kalbsleber",
+          "alt": "Leber",
+          "money": [
+            600,
+            740,
+            -140
+          ],
+          "old": [
+            740
+          ],
+          "mustContain": [
+            "29.99",
+            "36.99"
+          ],
+          "optional": [
+            2999,
+            3699
+          ]
+        },
+        {
+          "anchor": "clever Hendl",
+          "alt": "Hendl",
+          "money": [
+            699,
+            909,
+            -210
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 2 PKG. JE",
+            "12.99"
+          ],
+          "roleFree": [
+            909
+          ]
+        },
+        {
+          "anchor": "Rindsschnitzel",
+          "alt": "Schnitzel",
+          "money": [
+            959,
+            1199,
+            -240
+          ],
+          "old": [],
+          "mustContain": [
+            "AB 2 PKG. JE",
+            "19.98"
+          ],
+          "roleFree": [
+            1199
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "TIERWOHL AUS",
+          "level": 1
+        },
+        {
+          "anchor": "JEDEN DONNERSTAG",
+          "level": 2
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 6,
+      "keyPage": 6,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "BILLA PLUS KAUFEN HEISST",
+            "kind": "text"
+          },
+          {
+            "anchor": "FÜHREND BEI GEMÜSE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Frischfleisch in",
+            "kind": "text"
+          },
+          {
+            "anchor": "NUDELPFANNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "FASCHIERTE LAIBCHEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "GENUSS-FRÜHSTÜCK",
+            "kind": "text"
+          },
+          {
+            "anchor": "PALATSCHINKEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "Eierschwammerl",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kräuterseitlinge",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cremechampignons",
+            "kind": "text"
+          },
+          {
+            "anchor": "Benjamin",
+            "kind": "text"
+          },
+          {
+            "anchor": "Brokkoli",
+            "kind": "text"
+          },
+          {
+            "anchor": "MILDE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Trauben rot",
+            "kind": "text"
+          },
+          {
+            "anchor": "Trauben weiß",
+            "kind": "text"
+          },
+          {
+            "anchor": "Solange der Vorrat reicht",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "BILLA PLUS KAUFEN HEISST",
+            "kind": "text"
+          },
+          {
+            "anchor": "FÜHREND BEI GEMÜSE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Eierschwammerl",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kräuterseitlinge",
+            "kind": "text"
+          },
+          {
+            "anchor": "Cremechampignons",
+            "kind": "text"
+          },
+          {
+            "anchor": "Benjamin",
+            "kind": "text"
+          },
+          {
+            "anchor": "Brokkoli",
+            "kind": "text"
+          },
+          {
+            "anchor": "MILDE",
+            "kind": "text"
+          },
+          {
+            "anchor": "Trauben rot",
+            "kind": "text"
+          },
+          {
+            "anchor": "Trauben weiß",
+            "kind": "text"
+          },
+          {
+            "anchor": "Frischfleisch in",
+            "kind": "text"
+          },
+          {
+            "anchor": "NUDELPFANNE",
+            "kind": "text"
+          },
+          {
+            "anchor": "FASCHIERTE LAIBCHEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "GENUSS-FRÜHSTÜCK",
+            "kind": "text"
+          },
+          {
+            "anchor": "PALATSCHINKEN",
+            "kind": "text"
+          },
+          {
+            "anchor": "Solange der Vorrat reicht",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "NUDELPFANNE",
+          "alt": "Nudel",
+          "money": [
+            990,
+            1190
+          ],
+          "old": [
+            1190
+          ],
+          "mustContain": [
+            "2 € billiger"
+          ]
+        },
+        {
+          "anchor": "FASCHIERTE LAIBCHEN",
+          "alt": "Laibchen",
+          "money": [
+            890,
+            990
+          ],
+          "old": [
+            990
+          ],
+          "mustContain": [
+            "1 € billiger"
+          ]
+        },
+        {
+          "anchor": "GENUSS-FRÜHSTÜCK",
+          "alt": "Frühstück",
+          "money": [
+            790,
+            990
+          ],
+          "old": [
+            990
+          ],
+          "mustContain": [
+            "2 € billiger"
+          ]
+        },
+        {
+          "anchor": "PALATSCHINKEN",
+          "alt": "Palatschinken",
+          "money": [
+            390,
+            490
+          ],
+          "old": [
+            490
+          ],
+          "mustContain": [
+            "1 € billiger"
+          ]
+        },
+        {
+          "anchor": "Eierschwammerl",
+          "money": [
+            159
+          ],
+          "old": [],
+          "mustContain": [
+            "per 100 g"
+          ]
+        },
+        {
+          "anchor": "Kräuterseitlinge",
+          "alt": "Seitlinge",
+          "money": [
+            279
+          ],
+          "old": [],
+          "mustContain": [
+            "18.60"
+          ]
+        },
+        {
+          "anchor": "Cremechampignons",
+          "alt": "Champignons",
+          "money": [
+            199
+          ],
+          "old": [],
+          "mustContain": [
+            "12.44"
+          ]
+        },
+        {
+          "anchor": "Benjamin",
+          "alt": "Erdäpfel",
+          "money": [
+            199,
+            299
+          ],
+          "old": [
+            299
+          ],
+          "mustContain": [
+            "1.33"
+          ]
+        },
+        {
+          "anchor": "Brokkoli",
+          "money": [
+            149,
+            159,
+            -10
+          ],
+          "old": [
+            159
+          ],
+          "mustContain": [
+            "2.98"
+          ]
+        },
+        {
+          "anchor": "Trauben rot",
+          "alt": "Trauben",
+          "money": [
+            399
+          ],
+          "old": [],
+          "mustContain": [
+            "per Kilo"
+          ]
+        },
+        {
+          "anchor": "Trauben weiß",
+          "alt": "Trauben",
+          "money": [
+            399
+          ],
+          "old": [],
+          "mustContain": [
+            "per Kilo"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "FÜHREND BEI GEMÜSE",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": []
+    }
+  ]
+}

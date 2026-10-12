@@ -1,0 +1,72 @@
+import { execFile } from 'node:child_process'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { promisify } from 'node:util'
+import { mergeOverlapping } from './geometry.ts'
+import { findDuplicates } from './runs.ts'
+import type { Extraction, PageImage, Run } from './types.ts'
+
+export const poppler = promisify(execFile)
+export const MAX_BUFFER = 64 * 1024 * 1024
+const MIN_IMAGE_AREA = 0.01
+const MAX_IMAGE_AREA = 0.9
+
+export async function extractPage(pdf: string, pdfPage: number): Promise<Extraction> {
+  const page = String(pdfPage)
+  const { stdout } = await poppler('pdftotext', ['-q', '-f', page, '-l', page, '-tsv', pdf, '-'], {
+    maxBuffer: MAX_BUFFER,
+  })
+  let width = 0
+  let height = 0
+  let line = -1
+  const runs: Run[] = []
+  for (const row of stdout.split('\n').slice(1)) {
+    const cols = row.split('\t')
+    if (cols.length < 12) continue
+    const [level, , flow, , , , x, y, w, h] = cols.map(Number)
+    if (level === 1) {
+      width = w ?? 0
+      height = h ?? 0
+    } else if (level === 4) {
+      line++
+    } else if (level === 5) {
+      runs.push({
+        id: `${pdfPage}:${runs.length}`,
+        str: cols.slice(11).join('\t'),
+        box: { x: x ?? 0, y: y ?? 0, w: w ?? 0, h: h ?? 0 },
+        flow: flow ?? 0,
+        line,
+      })
+    }
+  }
+  if (!width || !height) throw new Error(`pdftotext returned no page size for ${pdf} p${pdfPage}`)
+  const duplicates = findDuplicates(runs)
+  const images = await extractImages(pdf, pdfPage, width * height)
+  return { pdfPage, width, height, runs, images, duplicates }
+}
+
+async function extractImages(pdf: string, pdfPage: number, pageArea: number): Promise<PageImage[]> {
+  const dir = await mkdtemp(join(tmpdir(), 'mia-images-'))
+  try {
+    const page = String(pdfPage)
+    await poppler('pdftohtml', ['-q', '-xml', '-zoom', '1', '-f', page, '-l', page, pdf, join(dir, 'page')], {
+      maxBuffer: MAX_BUFFER,
+    })
+    const xml = await readFile(join(dir, 'page.xml'), 'utf8')
+    const boxes = [...xml.matchAll(/<image top="(-?\d+)" left="(-?\d+)" width="(\d+)" height="(\d+)"/g)]
+      .map(([, top, left, w, h]) => ({ x: Number(left), y: Number(top), w: Number(w), h: Number(h) }))
+      .filter((b) => {
+        const share = (b.w * b.h) / pageArea
+        return share >= MIN_IMAGE_AREA && share <= MAX_IMAGE_AREA
+      })
+    return mergeOverlapping(boxes).map((box, i) => ({ id: `img${pdfPage}:${i}`, box }))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
+
+export async function popplerVersion(): Promise<string> {
+  const { stderr } = await poppler('pdftotext', ['-v'])
+  return stderr.split('\n')[0] ?? 'unknown'
+}

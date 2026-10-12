@@ -1,0 +1,4 @@
+out/
+validation/
+pnpm-lock.yaml
+*.md

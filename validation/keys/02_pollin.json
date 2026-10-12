@@ -1,0 +1,1209 @@
+{
+  "doc": "02_pollin",
+  "pdf": "02_pollin_herbstkracher_mailing_2026.pdf",
+  "lang": "de-DE",
+  "pages": [
+    {
+      "pdfPage": 1,
+      "keyPage": 1,
+      "readingOrder": [
+        [
+          {
+            "anchor": "KRACHER",
+            "kind": "text"
+          },
+          {
+            "anchor": "Mega-Schnäppchen",
+            "kind": "text"
+          },
+          {
+            "anchor": "X390",
+            "kind": "text"
+          },
+          {
+            "anchor": "EW-7611ULB",
+            "kind": "text"
+          },
+          {
+            "anchor": "Spot Green",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "KRACHER",
+            "kind": "text"
+          },
+          {
+            "anchor": "Mega-Schnäppchen",
+            "kind": "text"
+          },
+          {
+            "anchor": "EW-7611ULB",
+            "kind": "text"
+          },
+          {
+            "anchor": "X390",
+            "kind": "text"
+          },
+          {
+            "anchor": "Spot Green",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "X390",
+          "articleNo": "42-753 327",
+          "alt": "Thinkpad",
+          "money": [
+            19900,
+            22200
+          ],
+          "old": [
+            22200
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "EW-7611ULB",
+          "articleNo": "42-742 630",
+          "alt": "Stick",
+          "money": [
+            499,
+            795
+          ],
+          "old": [
+            795
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "Spot Green",
+          "articleNo": "42-522 805",
+          "alt": "leuchte",
+          "money": [
+            999,
+            1295
+          ],
+          "old": [
+            1295
+          ],
+          "mustContain": []
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "KRACHER",
+          "level": 1
+        }
+      ],
+      "tables": [],
+      "mustNotAppear": [
+        "HERBST HERBST",
+        "KRACHER KRACHER"
+      ]
+    },
+    {
+      "pdfPage": 3,
+      "keyPage": 3,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Gutschein reserviert",
+            "kind": "text"
+          },
+          {
+            "anchor": "Einfach günstig messen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wasserkanister",
+            "kind": "text"
+          },
+          {
+            "anchor": "Externe SSD",
+            "kind": "text"
+          },
+          {
+            "anchor": "USB-Ladegerät",
+            "kind": "text"
+          },
+          {
+            "anchor": "Zeitschaltuhr",
+            "kind": "text"
+          },
+          {
+            "anchor": "LED-Hand",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bohrschablone",
+            "kind": "text"
+          },
+          {
+            "anchor": "Feuchtigkeits",
+            "kind": "text"
+          },
+          {
+            "anchor": "Multi-Sensor",
+            "kind": "text"
+          },
+          {
+            "anchor": "Entfernungs",
+            "kind": "text"
+          },
+          {
+            "anchor": "BLDC",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "Gutschein reserviert",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wasserkanister",
+            "kind": "text"
+          },
+          {
+            "anchor": "Externe SSD",
+            "kind": "text"
+          },
+          {
+            "anchor": "USB-Ladegerät",
+            "kind": "text"
+          },
+          {
+            "anchor": "Zeitschaltuhr",
+            "kind": "text"
+          },
+          {
+            "anchor": "LED-Hand",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bohrschablone",
+            "kind": "text"
+          },
+          {
+            "anchor": "Einfach günstig messen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Feuchtigkeits",
+            "kind": "text"
+          },
+          {
+            "anchor": "Multi-Sensor",
+            "kind": "text"
+          },
+          {
+            "anchor": "Entfernungs",
+            "kind": "text"
+          },
+          {
+            "anchor": "BLDC",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Wasserkanister",
+          "articleNo": "42-866 149",
+          "alt": "Kanister",
+          "money": [
+            250,
+            399
+          ],
+          "old": [
+            399
+          ],
+          "mustContain": [
+            "10 L"
+          ]
+        },
+        {
+          "anchor": "Wasserkanister",
+          "articleNo": "42-866 148",
+          "alt": "Kanister",
+          "money": [
+            295,
+            499
+          ],
+          "old": [
+            499
+          ],
+          "mustContain": [
+            "15 L"
+          ]
+        },
+        {
+          "anchor": "Wasserkanister",
+          "articleNo": "42-866 146",
+          "alt": "Kanister",
+          "money": [
+            350,
+            499
+          ],
+          "old": [
+            499
+          ],
+          "mustContain": [
+            "20 L"
+          ]
+        },
+        {
+          "anchor": "Externe SSD",
+          "articleNo": "42-725 147",
+          "alt": "SSD",
+          "money": [
+            11995
+          ],
+          "old": [],
+          "mustContain": [
+            "1 TB"
+          ]
+        },
+        {
+          "anchor": "USB-Ladegerät",
+          "articleNo": "42-353 215",
+          "alt": "Ladegerät",
+          "money": [
+            1499,
+            2995
+          ],
+          "old": [
+            2995
+          ],
+          "mustContain": [
+            "-50%"
+          ]
+        },
+        {
+          "anchor": "Zeitschaltuhr",
+          "articleNo": "42-592 210",
+          "alt": "Zeitschaltuhr",
+          "money": [
+            350,
+            495
+          ],
+          "old": [
+            495
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "LED-Hand",
+          "articleNo": "42-522 785",
+          "alt": "leuchte",
+          "money": [
+            395
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Bohrschablone",
+          "articleNo": "42-504 388",
+          "alt": "Bohrschablone",
+          "money": [
+            699,
+            999
+          ],
+          "old": [
+            999
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "Feuchtigkeits",
+          "articleNo": "42-831 329",
+          "alt": "Feuchtigkeit",
+          "money": [
+            499,
+            699
+          ],
+          "old": [
+            699
+          ],
+          "mustContain": [],
+          "optional": [
+            139
+          ]
+        },
+        {
+          "anchor": "Multi-Sensor",
+          "articleNo": "42-831 330",
+          "alt": "Messgerät",
+          "money": [
+            499,
+            699
+          ],
+          "old": [
+            699
+          ],
+          "mustContain": [],
+          "optional": [
+            139
+          ]
+        },
+        {
+          "anchor": "Entfernungs",
+          "articleNo": "42-831 331",
+          "alt": "Entfernung",
+          "money": [
+            499,
+            699
+          ],
+          "old": [
+            699
+          ],
+          "mustContain": [],
+          "optional": [
+            139
+          ]
+        },
+        {
+          "anchor": "BLDC",
+          "articleNo": "42-811 702",
+          "alt": "Treiber|BLDC",
+          "money": [
+            2695
+          ],
+          "old": [],
+          "mustContain": [
+            "151x84x46 mm"
+          ]
+        },
+        {
+          "anchor": "BLDC",
+          "articleNo": "42-811 703",
+          "alt": "Treiber|BLDC",
+          "money": [
+            2490,
+            2895
+          ],
+          "old": [
+            2895
+          ],
+          "mustContain": [
+            "180x92x52 mm"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "Einfach günstig messen",
+          "level": 1
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "Betriebsspg.",
+            "Spitzenleistung",
+            "Maße",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "36V- / 48V-",
+              "1000W / 850W",
+              "151x84x46 mm",
+              "42-811 702",
+              "26,95"
+            ],
+            [
+              "48V- / 60V-",
+              "1800W / 1500W",
+              "180x92x52 mm",
+              "42-811 703",
+              "28,95",
+              "24,90"
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 7,
+      "keyPage": 7,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Gutschein reserviert",
+            "kind": "text"
+          },
+          {
+            "anchor": "Hände hoch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Sekundenkleber",
+            "kind": "text"
+          },
+          {
+            "anchor": "Felgenbürste",
+            "kind": "text"
+          },
+          {
+            "anchor": "Quad-LNB",
+            "kind": "text"
+          },
+          {
+            "anchor": "42-852 913",
+            "kind": "text"
+          },
+          {
+            "anchor": "Unterstellpyramiden",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kabelverbinder",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bauschaumpistole",
+            "kind": "text"
+          },
+          {
+            "anchor": "42-800 158",
+            "kind": "text"
+          },
+          {
+            "anchor": "Klebefilm",
+            "kind": "text"
+          },
+          {
+            "anchor": "Spannungsprüfer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Garagentor",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "Gutschein reserviert",
+            "kind": "text"
+          },
+          {
+            "anchor": "Hände hoch",
+            "kind": "text"
+          },
+          {
+            "anchor": "Bauschaumpistole",
+            "kind": "text"
+          },
+          {
+            "anchor": "Sekundenkleber",
+            "kind": "text"
+          },
+          {
+            "anchor": "Felgenbürste",
+            "kind": "text"
+          },
+          {
+            "anchor": "Quad-LNB",
+            "kind": "text"
+          },
+          {
+            "anchor": "42-852 913",
+            "kind": "text"
+          },
+          {
+            "anchor": "Unterstellpyramiden",
+            "kind": "text"
+          },
+          {
+            "anchor": "Kabelverbinder",
+            "kind": "text"
+          },
+          {
+            "anchor": "42-800 158",
+            "kind": "text"
+          },
+          {
+            "anchor": "Klebefilm",
+            "kind": "text"
+          },
+          {
+            "anchor": "Spannungsprüfer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Garagentor",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "Sekundenkleber",
+          "articleNo": "42-512 137",
+          "alt": "Kleber",
+          "money": [
+            299
+          ],
+          "old": [],
+          "mustContain": [
+            "149,50"
+          ]
+        },
+        {
+          "anchor": "Felgenbürste",
+          "articleNo": "42-852 605",
+          "alt": "Bürste",
+          "money": [
+            545,
+            799
+          ],
+          "old": [
+            799
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "Quad-LNB",
+          "articleNo": "42-571 170",
+          "alt": "LNB",
+          "money": [
+            1085,
+            1199
+          ],
+          "old": [
+            1199
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "42-852 913",
+          "articleNo": "42-852 913",
+          "alt": "Pumpe",
+          "money": [
+            1999,
+            2495
+          ],
+          "old": [
+            2495
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "Unterstellpyramiden",
+          "articleNo": "42-504 779",
+          "alt": "Pyramide",
+          "money": [
+            299,
+            599
+          ],
+          "old": [
+            599
+          ],
+          "mustContain": [
+            "10 Stück"
+          ]
+        },
+        {
+          "anchor": "Kabelverbinder",
+          "articleNo": "42-554 653",
+          "alt": "Kabelverbinder",
+          "money": [
+            220
+          ],
+          "old": [],
+          "mustContain": [
+            "Schraub"
+          ]
+        },
+        {
+          "anchor": "Kabelverbinder",
+          "articleNo": "42-554 654",
+          "alt": "Kabelverbinder",
+          "money": [
+            299
+          ],
+          "old": [],
+          "mustContain": [
+            "Klemm"
+          ]
+        },
+        {
+          "anchor": "Kabelverbinder",
+          "articleNo": "42-554 655",
+          "alt": "Kabelverbinder",
+          "money": [
+            910
+          ],
+          "old": [],
+          "mustContain": [
+            "Klemm"
+          ]
+        },
+        {
+          "anchor": "Kabelverbinder",
+          "articleNo": "42-554 656",
+          "alt": "Kabelverbinder",
+          "money": [
+            399
+          ],
+          "old": [],
+          "mustContain": [
+            "Schraub"
+          ]
+        },
+        {
+          "anchor": "Bauschaumpistole",
+          "articleNo": "42-504 441",
+          "alt": "Pistole",
+          "money": [
+            999,
+            2299
+          ],
+          "old": [
+            2299
+          ],
+          "mustContain": [
+            "-57%"
+          ]
+        },
+        {
+          "anchor": "42-800 158",
+          "articleNo": "42-800 158",
+          "alt": "Leiterplatte",
+          "money": [
+            285
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Klebefilm",
+          "articleNo": "42-891 568",
+          "alt": "Klebe",
+          "money": [
+            225
+          ],
+          "old": [],
+          "mustContain": [
+            "4 Stück"
+          ]
+        },
+        {
+          "anchor": "Spannungsprüfer",
+          "articleNo": "42-831 174",
+          "alt": "Spannungsprüfer",
+          "money": [
+            7495,
+            10817
+          ],
+          "old": [
+            10817
+          ],
+          "mustContain": [
+            "-31%"
+          ]
+        },
+        {
+          "anchor": "Garagentor",
+          "articleNo": "42-550 639",
+          "alt": "Fernschalter",
+          "money": [
+            1995
+          ],
+          "old": [],
+          "mustContain": [
+            "85x61x22 mm"
+          ]
+        },
+        {
+          "anchor": "Garagentor",
+          "articleNo": "42-550 668",
+          "alt": "Fernbedienung",
+          "money": [
+            899
+          ],
+          "old": [],
+          "mustContain": [
+            "57x30x13 mm"
+          ]
+        },
+        {
+          "anchor": "Garagentor",
+          "articleNo": "42-550 640",
+          "alt": "Fernschalter",
+          "money": [
+            2199
+          ],
+          "old": [],
+          "mustContain": [
+            "90x73x22 mm"
+          ]
+        },
+        {
+          "anchor": "Garagentor",
+          "articleNo": "42-550 669",
+          "alt": "Fernbedienung",
+          "money": [
+            950
+          ],
+          "old": [],
+          "mustContain": [
+            "55x30x14 mm"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "Hände hoch",
+          "level": 1
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "Anschluss",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "Schraub",
+              "42-554 653",
+              "2,20"
+            ],
+            [
+              "Klemm",
+              "42-554 654",
+              "2,99"
+            ],
+            [
+              "Klemm",
+              "42-554 655",
+              "9,10"
+            ],
+            [
+              "Schraub",
+              "42-554 656",
+              "3,99"
+            ]
+          ]
+        },
+        {
+          "header": [
+            "Serie",
+            "Typ",
+            "Maße",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "HD2RX",
+              "Fernschalter-Set, 2 Relais",
+              "85x61x22 mm",
+              "42-550 639",
+              "19,95"
+            ],
+            [
+              "Fernbedienung Solo",
+              "57x30x13 mm",
+              "42-550 668",
+              "8,99"
+            ],
+            [
+              "HD4RX",
+              "Fernschalter-Set, 4 Relais",
+              "90x73x22 mm",
+              "42-550 640",
+              "21,99"
+            ],
+            [
+              "Fernbedienung Solo",
+              "55x30x14 mm",
+              "42-550 669",
+              "9,50"
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": []
+    },
+    {
+      "pdfPage": 5,
+      "keyPage": 5,
+      "heldOut": true,
+      "readingOrder": [
+        [
+          {
+            "anchor": "Preiskracher",
+            "kind": "text"
+          },
+          {
+            "anchor": "PCF8574",
+            "kind": "text"
+          },
+          {
+            "anchor": "Stufenbohrer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Verstärker",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wurfgleiter",
+            "kind": "text"
+          },
+          {
+            "anchor": "DH-WT004",
+            "kind": "text"
+          },
+          {
+            "anchor": "AIRCO2NTROL",
+            "kind": "text"
+          },
+          {
+            "anchor": "Prüfleitungen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Teflon",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rücklicht",
+            "kind": "text"
+          },
+          {
+            "anchor": "Runder LED-Vorderscheinwerfer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Scheinwerfer 40028",
+            "kind": "text"
+          }
+        ],
+        [
+          {
+            "anchor": "PCF8574",
+            "kind": "text"
+          },
+          {
+            "anchor": "Stufenbohrer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Verstärker",
+            "kind": "text"
+          },
+          {
+            "anchor": "Wurfgleiter",
+            "kind": "text"
+          },
+          {
+            "anchor": "DH-WT004",
+            "kind": "text"
+          },
+          {
+            "anchor": "Preiskracher",
+            "kind": "text"
+          },
+          {
+            "anchor": "AIRCO2NTROL",
+            "kind": "text"
+          },
+          {
+            "anchor": "Prüfleitungen",
+            "kind": "text"
+          },
+          {
+            "anchor": "Teflon",
+            "kind": "text"
+          },
+          {
+            "anchor": "Rücklicht",
+            "kind": "text"
+          },
+          {
+            "anchor": "Runder LED-Vorderscheinwerfer",
+            "kind": "text"
+          },
+          {
+            "anchor": "Scheinwerfer 40028",
+            "kind": "text"
+          }
+        ]
+      ],
+      "products": [
+        {
+          "anchor": "PCF8574",
+          "articleNo": "42-936 030",
+          "alt": "Port",
+          "money": [
+            195
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Stufenbohrer",
+          "articleNo": "42-501 450",
+          "alt": "Bohrer",
+          "money": [
+            1395,
+            1999
+          ],
+          "old": [
+            1999
+          ],
+          "mustContain": [
+            "3-teilig"
+          ]
+        },
+        {
+          "anchor": "Verstärker",
+          "articleNo": "42-631 179",
+          "alt": "Verstärker",
+          "money": [
+            3480
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "Wurfgleiter",
+          "articleNo": "42-820 847",
+          "alt": "Gleiter",
+          "money": [
+            65,
+            55,
+            35
+          ],
+          "old": [],
+          "mustContain": [
+            "ab 18 Stück",
+            "ab 36 Stück"
+          ]
+        },
+        {
+          "anchor": "Wurfgleiter",
+          "articleNo": "42-820 848",
+          "alt": "Gleiter",
+          "money": [
+            395,
+            350,
+            295
+          ],
+          "old": [],
+          "mustContain": [
+            "ab 5 Stück",
+            "ab 10 Stück"
+          ]
+        },
+        {
+          "anchor": "DH-WT004",
+          "articleNo": "42-871 815",
+          "alt": "Wasserzähler",
+          "money": [
+            995
+          ],
+          "old": [],
+          "mustContain": []
+        },
+        {
+          "anchor": "AIRCO2NTROL",
+          "articleNo": "42-592 244",
+          "alt": "CO2",
+          "money": [
+            2999,
+            7999
+          ],
+          "old": [
+            7999
+          ],
+          "mustContain": [
+            "-63%"
+          ]
+        },
+        {
+          "anchor": "Prüfleitungen",
+          "articleNo": "42-830 003",
+          "alt": "Messleitung",
+          "money": [
+            450
+          ],
+          "old": [],
+          "mustContain": [
+            "2 mm-Standard"
+          ]
+        },
+        {
+          "anchor": "Prüfleitungen",
+          "articleNo": "42-830 004",
+          "alt": "Messleitung",
+          "money": [
+            450
+          ],
+          "old": [],
+          "mustContain": [
+            "4 mm-Kombi"
+          ]
+        },
+        {
+          "anchor": "Teflon",
+          "articleNo": "42-511 269",
+          "alt": "Dichtungsband",
+          "money": [
+            199
+          ],
+          "old": [],
+          "mustContain": [
+            "6 Stück"
+          ]
+        },
+        {
+          "anchor": "Rücklicht",
+          "articleNo": "42-852 240",
+          "alt": "Rücklicht",
+          "money": [
+            499,
+            595
+          ],
+          "old": [
+            595
+          ],
+          "mustContain": []
+        },
+        {
+          "anchor": "Runder LED-Vorderscheinwerfer",
+          "articleNo": "42-852 236",
+          "alt": "Scheinwerfer",
+          "money": [
+            595
+          ],
+          "old": [],
+          "mustContain": [
+            "30 lux"
+          ]
+        },
+        {
+          "anchor": "Runder LED-Vorderscheinwerfer",
+          "articleNo": "42-852 235",
+          "alt": "Scheinwerfer",
+          "money": [
+            1295
+          ],
+          "old": [],
+          "mustContain": [
+            "80 lux"
+          ]
+        },
+        {
+          "anchor": "Scheinwerfer 40028",
+          "articleNo": "42-852 239",
+          "alt": "Scheinwerfer",
+          "money": [
+            1250
+          ],
+          "old": [],
+          "mustContain": [
+            "70 Lux"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "anchor": "Preiskracher",
+          "level": 1
+        }
+      ],
+      "tables": [
+        {
+          "header": [
+            "Material",
+            "Spannweite",
+            "Farben*",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "Polystyrol",
+              "190 mm",
+              "12",
+              "42-820 847",
+              "-,65",
+              "ab 18 Stück à -,55",
+              "ab 36 Stück à -,35"
+            ],
+            [
+              "Polypropylen",
+              "480 mm",
+              "4",
+              "42-820 848",
+              "3,95",
+              "ab 5 Stück à 3,50",
+              "ab 10 Stück à 2,95"
+            ]
+          ]
+        },
+        {
+          "header": [
+            "Spitze",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "2 mm-Standard",
+              "42-830 003",
+              "4,50"
+            ],
+            [
+              "4 mm-Kombi",
+              "42-830 004",
+              "4,50"
+            ]
+          ]
+        },
+        {
+          "header": [
+            "Typ",
+            "Lichtstärke",
+            "Schutzklasse",
+            "Maße (HxBxT)",
+            "Artikelnr.",
+            "€"
+          ],
+          "rows": [
+            [
+              "40025",
+              "30 lux",
+              "IPX3",
+              "110x66x35 mm",
+              "42-852 236",
+              "5,95"
+            ],
+            [
+              "40024",
+              "80 lux",
+              "IPX4",
+              "110x66x35 mm",
+              "42-852 235",
+              "12,95"
+            ]
+          ]
+        }
+      ],
+      "mustNotAppear": []
+    }
+  ]
+}

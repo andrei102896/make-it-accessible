@@ -1,0 +1,10 @@
+node_modules/
+out/
+.DS_Store
+
+# Publishers' documents and anything derived from them stay local (see validation/SOURCES.md).
+validation/testdocs/
+validation/png/
+validation/text/
+validation/competitor-output/
+validation/private/
