@@ -32,7 +32,7 @@ Stage 0 answers one question before any product code: on product grids, does our
 
 ## Revised open-decision recommendations
 1. **Tagged PDF v1: no.** HTML as declared replacement; guidance text: "remove the PDF and link this page; a PDF left online is assessed on its own" (28 CFR 35.202). Interviews are not scheduled anywhere, so add one onboarding yes/no question "must the original PDF stay downloadable?"; tagged PDF goes on the roadmap if ≥ 40 % say yes, shipped only after veraPDF passes.
-2. **Trial**: free checker (no account, no AI) + upload full document, process up to 10 chosen pages, no card. Result visible in editor + report; **publish/export only on a paid plan** (a partial document can't be a replacement). Pages without a usable text layer marked unsupported, not charged.
+2. **Trial**: free checker (no account, no AI) + upload any document, only its first 10 pages are processed (said up front), no card. Result visible in editor + report; **publish/export only on a paid plan** (a partial document can't be a replacement). Pages without a usable text layer marked unsupported, not charged.
 3. **Prices**: shape fixed (Starter/Pro monthly, pooled page credits, no rollover, add-ons). Numbers from measured stage-0 p90 (thinking included, Bedrock price), cost/revenue ≤ 25 %. 1 credit = 1 page; pages ≥ ~2× A4 (spreads) = 2 credits. Risk: ≤ 0.05 EUR/page may not hold on dense pages.
 4. **Market**: DACH + English (BFSG + Austrian BaFG). Renderer strings localised from stage 0 (published HTML must not leak English into German docs); checker result + report de/en at launch; editor English until ≥ 50 % of trial accounts are German.
 

@@ -9,6 +9,7 @@ Idea validated on the supply side; demand will be validated by launching. Stage 
 - `AGENTS.md`, `README.md` — session bootstrap (rules, definition of done) and architecture map. Code lives in `packages/pipeline` (product) and `packages/eval` (stage-0 harness).
 - `docs/SPEC.md` — full product spec (v1, pre-review). Needs the rewrite described below.
 - `docs/VALIDATION.md` — validation protocol (criteria C1–C9, thresholds, decision matrix).
+- `docs/CLIENT_FLOW.md` — agreed client flow (free check → trial with the first 10 pages → review → report → publish on paid plans → billing); input for the SPEC rewrite.
 - `docs/STAGE0.md` — approved stage-0 plan (quality gate), revised after an adversarial review; includes the recommendations for the 4 open decisions.
 - `validation/KEYS.md` — answer-key freeze hashes and the log of every key change.
 - `validation/private/` (local only, not in git) — test results against the generic tools (Tool A, Tool B), per-page baseline scores, competitor notes and their raw output.
