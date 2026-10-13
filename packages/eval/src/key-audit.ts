@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { z } from 'zod'
 import { hashes } from './file-hashes.ts'
+import { fileSha256 } from './keys.ts'
 import { ROOT } from './paths.ts'
 
 // The tools a key writer runs with; anything else in its transcript discards the key.
@@ -22,6 +23,9 @@ const StageRecord = z
   })
   .loose()
 export type StageRecord = z.infer<typeof StageRecord>
+
+const recordPath = (doc: string, pdfPage: number): string =>
+  join(ROOT, 'validation', 'private', 'stage', 'dev', `${doc}-p${String(pdfPage).padStart(2, '0')}.json`)
 
 export const loadRecord = async (page: string): Promise<StageRecord> =>
   StageRecord.parse(
@@ -139,9 +143,11 @@ export function transcriptProblems(lines: unknown[], where: Where): Omit<Audit, 
 async function folderProblems(where: Where): Promise<string[]> {
   const { pageDir, writer, record } = where
   const problems: string[] = []
-  const evidence = await hashes(join(pageDir, 'evidence'))
+  // The record lists the evidence as it was before stage.json was added; stage.json must equal the repo's copy.
+  const { 'stage.json': staged, ...evidence } = await hashes(join(pageDir, 'evidence'))
   const sorted = (h: Record<string, string>): string => JSON.stringify(Object.entries(h).sort())
   if (sorted(evidence) !== sorted(record.files)) problems.push('the evidence changed')
+  if (staged !== (await fileSha256(recordPath(record.doc, record.pdfPage)))) problems.push('stage.json changed')
   const own = join(pageDir, writer)
   const names = (await readdir(own)).sort()
   if (names.join() !== 'key.json,run.sh') problems.push(`the writer folder holds ${names.join(', ')}`)
