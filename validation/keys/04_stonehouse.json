@@ -2,11 +2,12 @@
   "doc": "04_stonehouse",
   "pdf": "04_stonehouse_hotel_christmas_brochure_2026.pdf",
   "lang": "en-GB",
+  "currency": "GBP",
   "pages": [
     {
       "pdfPage": 1,
       "keyPage": 1,
-      "heldOut": true,
+      "type": "text",
       "readingOrder": [
         [
           {
@@ -32,7 +33,7 @@
     {
       "pdfPage": 4,
       "keyPage": 4,
-      "heldOut": true,
+      "type": "pricelist",
       "readingOrder": [
         [
           {
@@ -170,7 +171,7 @@
     {
       "pdfPage": 5,
       "keyPage": 5,
-      "heldOut": true,
+      "type": "text",
       "readingOrder": [
         [
           {

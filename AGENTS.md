@@ -1,6 +1,6 @@
 # AGENTS.md — Make It Accessible
 
-Read before coding, in order: this file → README.md → PROGRESS.md → docs/STAGE0.md (while stage 0 runs).
+Read before coding, in order: this file → README.md → PROGRESS.md → docs/ROADMAP.md (tracker) → docs/HARDENING.md (current plan).
 
 ## What this is
 A SaaS that turns a designed PDF (retail leaflet, catalog, brochure) into an accessible HTML version, with an honest per-document report and a review editor. The wedge is product grids with price fidelity. Current phase: stage 0, a measured quality test of the pipeline against hand-written answer keys. Stack: pnpm workspaces, Node 26 running TypeScript natively, TypeScript 6 strict, zod, Poppler CLI, Claude (stage 0 via Claude Code headless mode), Playwright + axe for scoring.
@@ -38,3 +38,4 @@ All green before declaring done. List every file touched. Behaviour-preserving r
 - Docs are the source of truth: update them in the same change or stop and ask.
 - Record regression guards (incident + "do not remove") and dead ends (evidence + "do not rebuild") in README.md.
 - Log decisions in PROGRESS.md and stage-0 results in docs/STAGE0.md, dated.
+- Tick tasks in docs/ROADMAP.md in the same change that completes them.

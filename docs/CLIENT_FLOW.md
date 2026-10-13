@@ -15,7 +15,7 @@ The cost in page credits is shown before starting. Pages we cannot process corre
 Split view: original page left, accessible version right. Every element carries one of three labels:
 - **auto-checked** — prices recomputed from the PDF, text confirmed against the text layer;
 - **AI-generated** — alt text and text read from badges; labelled, no action required;
-- **needs review** — uncertain grouping, prices read from bare digits, image text containing digits, words left unused. This is the user's actual work (0–2 items per page on the tested grids).
+- **needs review** — uncertain grouping, prices read from bare digits, image text containing digits, words left unused. This is the user's actual work (measured 2–6 per page on the stage-0 grids; target ≤ 0.5, `docs/HARDENING.md`).
 
 Editable: text, alt text, order, heading levels, product grouping (split / merge).
 
@@ -26,7 +26,7 @@ What was checked automatically, what AI generated, what the user confirmed, what
 The trial shows the result and the report but cannot publish: a partial document cannot replace the PDF. Paid plans: hosted link, embed snippet, ZIP export; a short guide "replace the link to the PDF with this page" (a PDF left online is assessed on its own); a new version at the same URL for next week's leaflet.
 
 ## 7. Billing
-Monthly Stripe subscription with page credits (1 page = 1 credit, a spread = 2), add-on credits, one-click cancel in the Stripe portal.
+Monthly Stripe subscription with page credits (by page area: 1 credit per A4 equivalent, so a spread costs 2 whatever the layout setting), add-on credits, one-click cancel in the Stripe portal.
 
 ## Changes against the original SPEC
 | Original SPEC | Now |

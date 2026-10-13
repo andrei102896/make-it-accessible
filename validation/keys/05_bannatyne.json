@@ -2,11 +2,12 @@
   "doc": "05_bannatyne",
   "pdf": "05_bannatyne_hastings_wedding_brochure_2026.pdf",
   "lang": "en-GB",
+  "currency": "GBP",
   "pages": [
     {
       "pdfPage": 1,
       "keyPage": 1,
-      "heldOut": true,
+      "type": "text",
       "readingOrder": [
         [
           {
@@ -52,7 +53,7 @@
     {
       "pdfPage": 2,
       "keyPage": 2,
-      "heldOut": true,
+      "type": "text",
       "readingOrder": [
         [
           {
@@ -260,7 +261,7 @@
     {
       "pdfPage": 3,
       "keyPage": 3,
-      "heldOut": true,
+      "type": "pricelist",
       "readingOrder": [
         [
           {

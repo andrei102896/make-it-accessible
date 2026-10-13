@@ -2,102 +2,59 @@ import { pathToFileURL } from 'node:url'
 import { chromium } from 'playwright'
 import type { KeyDoc } from '../keys.ts'
 import { axeSummary } from './axe.ts'
-import {
-  altText,
-  productPrices,
-  readingOrder,
-  structureScore,
-  textFidelity,
-  type DocScore,
-  type DomPage,
-  type PageScore,
-} from './metrics.ts'
+import { pageDom, readSections } from './dom.ts'
+import { printedPages } from './layout.ts'
+import { altText, productPrices, readingOrder, textFidelity } from './metrics.ts'
+import { structureScore } from './tables.ts'
+import type { DocScore, PageScore } from './types.ts'
 
 export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: readonly number[]): Promise<DocScore> {
   const browser = await chromium.launch()
   try {
     const tab = await (await browser.newContext()).newPage()
     await tab.goto(pathToFileURL(htmlPath).href)
-    const doms = await tab.evaluate((): DomPage[] =>
-      [...document.querySelectorAll<HTMLElement>('section[data-page]')].map((section) => {
-        const leaves = [...section.querySelectorAll<HTMLElement>('p, h3, h4, h5, h6, li, td, th, caption')]
-          .filter((el) => !el.querySelector('p, ul, ol, table, li'))
-          .map((el) => ({ text: el.innerText }))
-        const containers = [...section.querySelectorAll<HTMLElement>('li, tr')].map((el) => {
-          const product = el.closest<HTMLElement>('.products > li') ?? el
-          return {
-            text: el.innerText,
-            alts: [...product.querySelectorAll('img')].map((img) => img.getAttribute('alt') ?? ''),
-            prices: [...el.querySelectorAll<HTMLElement>('.price')].map((p) => ({
-              role: p.dataset.role ?? '',
-              amount: p.dataset.amount === undefined ? null : Number(p.dataset.amount),
-            })),
-            review: el.closest('[data-review]') !== null,
-          }
-        })
-        const headings = [...section.querySelectorAll<HTMLElement>('h3, h4, h5, h6')].map((h) => ({
-          level: Number(h.tagName[1]),
-          text: h.innerText,
-        }))
-        // Merged cells are repeated on every row and column they span, as a screen reader announces them.
-        const rows = [...section.querySelectorAll('table')].flatMap((table) => {
-          const grid: ({ text: string; amounts: number[] } | undefined)[][] = []
-          ;[...table.rows].forEach((tr, ri) => {
-            let ci = 0
-            for (const cell of tr.cells) {
-              while (grid[ri]?.[ci]) ci++
-              const data = {
-                text: cell.innerText,
-                amounts: [...cell.querySelectorAll<HTMLElement>('.price')].flatMap((p) =>
-                  p.dataset.amount === undefined ? [] : [Number(p.dataset.amount)],
-                ),
-              }
-              for (let r = 0; r < Math.max(1, cell.rowSpan); r++)
-                for (let c = 0; c < cell.colSpan; c++) (grid[ri + r] ??= [])[ci + c] = data
-              ci += cell.colSpan
-            }
-          })
-          return [...table.rows].map((tr, ri) => ({
-            text: tr.innerText,
-            header: tr.querySelector('td') === null,
-            review: tr.closest('[data-review]') !== null,
-            cells: Array.from(grid[ri] ?? [], (c) => c ?? { text: '', amounts: [] }),
-          }))
-        })
-        return { page: Number(section.dataset.page), leaves, containers, headings, rows, text: section.innerText }
-      }),
-    )
+    const sections = await readSections(tab)
+    const printed = printedPages(key, sections, keyPages)
     const axe = await axeSummary(tab)
     const pages = key.pages
       .filter((p) => keyPages.includes(p.keyPage))
       .map((p): PageScore => {
-        const dom = doms.find((d) => d.page === p.keyPage) ?? {
-          page: p.keyPage,
-          leaves: [],
-          containers: [],
-          headings: [],
-          rows: [],
-          text: '',
-        }
+        const dom = pageDom(sections, p.keyPage)
         const c1 = readingOrder(p, dom)
-        const c2 = productPrices(p, dom)
+        const c2 = productPrices(p, dom, key.currency)
         const c3 = textFidelity(p, dom)
         const c4 = altText(p, dom)
-        const c5 = structureScore(p, dom)
+        const c5 = structureScore(p, dom, key.currency)
+        const layout = key.sections ? (printed.get(p.keyPage) ?? []) : null
+        const full = p.scope === 'full' && p.expect === 'content'
+        const when = (applies: boolean, ok: boolean): boolean | null => (applies ? ok : null)
+        // An unsupported page passes only when it is marked so and publishes no prices.
+        const unsupported =
+          p.expect === 'unsupported'
+            ? dom.unsupported && c2.products === 0 && !dom.containers.some((c) => c.prices.length)
+            : null
         return {
           keyPage: p.keyPage,
-          heldOut: Boolean(p.heldOut),
           c1,
           c2,
           c3,
           c4,
           c5,
+          layout,
+          decisions: null,
           pass: {
-            c1: c1.textOnly >= 0.95,
-            c2: c2.errorProducts === 0,
-            c3: c3.missing.length + c3.altered.length + c3.invented.length <= 1,
-            c4: c4.total === 0 || c4.ok / c4.total >= 0.8,
-            c5: c5.rowsOk === c5.rows,
+            c1: when(full, c1.textOnly >= 0.95),
+            c2: when(p.expect === 'content', c2.errorProducts === 0),
+            c3: when(
+              full,
+              c3.missing.length + c3.altered.length + c3.invented.length <= 1 &&
+                !c3.required.length &&
+                !c3.outsideTrim.length,
+            ),
+            c4: when(full, c4.total === 0 || c4.ok / c4.total >= 0.8),
+            c5: when(full, c5.rowsOk === c5.rows),
+            layout: layout && layout.length === 0,
+            unsupported,
           },
         }
       })

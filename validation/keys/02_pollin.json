@@ -2,10 +2,12 @@
   "doc": "02_pollin",
   "pdf": "02_pollin_herbstkracher_mailing_2026.pdf",
   "lang": "de-DE",
+  "currency": "EUR",
   "pages": [
     {
       "pdfPage": 1,
       "keyPage": 1,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -108,6 +110,7 @@
     {
       "pdfPage": 3,
       "keyPage": 3,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -434,6 +437,7 @@
     {
       "pdfPage": 7,
       "keyPage": 7,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -839,7 +843,7 @@
     {
       "pdfPage": 5,
       "keyPage": 5,
-      "heldOut": true,
+      "type": "grid",
       "readingOrder": [
         [
           {

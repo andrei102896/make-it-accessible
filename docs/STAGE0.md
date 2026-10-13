@@ -261,4 +261,8 @@ Other gate lines:
 - **Latency:** slowest page 64 s (Honda spec spread), limit 150 s.
 
 Verdict: 0 silent price errors in 52 priced items on 4 unseen pages, 3 runs each (95 % upper bound 5.8 %).
-**Decision: GO — Andrei, 2026-10-12.** Conditions, both in the hardening step before the MVP: two-page spreads are split into single pages before processing (both Honda reading-order failures); review rules are cut to items that need a human decision (grid pages are at 2–6 per page). A strict reading of the gate would give NARROW (Pollin p5 failed reading order in one of three runs); GO was chosen because the stage-0 question, price fidelity, is answered.
+**Decision: GO — Andrei, 2026-10-12.** Conditions, both in the hardening step before the MVP: two-page spreads are split into single pages before processing (both Honda reading-order failures); review rules are cut to items that need a human decision (grid pages are at 2–6 per page). Amended 2026-10-12 (Andrei): the spread condition is now "layout-aware reading order; a spread is published as two printed pages; content crossing the gutter stays whole" (`docs/HARDENING.md`), because a physical split breaks tables that cross the gutter. A strict reading of the gate would give NARROW (Pollin p5 failed reading order in one of three runs); GO was chosen because the stage-0 question, price fidelity, is answered.
+
+### Harness correction after stage 0 (2026-10-13, phase A2)
+The scorer now reads amounts from the visible price text with its own parser and counts written amounts only where a product has no price element. Rescoring the saved runs changes two results, both towards the truth: Pollin p3 (tuning run 16-25) "Bohrschablone" shows its current price as "€ 9,99 € 6,99" and now fails C2 (flagged); Pollin p5 (held-out run 17-38) "Stufenbohrer" additionally reports the missing 19,99. The GO verdict is unaffected: neither is a silent price error.
+

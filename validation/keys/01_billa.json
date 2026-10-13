@@ -2,10 +2,12 @@
   "doc": "01_billa",
   "pdf": "01_billa_plus_kw41_wien.pdf",
   "lang": "de-AT",
+  "currency": "EUR",
   "pages": [
     {
       "pdfPage": 1,
       "keyPage": 1,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -128,6 +130,7 @@
     {
       "pdfPage": 3,
       "keyPage": 3,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -438,6 +441,7 @@
     {
       "pdfPage": 8,
       "keyPage": 8,
+      "type": "grid",
       "readingOrder": [
         [
           {
@@ -818,7 +822,7 @@
     {
       "pdfPage": 6,
       "keyPage": 6,
-      "heldOut": true,
+      "type": "grid",
       "readingOrder": [
         [
           {

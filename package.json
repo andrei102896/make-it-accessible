@@ -14,7 +14,8 @@
     "test": "node --test \"packages/*/src/**/*.test.ts\"",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "stage0": "node packages/eval/src/run.ts",
-    "adhoc": "node packages/eval/src/adhoc.ts"
+    "adhoc": "node packages/eval/src/adhoc.ts",
+    "aggregate": "node packages/eval/src/aggregate.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

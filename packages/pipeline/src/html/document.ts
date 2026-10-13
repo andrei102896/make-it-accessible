@@ -70,41 +70,48 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
     const words: Run[] = t.src.flatMap(([from, to]) => runs.slice(from, to + 1))
     return esc(t.text ?? joinRuns(words))
   }
-  const flagged = (path: string): string =>
-    page.flagged.some((f) => f === path || f.startsWith(`${path}.`)) ? ' data-review' : ''
+  // The narrowest element carrying a finding is marked, so a reviewer (and the scorer) sees what was flagged.
+  const flagged = (path: string, exact = false): string =>
+    page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
+      ? ' data-review'
+      : ''
 
   const currency = currencyOf(joinRuns(runs))
-  const price = (p: PriceValue): string => {
+  const price = (path: string, p: PriceValue): string => {
     const label = p.qualifier ? text(p.qualifier) : p.role === 'previous' ? ui.previous : ''
     const cited = p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
     const amount = amountOf(cited)
     const shown = amount ? formatMoney(amount.cents, lang, currency) : joinRuns(cited)
     const data = amount ? ` data-amount="${String(amount.cents)}"` : ''
     const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
-    return `<span class="price" data-role="${p.role}"${data}>${qualifier}${esc(shown)}</span>`
+    return `<span class="price" data-role="${p.role}"${data}${flagged(path)}>${qualifier}${esc(shown)}</span>`
   }
 
   const image = (path: string, img: ImageValue): string => {
     const src = page.imageSrc(path)
-    return src ? `<img src="${esc(src)}" alt="${esc(img.alt ?? '')}">` : ''
+    return src ? `<img src="${esc(src)}" alt="${esc(img.alt ?? '')}"${flagged(path)}>` : ''
   }
 
   const block = (path: string, b: Block): string => {
     switch (b.kind) {
       case 'heading': {
         const level = Math.min(6, b.level + 2)
-        return `<h${level}>${text(b.text)}</h${level}>`
+        return `<h${level}${flagged(path)}>${text(b.text)}</h${level}>`
       }
       case 'paragraph':
-        return `<p>${text(b.text)}</p>`
+        return `<p${flagged(path)}>${text(b.text)}</p>`
       case 'list':
-        return `<ul>${b.items.map((t) => `<li>${text(t)}</li>`).join('')}</ul>`
+        return `<ul${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${text(t)}</li>`).join('')}</ul>`
       case 'table': {
         const id = `${path.replace(/[^a-z0-9]/gi, '-')}-p${page.keyPage}`
-        const caption = b.caption ? `<caption id="${id}">${text(b.caption)}</caption>` : ''
+        const caption = b.caption ? `<caption id="${id}"${flagged(`${path}.caption`)}>${text(b.caption)}</caption>` : ''
         const rows = b.rows.map((row, r) => {
-          const cells = row.map((cell) => {
-            const content = [cell.text ? text(cell.text) : '', ...(cell.prices ?? []).map(price)]
+          const cells = row.map((cell, c) => {
+            const at = `${path}.rows[${r}][${c}]`
+            const content = [
+              cell.text ? text(cell.text) : '',
+              ...(cell.prices ?? []).map((p, i) => price(`${at}.prices[${i}]`, p)),
+            ]
               .filter(Boolean)
               .join(' ')
             const span = `${cell.colSpan ? ` colspan="${cell.colSpan}"` : ''}${cell.rowSpan ? ` rowspan="${cell.rowSpan}"` : ''}`
@@ -116,10 +123,10 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
           return `<tr${flagged(`${path}.rows[${r}]`)}>${cells.join('')}</tr>`
         })
         const name = b.caption ? `aria-labelledby="${id}"` : `aria-label="${ui.table}"`
-        return `<div class="table" role="region" tabindex="0" ${name}><table>${caption}${rows.join('')}</table></div>`
+        return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}><table>${caption}${rows.join('')}</table></div>`
       }
       case 'products':
-        return `<ul class="products" role="list">${b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')}</ul>`
+        return `<ul class="products" role="list"${flagged(path, true)}>${b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')}</ul>`
       case 'figure':
         return image(`${path}.image`, b.image)
     }
@@ -127,13 +134,15 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
 
   const product = (path: string, item: Item): string => {
     const parts = [
-      `<p class="name">${text(item.name)}</p>`,
-      item.prices.length ? `<p class="prices">${item.prices.map(price).join(' ')}</p>` : '',
-      item.unit ? `<p class="unit">${text(item.unit)}</p>` : '',
+      `<p class="name"${flagged(`${path}.name`)}>${text(item.name)}</p>`,
+      item.prices.length
+        ? `<p class="prices">${item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)).join(' ')}</p>`
+        : '',
+      item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : '',
       ...item.details.map((d, i) => block(`${path}.details[${i}]`, d)),
       item.image ? image(`${path}.image`, item.image) : '',
     ]
-    return `<li${flagged(path)}>${parts.filter(Boolean).join('')}</li>`
+    return `<li${flagged(path, true)}>${parts.filter(Boolean).join('')}</li>`
   }
 
   const id = `page-${page.keyPage}`

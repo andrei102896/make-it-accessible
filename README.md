@@ -18,11 +18,12 @@ Requires Node 26, Poppler (`brew install poppler`) and, for model runs, a logged
 ```
 pnpm install
 pnpm check                              # typecheck + lint + format check + tests
-pnpm stage0                             # run the tuning pages through the model and score them
-pnpm stage0 --pages heldout             # held-out pages (gate only)
+pnpm stage0                             # tuning documents (validation/split.json) through the model, scored
+pnpm stage0 --pages dev                 # dev half; --pages test needs --sealed-test (opened once, phase C)
 pnpm stage0 --only 3 01_billa           # one page of one document
 pnpm stage0 --effort high --model claude-opus-5-5
-pnpm stage0 --rescore out/<run>         # rebuild HTML and scores from a saved run, no model calls
+pnpm stage0 --rescore out/<run>         # rescore a copy of a saved run (out/<run>-rescore-<time>), no model calls
+pnpm aggregate <run> <run> <run> [--before <run> ...]   # 3-run pass rule, price bounds, decisions, regressions
 pnpm adhoc <file.pdf> [--pages 1-5]     # any PDF without an answer key: validator findings, axe, cost
 ```
 
@@ -45,13 +46,24 @@ packages/pipeline/src/        product code, reused by the MVP
   model/structure.ts          one page: call, parse, single retry
   validate/validate.ts        provenance, price, coverage and alt-text checks
   html/document.ts            deterministic accessible HTML renderer
-packages/eval/src/            stage-0 harness, never shipped
-  keys.ts                     answer-key schema, loader and validation against the PDF
-  score/metrics.ts            C1–C5 metrics (pure)
+packages/eval/src/            evaluation harness, never shipped
+  key-schema.ts               answer-key schema (v2: prices per amount, page type, printed pages)
+  keys.ts                     key loader and validation against the PDF text layer
+  manifest.ts                 split (tuning/dev/test) and layout-label manifests
+  score/metrics.ts            C1, C3, C4 and C2 per page (pure)
+  score/prices.ts             C2 per product: amount, role, currency, qualifier
+  score/tables.ts             C5 headings and table rows
+  score/layout.ts             printed pages: order, labels, anchor placement
+  score/decisions.ts          review decisions per page
+  score/money.ts              the scorer's own price reader, independent of the pipeline
+  score/aggregate.ts          3-run summary, bounds, regression rule
+  score/dom.ts                reads the rendered sections in the browser
   score/score.ts              browser scoring
   score/axe.ts                axe summary for any HTML
   process.ts                  one page through the pipeline, HTML assembly, model prices
-  run.ts                      CLI: run, score, rescore against the answer keys
+  run.ts                      CLI: run and score against the answer keys
+  rescore.ts, scoring.ts      rescoring a copy of a run; shared build-and-score
+  aggregate.ts                CLI: summary over several runs
   adhoc.ts                    CLI: any PDF without a key
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log
@@ -67,6 +79,9 @@ out/                          run outputs (local only)
 - **`amountOf` picks one amount or fails.** A euro/cent pair, else the single word with a separator, else one bare number. Joining all cited numbers turned "(1 kg 22.34)" into 122,34 (`runs.test.ts`). The model never writes amounts, so this is the only guard.
 - **Pound and dollar amounts are often one word with the sign ("£7500").** `amountOf` splits the sign off; before that every price on the GBP test documents was unreadable (`runs.test.ts`).
 - **Table rows are scored by column on the rendered grid.** A text check passed a ■ moved one column over (`score.test.ts`); keys written as full-width rows rely on it.
+- **The scorer reads what a reader gets.** Amounts and currencies come from each price's visible text through `score/money.ts`, never from the pipeline's `data-amount` or parser (a parser bug must not grade itself). A price element with two amounts is unreadable. Written amounts count only where a product has no price element.
+- **Rescoring never writes into a run.** `--rescore` copies the run first; the originals are the evidence for past decisions.
+- **Findings mark the narrowest element.** A product, product list or table is marked only for a grouping doubt; a cell finding marks its row (`rows[r][c]` paths, a bug that left every row unmarked until 2026-10-13).
 - **The scorer must score a perfect page at 100 %** (`score.test.ts`). It caught a false "repeated sentence = invented" rule.
 
 ## Dead ends
