@@ -1,0 +1,454 @@
+{
+  "seed": "17fbff2fa0c26db64fc6543cbad1b96d1f414316",
+  "selection": {
+    "06_lidl_gb": {
+      "pdf": "06_lidl_gb_weekly_2026-10-15.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 27,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 26,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 17,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        6,
+        1,
+        2
+      ],
+      "reserve": []
+    },
+    "07_bm": {
+      "pdf": "07_bm_christmas_gift_guide_2025.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 17,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 34,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 30,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        4,
+        29,
+        22
+      ],
+      "reserve": [
+        36,
+        18,
+        37
+      ]
+    },
+    "08_keystore": {
+      "pdf": "08_keystore_ks14_offers_2026-10.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 3,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 7,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 8,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        4,
+        1,
+        6
+      ],
+      "reserve": [
+        5,
+        2
+      ]
+    },
+    "09_kaufland": {
+      "pdf": "09_kaufland_de_prospekt_2026-10-12.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 64,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 5,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 31,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        33,
+        57,
+        54
+      ],
+      "reserve": [
+        6,
+        25,
+        72
+      ]
+    },
+    "10_lidl_de": {
+      "pdf": "10_lidl_de_aktionsprospekt_2026-10-12.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 7,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 62,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 64,
+          "rule": "empty"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "11_lidl_ch": {
+      "pdf": "11_lidl_ch_aktuell_kw41_2026.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 20,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 3,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 16,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        7,
+        29,
+        8
+      ],
+      "reserve": []
+    },
+    "12_landi": {
+      "pdf": "12_landi_ch_themenflyer_heizen_2026.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 4,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 5,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 6,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        8,
+        2,
+        9
+      ],
+      "reserve": [
+        11,
+        10,
+        3
+      ]
+    },
+    "13_swift": {
+      "pdf": "13_swift_caravans_2026.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 17,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 4,
+          "rule": "text"
+        },
+        {
+          "pdfPage": 12,
+          "rule": "text"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "14_swift_spec": {
+      "pdf": "14_swift_caravan_tech_spec_2023.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "spread"
+        },
+        {
+          "pdfPage": 5,
+          "rule": "spread"
+        }
+      ],
+      "spare": [
+        3,
+        4,
+        6
+      ],
+      "reserve": []
+    },
+    "15_elddis": {
+      "pdf": "15_elddis_motorhomes_2027.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 18,
+          "rule": "spread"
+        },
+        {
+          "pdfPage": 30,
+          "rule": "text"
+        },
+        {
+          "pdfPage": 8,
+          "rule": "text"
+        }
+      ],
+      "spare": [
+        17,
+        28,
+        11
+      ],
+      "reserve": []
+    },
+    "16_coachman": {
+      "pdf": "16_coachman_spec_prices_2016.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "17_elddis_prices": {
+      "pdf": "17_elddis_price_list_a3_2027.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "18_akash": {
+      "pdf": "18_akash_takeaway_trifold.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "19_sondergeld": {
+      "pdf": "19_sondergeld_speisekarte_canva.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 3,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        2
+      ],
+      "reserve": []
+    },
+    "20_schumanns": {
+      "pdf": "20_schumanns_wochenkarte_scan.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 2,
+          "rule": "empty"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "21_cafe_friedrich": {
+      "pdf": "21_cafe_friedrich_speisekarte.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 3,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        2
+      ],
+      "reserve": []
+    },
+    "22_lamh": {
+      "pdf": "22_lamh_cafe_menu_trifold.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "23_schnizz": {
+      "pdf": "23_schnizz_lieferflyer_image.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "24_savoyen": {
+      "pdf": "24_savoyen_vienna_massage_prices.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 4,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 2,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        3
+      ],
+      "reserve": []
+    },
+    "25_gasthof_deutsch": {
+      "pdf": "25_gasthof_deutsch_speisekarte_2025.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 1,
+          "rule": "empty"
+        }
+      ],
+      "spare": [],
+      "reserve": []
+    },
+    "26_sanford": {
+      "pdf": "26_sanford_benefits_2026.pdf",
+      "set": "test",
+      "pages": [
+        {
+          "pdfPage": 8,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 9,
+          "rule": "priced"
+        },
+        {
+          "pdfPage": 15,
+          "rule": "fixed"
+        }
+      ],
+      "spare": [
+        7,
+        10,
+        13
+      ],
+      "reserve": []
+    },
+    "27_lidl_nl": {
+      "pdf": "27_lidl_nl_actie_week31_2026.pdf",
+      "set": "dev",
+      "pages": [
+        {
+          "pdfPage": 5,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 21,
+          "rule": "fixed"
+        },
+        {
+          "pdfPage": 17,
+          "rule": "priced"
+        }
+      ],
+      "spare": [
+        15,
+        6,
+        10
+      ],
+      "reserve": []
+    }
+  }
+}

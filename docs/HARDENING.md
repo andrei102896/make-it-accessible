@@ -118,7 +118,7 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
   - every key page appears in each section order;
   - `sectionOrders` lists other acceptable orders of printed pages;
   - open `disputes` block the freeze.
-- **`seen` prices:** a price visible only in the render. It is allowed only when its amount is absent from the text layer. It must be published flagged, in the text or in a flagged picture's alt. Results report how many items are `seen`.
+- **Prices read from the render** (since the second policy review: unreadable occurrences and manual `image` entries): allowed only when the text layer cannot prove the amount. They must be published flagged, in the text or in a flagged picture's alt. Results report how many items are read from the render.
 - **Scorer changes:**
   - on a fully keyed page, any other priced product in the output is an error, silent unless flagged;
   - one output cell may hold adjacent key cells;
@@ -150,6 +150,16 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
   - **C4 is "product alt names the product (lexical)".** A negation within three words before the name fails it. It is not presented as a rate of correct descriptions. Alt fidelity is scored by hand by Andrei on 30 seeded test alts in phase C (correct / essential detail missing / false information) and reported with its bound (0 of 30 gives 9.5 %), not gating.
   - **"Role unverified"** (prices whose role the output does not show, or that the key leaves open) is reported next to the silent-price headline.
 - **Page draw:** `selection.json` records 3 spares per document (replacement and top-up, in order) before the 3 reserve pages of each test document.
+
+**Second review of the key policy (2026-10-13, Andrei).** Fixed before any key exists:
+- **Page prices are scored.** A price that belongs to no product must appear in one output block with its amount, its currency and its offer words. Each block answers one page price. A page price printed without a currency, or read from the render, must be flagged (the block or a flagged picture's alt).
+- **Manual amounts** cover what the ledger misses, wrongly joins or wrongly cuts, and prices only in the image. They work through `missed`, `split` and `image` entries and `merged` claims; every one is confirmed by Andrei before the freeze. A split's parts are distinct, named by one split each, and cite each of its words once; merged parts, joined in word order, must read as the confirmed whole.
+- **One proof for every destination.** Corrections (`value`, `misread`) work the same on product prices, table cells and page prices.
+- **Values must be consistent.** Every typed value must read as itself.
+- **The ledger is frozen.** Each key page records `ledgerSha256` and each key `pdfSha256`. Loading a key checks them, so validation, runs, rescoring and aggregation all stop on a segmentation change, which needs an explicit key migration.
+- **`unknown` with a `reason`** is an accepted, documented uncertainty, distinct from an open dispute.
+- **Repeated anchors.** Reading-order entries may name the n-th occurrence of a repeated anchor.
+- **Visual reconciliation.** The arbiter and Andrei check each page render with every occurrence outlined, because covering every ledger entry does not prove every price is covered.
 
 **Key writing.**
 - **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.

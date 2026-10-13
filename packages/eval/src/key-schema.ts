@@ -7,7 +7,14 @@ const ROLES = ['current', 'previous', 'unit', 'previousUnit', 'discount', 'depos
 export const Role = z.enum(ROLES)
 // Pence may carry a tenth ("16.7p"), so an amount in cents has at most one decimal.
 export const Cents = z.number().refine((c) => Math.abs(c * 10 - Math.round(c * 10)) < 1e-6, 'at most one decimal')
-export const OrderEntry = z.object({ anchor: z.string().min(1), kind: z.enum(['text', 'imageOnlyText']) }).strict()
+// `occurrence`: the n-th time the anchor's text appears (canon form), for blocks that repeat it ("Add bacon").
+export const OrderEntry = z
+  .object({
+    anchor: z.string().min(1),
+    kind: z.enum(['text', 'imageOnlyText']),
+    occurrence: z.number().int().positive().optional(),
+  })
+  .strict()
 export const Heading = z.object({ anchor: z.string().min(1), level: z.number().int().min(1).max(6) }).strict()
 export const PageText = z.union([
   z.string().min(1),

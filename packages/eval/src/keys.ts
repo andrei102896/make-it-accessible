@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -5,7 +6,8 @@ import { canon } from '@make-it-accessible/pipeline/text/normalize'
 import { provenAmounts } from './key-proof.ts'
 import { KeyDocV3Schema, type KeyDocV3 } from './key-schema-v3.ts'
 import { KeyDocSchema, type KeyPage, type KeyProduct, type KeySection } from './key-schema.ts'
-import { fromV3Page, validateV3Page } from './key-v3.ts'
+import { renderedCells, validateV3Page } from './key-v3-check.ts'
+import { fromV3Page, ledgerSha256 } from './key-v3.ts'
 import { ledger, type Occurrence } from './ledger.ts'
 import { loadSplit, type KeySet } from './manifest.ts'
 import { DOCS_DIR, KEYS_DIR, SEALED_DIR, WORDS_DIR } from './paths.ts'
@@ -49,6 +51,11 @@ async function parseKey(path: string): Promise<unknown> {
   }
 }
 
+const fileSha256 = async (path: string): Promise<string> =>
+  createHash('sha256')
+    .update(await readFile(path))
+    .digest('hex')
+
 export async function loadKeyFile(path: string, pdfOverride?: string): Promise<KeyDoc> {
   const json = await parseKey(path)
   const version = typeof json === 'object' && json !== null && 'version' in json ? json.version : undefined
@@ -70,12 +77,20 @@ export async function loadKeyFile(path: string, pdfOverride?: string): Promise<K
       : checked.error
   const raw = checked.data
   const pdfPath = pdfOverride ?? join(DOCS_DIR, raw.pdf)
+  // Every reader of a key (validation, runs, rescoring, aggregation) loads it here, so the evidence is checked here.
+  if (raw.pdfSha256 !== (await fileSha256(pdfPath)))
+    throw new Error(`${raw.doc}: the PDF is not the one the key was written against`)
   const where = { dir: await wordsDir(raw.doc), doc: raw.doc }
   const evidence = new Map<number, Evidence>()
   const pages: KeyPage[] = []
   for (const page of raw.pages) {
     const { words, sha256 } = await snapshotWords(pdfPath, page.pdfPage, where)
     const occurrences = ledger(words)
+    const at = `${raw.doc} p${String(page.keyPage)}`
+    if (page.wordsSha256 !== sha256)
+      throw new Error(`${at}: the word snapshot is not the one the key was written against`)
+    if (page.ledgerSha256 !== ledgerSha256(occurrences))
+      throw new Error(`${at}: the reader now segments this page differently; migrate the key explicitly`)
     evidence.set(page.keyPage, { words, occurrences, text: canon(words.map((w) => w.str).join(' ')), sha256 })
     pages.push(fromV3Page(page, occurrences))
   }
@@ -121,12 +136,15 @@ function checkLegacyProduct(p: KeyProduct, c: Check): void {
   if (!p.old.every((o) => money.includes(o))) c.problems.push(`${c.where}: ${p.anchor} old price not in money`)
 }
 
-// Rules every key shares: anchors, tables, required and slug text.
-function checkPage(page: KeyPage, c: Check, strict: boolean): void {
-  const once = (s: string, what: string): void => {
+// Rules every key shares: anchors, tables, required and slug text. `fromRender`: cells read from the image, not the text layer.
+function checkPage(page: KeyPage, c: Check, strict: boolean, fromRender: ReadonlySet<string> = new Set()): void {
+  // Anchors are unique in canon form (NFKC, case and spacing ignored), unless an entry names which occurrence it means.
+  const once = (s: string, what: string, nth?: number): void => {
     const n = occurrences(c.text, s)
     if (n === 0) c.problems.push(`${c.where}: ${what} "${s}" not in the text layer`)
-    else if (n > 1 && strict) c.problems.push(`${c.where}: ${what} "${s}" occurs ${n} times; anchors are unique`)
+    else if (nth !== undefined && n < nth) c.problems.push(`${c.where}: ${what} "${s}" occurs ${n} times, not ${nth}`)
+    else if (nth === undefined && n > 1 && strict)
+      c.problems.push(`${c.where}: ${what} "${s}" occurs ${n} times; anchors are unique`)
   }
   const mustExist = (s: string, what: string): void => {
     if (occurrences(c.text, s) === 0) c.problems.push(`${c.where}: ${what} "${s}" not in the text layer`)
@@ -141,7 +159,7 @@ function checkPage(page: KeyPage, c: Check, strict: boolean): void {
     .flat()
     .filter((e) => e.kind === 'text')
     .forEach((e) => {
-      once(e.anchor, 'reading-order anchor')
+      once(e.anchor, 'reading-order anchor', e.occurrence)
     })
   page.headings.forEach((h) => {
     once(h.anchor, 'heading anchor')
@@ -154,7 +172,7 @@ function checkPage(page: KeyPage, c: Check, strict: boolean): void {
         mustExist(w, 'table header word')
       })
     t.rows.flat().forEach((cell) => {
-      if (cell) mustExist(cell, 'table cell')
+      if (cell && !fromRender.has(cell)) mustExist(cell, 'table cell')
     })
     if (strict && t.rows.some((r) => r.length !== t.header.length))
       c.problems.push(`${c.where}: new keys write every table row as wide as its header`)
@@ -207,10 +225,15 @@ export async function validateKey(key: KeyDoc, set: KeySet = 'tuning'): Promise<
     const rawPage = key.v3?.raw.pages.find((p) => p.keyPage === page.keyPage)
     if (evidence && rawPage) {
       texts.set(page.keyPage, evidence.text)
-      if (rawPage.wordsSha256 !== evidence.sha256)
-        problems.push(`${where}: the word snapshot is not the one the key was written against`)
-      problems.push(...validateV3Page(rawPage, evidence.occurrences, evidence.text).map((p) => `${key.doc} ${p}`))
-      checkPage(page, { where, text: evidence.text, amounts: new Set(), problems }, true)
+      problems.push(
+        ...validateV3Page(rawPage, evidence.occurrences, evidence.words, evidence.text).map((p) => `${key.doc} ${p}`),
+      )
+      checkPage(
+        page,
+        { where, text: evidence.text, amounts: new Set(), problems },
+        true,
+        renderedCells(rawPage, evidence.occurrences),
+      )
       continue
     }
     const words = await pageWords(key.pdfPath, page.pdfPage)

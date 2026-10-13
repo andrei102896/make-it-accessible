@@ -52,7 +52,9 @@ packages/pipeline/src/        product code, reused by the MVP
 packages/eval/src/            evaluation harness, never shipped
   key-schema.ts               key schema as the scorer reads it (stage-0 files parse into it directly)
   key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds
-  key-v3.ts                   version-3 claims into per-product prices; claim, product and anchor validation
+  key-v3.ts                   version-3 claims and manual amounts into per-product prices; ledger hash
+  key-v3-check.ts             version-3 validation: claims, corrections, manual amounts, split/merged, cells, products
+  key-v3-fixture.ts           test fixture: a tuning page written as a version-3 key
   ledger.ts                   money occurrences of a page from its words (glyph runs, chained cents, unreadable)
   snapshot.ts                 frozen word snapshots of keyed pages, drift check
   keys.ts                     key loader (sealed keys from validation/sealed/) and validation against the text layer
@@ -104,6 +106,8 @@ out/                          run outputs (local only)
 - **A price's flag is its own.** One flagged price made every error in its product "flagged", including an unflagged image price beside it (`rules.test.ts`).
 - **The ledger never ends a price on "£" or "$", and two whole prices never join.** "4.59 £ 5.99" gave "4.59 £" and a currency-less 5.99; "£1 £2" set close vanished (`ledger.test.ts`).
 - **Text is never read as prices where price elements exist.** A parent with no price of its own passed on its nested add-on's amount (`rules.test.ts`).
+- **The ledger is frozen per key page (`ledgerSha256`).** Rebuilding it with a changed reader could give the same ids other meanings; validation fails and the key is migrated on purpose (`key-v3.test.ts`).
+- **A page price is checked with its currency and offer words in one block.** Checking the amount alone let "Everything £1" vanish while another £1 on the page counted for it (`rules.test.ts`).
 - **An unmapped glyph ("£�.99") reads as nothing, never as an amount.** It read as 99p; such occurrences carry their value from the render (`money.test.ts`, `ledger.test.ts`).
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 

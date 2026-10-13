@@ -19,7 +19,8 @@ Phase A, measurement first:
   - [x] Eval reader fixes (decimal pence, unmapped glyphs, NFKC, thousands with spaces, suffix currency) and the occurrence ledger, checked against renders of Lidl GB p7, Lidl CH p16, Lidl NL p15 (2026-10-13)
   - [x] Key v3 (writers claim occurrences), scorer conditions/roles/claims and add-ons, strict tables, C1 in-block order, C3 coverage reported (calibrated on stage-0 runs), C4 lexical rename, word snapshots, spares before the reserve (2026-10-13)
   - [ ] Key policy approved by Andrei (`validation/KEY_POLICY.md`)
-  - [ ] Rules commit by Andrei → page draw with its SHA → `validation/selection.json` frozen
+  - [x] Rules commit by Andrei (`17fbff2`) → page draw with its SHA → `validation/selection.json` frozen (2026-10-13)
+  - [x] Second policy review fixes: page prices scored, manual amounts (missed/split/image) and merged claims, one correction path for every destination, value consistency, frozen ledger and PDF hash, nth anchors, visual reconciliation (2026-10-13)
   - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
   - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
 - [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)

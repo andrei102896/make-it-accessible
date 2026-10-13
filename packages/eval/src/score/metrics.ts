@@ -1,5 +1,6 @@
 import { norm } from '@make-it-accessible/pipeline/text/normalize'
-import type { KeyPage, KeyProduct } from '../keys.ts'
+import type { KeyPage, KeyPrice, KeyProduct } from '../keys.ts'
+import { holds } from './conditions.ts'
 import { moneyInText, readMoney, type Currency } from './money.ts'
 import { checkContainer } from './prices.ts'
 import { loose } from './text.ts'
@@ -33,15 +34,21 @@ function longestOrdered(positions: readonly number[]): Set<number> {
 
 export function readingOrder(key: KeyPage, dom: DomPage): PageScore['c1'] {
   const leaves = dom.leaves.map((l) => loose(l.text))
-  const position = (anchor: string): { pos: number; leaf: number } | null => {
-    const needle = loose(anchor)
-    const leaf = leaves.findIndex((l) => l.includes(needle))
-    return leaf < 0 ? null : { pos: leaf * LEAF + (leaves[leaf]?.indexOf(needle) ?? 0), leaf }
-  }
+  // An entry naming its n-th occurrence ("Add bacon" under the second dish) takes the n-th match across blocks,
+  // counted like the validator counts it in the text layer.
+  const matches = (needle: string): { pos: number; leaf: number }[] =>
+    leaves.flatMap((l, leaf) => {
+      const found: { pos: number; leaf: number }[] = []
+      for (let at = l.indexOf(needle); at >= 0; at = l.indexOf(needle, at + 1))
+        found.push({ pos: leaf * LEAF + at, leaf })
+      return found
+    })
+  const position = (anchor: string, nth = 1): { pos: number; leaf: number } | null =>
+    matches(loose(anchor))[nth - 1] ?? null
   let best = { textOnly: 0, strict: 0, outOfOrder: 0, flaggedOutOfOrder: 0 }
   for (const order of key.readingOrder) {
     const ordered = (entries: typeof order): { ratio: number; stray: number[] } => {
-      const found = entries.flatMap((e) => position(e.anchor) ?? [])
+      const found = entries.flatMap((e) => position(e.anchor, e.occurrence) ?? [])
       const kept = longestOrdered(found.map((f) => f.pos))
       return {
         ratio: entries.length ? kept.size / entries.length : 1,
@@ -115,13 +122,28 @@ export function productPrices(key: KeyPage, dom: DomPage, currency: Currency): P
   }
   // A complete key makes any other priced product in the output an error, except a price that belongs to no product.
   if (key.strict) {
-    // A price that belongs to no product must reach the reader somewhere on the page, as text or as a price.
+    // A price that belongs to no product must reach the reader: amount, currency and offer words in one block, each
+    // block answering one page price. One read from the render or printed without a currency must be flagged.
     const keyed = key.products.flatMap((p) => p.prices?.map((k) => k.cents) ?? [])
-    const published = moneyInText(dom.text).map((m) => m.cents)
-    const missing = key.textPrices.filter((k, i) => {
-      const needed = key.textPrices.slice(0, i + 1).filter((t) => t.cents === k.cents).length
-      const free = published.filter((c) => c === k.cents).length - keyed.filter((c) => c === k.cents).length
-      return free < needed
+    const fits = (k: KeyPrice, text: string): boolean =>
+      moneyInText(text).some((m) => m.cents === k.cents && (k.currency === null || m.currency === k.currency)) &&
+      k.conditions.every((c) => holds(c, text))
+    const mustFlag = (k: KeyPrice): boolean => k.seen === true || k.currency === null
+    const blocks = [
+      ...dom.leaves.map((l) => ({ text: l.text, flagged: l.review })),
+      ...dom.flaggedAlts.map((text) => ({ text, flagged: true })),
+    ]
+    const used = new Set<number>()
+    const missing = key.textPrices.filter((k) => {
+      const at = blocks.findIndex((b, i) => !used.has(i) && fits(k, b.text) && (b.flagged || !mustFlag(k)))
+      // Without offer words a product's block with the same amount could answer it, so the product's own count is kept.
+      const free = k.conditions.length
+        ? at
+        : blocks.filter((b, i) => !used.has(i) && fits(k, b.text)).length > keyed.filter((c) => c === k.cents).length
+          ? at
+          : -1
+      if (free >= 0) used.add(free)
+      return free < 0
     })
     missing.forEach((k) => {
       errorProducts++

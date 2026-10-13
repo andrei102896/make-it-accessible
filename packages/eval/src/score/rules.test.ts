@@ -244,3 +244,59 @@ test('strict tables keep empty columns, read headers above the body, and give ea
   )
   assert.equal(specific.c5.rowsOk, 2)
 })
+
+test('a page price needs its amount, currency and offer words in one block', async () => {
+  const offer = { textPrices: [{ ...eur(100, 'current'), conditions: ['Alles für'] }] }
+  assert.deepEqual((await score(offer, '<p>Alles für 1,00 €</p>')).c2.errors, [])
+  assert.match((await score(offer, '<p>Alles</p><p>1,00 €</p>')).c2.errors.join(' '), /page price 1,00 missing/)
+  assert.match((await score(offer, '<p>Alles für 1,00 CHF</p>')).c2.errors.join(' '), /page price 1,00 missing/)
+})
+
+test('a reading-order entry may name the n-th block holding a repeated anchor', async () => {
+  const order = {
+    readingOrder: [
+      [
+        { anchor: 'Rösti', kind: 'text' },
+        { anchor: 'Add bacon', kind: 'text', occurrence: 1 },
+        { anchor: 'Burger', kind: 'text' },
+        { anchor: 'Add bacon', kind: 'text', occurrence: 2 },
+      ],
+    ],
+  }
+  assert.equal((await score(order, '<p>Rösti</p><p>Add bacon</p><p>Burger</p><p>Add bacon</p>')).c1.textOnly, 1)
+  // The only bacon left lands after Burger: the first add-on is out of order and the second is missing.
+  assert.equal((await score(order, '<p>Rösti</p><p>Burger</p><p>Add bacon</p>')).c1.textOnly, 0.5)
+})
+
+test('identical page prices take one block each; one without a currency or read from the render is flagged', async () => {
+  const two = {
+    textPrices: [
+      { ...eur(100, 'current'), conditions: ['Alles für'] },
+      { ...eur(100, 'current'), conditions: ['Kinder essen'] },
+    ],
+  }
+  assert.deepEqual((await score(two, '<p>Alles für 1,00 €</p><p>Kinder essen 1,00 €</p>')).c2.errors, [])
+  const bare = { textPrices: [{ ...eur(100, 'current'), currency: null, conditions: ['Alles'] }] }
+  assert.match((await score(bare, '<p>Alles 1,00 CHF</p>')).c2.errors.join(' '), /page price 1,00 missing/)
+  assert.deepEqual((await score(bare, '<p data-review>Alles 1,00 CHF</p>')).c2.errors, [])
+  const seen = { textPrices: [{ ...eur(100, 'current'), seen: true, conditions: ['Alles'] }] }
+  assert.match((await score(seen, '<p>Alles 1,00 €</p>')).c2.errors.join(' '), /page price 1,00 missing/)
+  assert.deepEqual(
+    (await score(seen, '<figure data-review><img src="x.jpg" alt="Alles 1,00 €"></figure>')).c2.errors,
+    [],
+  )
+})
+
+test('repeated anchors inside one block are counted like the validator counts them', async () => {
+  const order = {
+    readingOrder: [
+      [
+        { anchor: 'Rösti', kind: 'text' },
+        { anchor: 'add bacon', kind: 'text', occurrence: 1 },
+        { anchor: 'Burger', kind: 'text' },
+        { anchor: 'add bacon', kind: 'text', occurrence: 2 },
+      ],
+    ],
+  }
+  assert.equal((await score(order, '<p>Rösti, add bacon. Burger, add bacon.</p>')).c1.textOnly, 1)
+})

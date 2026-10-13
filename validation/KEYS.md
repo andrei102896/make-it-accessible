@@ -42,6 +42,7 @@ Manifest changes after the freeze:
 | Date | File | Change | Reason | New SHA-256 | Effect |
 |---|---|---|---|---|---|
 | 2026-10-13 | `layout-labels.json` | added 27_lidl_nl_actie_week31_2026.pdf: 21 × single (every page viewed as a render) | document added to the corpus after the first freeze; no existing label changed | `4120b2c0570035d4d2d77ba41fa110ff0be7444f66fdf1852ce5d3068c48ba7b` | none |
+| 2026-10-13 | `selection.json` | page draw for A4: 53 pages, up to 3 spares per document and up to 3 reserve pages per test document (short documents run out); seed = SHA of the rules commit `17fbff2fa0c26db64fc6543cbad1b96d1f414316` | A4, drawn once with the committed rules before any page was keyed | `e100142cbf54a98ad16fc80ae17f5602ba5ba305af419deebec1133db426604d` | none |
 | 2026-10-13 | `split.json` | added the 22 corpus documents 06–27: 12 test, 10 dev, by publisher group (`docs/HARDENING.md`, A4 and A5 as amended); the five stage-0 documents stay tuning | A5, decided before any A4 page is drawn or keyed | `bf932831a5e7f0fe158c916ca509d8a9d2a91291a072172ffc0a171961193773` | none (no dev or test key exists yet) |
 
 Conventions for keys written from 2026-10-13 (schema v2, superseded the same day by version 3 below before any key used it; roles `any`, `qualifier` and `optional` no longer parse):
@@ -54,7 +55,8 @@ Conventions for keys written from 2026-10-13 (schema v2, superseded the same day
   - every money occurrence of the eval ledger is claimed once (price, cell, page text, not a price);
   - unreadable occurrences carry their value from the render;
   - misreads stay open until Andrei confirms them;
-  - anchors of the reading order, headings and sections occur once;
+  - anchors of the reading order, headings and sections occur once in canon form, unless a reading-order entry names the n-th occurrence it means;
   - open `disputes` block the freeze.
-- Each version-3 page records the SHA-256 of its word snapshot (`validation/words/`, or `validation/sealed/words/` for the test half; not in git). Occurrence ids refer to that snapshot, so it is frozen with the key.
+- Each version-3 page records the SHA-256 of its word snapshot (`validation/words/`, or `validation/sealed/words/` for the test half; not in git) and of the ledger built from it; the key records the PDF's SHA-256. Occurrence ids mean what they meant when the key was written: a change in segmentation fails validation and needs an explicit key migration.
+- Amounts the ledger does not give are `manual` entries (`missed`, `split`, `image`), each confirmed by Andrei before the freeze.
 - Sealed test keys live in `validation/sealed/` (not in git); this file records their SHA-256 at the freeze.

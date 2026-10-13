@@ -7,7 +7,7 @@ Rules every key writer follows, decided once so two writers do not settle the sa
 - **One claim per occurrence.** The writer assigns every occurrence exactly once in `occurrences`:
   - `price`: belongs to product `product`, with `role` and `conditions`;
   - `cell`: a table cell (`table`, `row`, `col`, zero-based);
-  - `text`: a price that belongs to no product ("Everything £1", "£3.00 plus 60p for each item"); it must be published;
+  - `text`: a price that belongs to no product ("Everything £1", "£3.00 plus 60p for each item"); it must be published with its amount, currency and the offer words given as its `conditions`, flagged when it prints no currency or is read from the render;
   - `notPrice` with a `reason`: a date, a weight or dimension, an article or phone number.
 - **The rest of the page.** The writer also keys:
   - `readingOrder`, with alternatives;
@@ -21,10 +21,17 @@ Rules every key writer follows, decided once so two writers do not settle the sa
 - **Check before handing back.** The writer runs `pnpm keys:check <file> --pdf <file.pdf> --details` until it is clean. A key is never changed only to silence the validator: what the writer cannot settle goes to `disputes`.
 
 ## Values the ledger cannot give
+Every destination (a product price, a table cell, a page price) takes the same correction fields, so where an amount goes never decides how it is proven.
 - **Unreadable occurrence** (an unmapped glyph, "£�.99"): the claim carries `value` (`printed`, `cents`, `currency`) read from the render. It is scored as a price the output must flag, and Andrei checks it on the crop sheet.
 - **Misread occurrence** (the reader got a readable occurrence wrong): the claim carries `value` and `misread: "open"`. It blocks the freeze until Andrei confirms the value (`"confirmed"`).
-- **A price only in the image** (outlined, inside a picture), with no occurrence: it goes in the product's `seen` list, with its value. A price whose amount the text layer holds is never `seen`: claim its occurrence.
-- **Misreads** work the same way on page-text claims (`text`).
+- **Manual amounts** (`manual`, ids `m1`, `m2`, …) are claimed in `occurrences` like ledger occurrences. Each one blocks the freeze until Andrei sets `confirmed: true`. There are three kinds:
+  - `missed`: the text layer has the price, but the reader made no occurrence of it. Its `words` cite the snapshot words, which no occurrence may hold.
+  - `split`: the reader joined several prices into one occurrence. That occurrence is claimed `{ "kind": "split", "into": ["m1", "m2"] }`. The parts are distinct `split` entries, each named by this one split, and together they cite each word of the occurrence exactly once.
+  - `image`: the price is only in the image (outlined, inside a picture). It cites no words. A price whose amount the text layer holds is never `image`: claim its occurrence.
+- **Merged occurrence** (the reader cut one price in two): one part is claimed with the whole price as a confirmed misread `value`, and the other is claimed `{ "kind": "merged", "into": "<the first part's id>" }`. The parts, joined in word order, must read as that value.
+- **Every value reads as itself:** `printed` must read as `cents` and, when it prints one, as `currency` ("£1" is never 200).
+- **Visual reconciliation.** Covering every ledger entry does not prove every price is covered. The arbiter and Andrei look at the page render with every occurrence and manual amount outlined, and any printed price without an outline becomes a `missed` or `image` entry before the freeze.
+- **Frozen ledger.** Each page records `wordsSha256` and `ledgerSha256`, and the key records the PDF's `pdfSha256`. If the reader later segments the page differently, validation fails and the key is migrated explicitly; ids are never reinterpreted silently.
 
 ## Products
 - **One product is one offer:** a name with its own price. Variants sold at one price ("Paprika rot od. gelb"), or a pack and its contents, are one product.
@@ -45,7 +52,7 @@ Rules every key writer follows, decided once so two writers do not settle the sa
 - **previousUnit:** a previous price per unit ("1 kg: 9,99, statt 12,99" → 12,99 is `previousUnit` with conditions "statt" and "1 kg").
 - **discount:** a money-off amount ("-2€", "Save £1", "2 € billiger"), with the amount as it reads and the wording as a condition.
 - **deposit:** "+0,25 Pfand", with "Pfand" as a condition.
-- **unknown:** only when the page leaves the role open, with a `reason` on the claim. It is reported as "role unverified" next to the headline.
+- **unknown:** only when the page leaves the role open, with a `reason` on the claim (product prices and page prices alike). This is an accepted, documented uncertainty, not an open dispute: it does not block the freeze and is reported as "role unverified" next to the headline. A question the writer cannot settle at all goes to `disputes`, which does block the freeze.
 
 **`conditions`** are words printed with the price, checked against the text layer. They must appear in that price's own label in the output, not anywhere in the product's text, and not negated ("ohne Lidl Plus"). Only when the output has no price element at all are they looked for in the product's text, and that price counts as "role unverified".
 - **Multibuy:** "2 for £5" is the amount £5, role `current`, condition "2 for".
@@ -54,7 +61,10 @@ Rules every key writer follows, decided once so two writers do not settle the sa
 **`currency`** is what the occurrence prints. When the price itself prints none, the claim states the document currency only if the page states it ("Alle Preise in CHF", "Prices in £"). Otherwise it stays `null`, and the output must then flag it.
 
 ## Reading order, headings, printed pages
-- **Reading order.** One anchor per block (heading, product, paragraph, table). Anchors are unique on the page. On grids, list both row by row and column by column, as two alternative orders, whenever both are reasonable.
+- **Reading order.** One anchor per block (heading, product, paragraph, table).
+  - Anchors are unique on the page in canon form (Unicode NFKC, case and spacing ignored).
+  - A block whose text repeats ("Add bacon" under two dishes) names which occurrence it means: `{ "anchor": "Add bacon", "kind": "text", "occurrence": 2 }`.
+  - On grids, list both row by row and column by column, as two alternative orders, whenever both are reasonable.
 - **Heading levels** are relative: the page's main heading is 1.
 - **`sections`:**
   - one entry per printed page, in reading order;

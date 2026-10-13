@@ -24,6 +24,8 @@ export type DomPage = {
   rows: Row[]
   text: string
   alts: string[]
+  // Alt texts a person is asked to confirm (the picture or its block is flagged).
+  flaggedAlts: string[]
   unsupported: boolean
 }
 

@@ -77,6 +77,9 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
         rows,
         text: section.innerText,
         alts: [...section.querySelectorAll('img')].map((img) => img.getAttribute('alt') ?? ''),
+        flaggedAlts: [...section.querySelectorAll('img')]
+          .filter((img) => img.closest('[data-review]') !== null)
+          .map((img) => img.getAttribute('alt') ?? ''),
         unsupported: section.hasAttribute('data-unsupported'),
       }
     })
@@ -97,6 +100,7 @@ export function pageDom(sections: readonly DomSection[], keyPage: number): DomPa
     rows: own.flatMap((s, i) => s.rows.map((r) => ({ ...r, table: i * TABLES_PER_SECTION + r.table }))),
     text: own.map((s) => s.text).join('\n'),
     alts: own.flatMap((s) => s.alts),
+    flaggedAlts: own.flatMap((s) => s.flaggedAlts),
     unsupported: own.length > 0 && own.every((s) => s.unsupported),
   }
 }
