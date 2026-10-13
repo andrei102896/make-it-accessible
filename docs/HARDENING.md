@@ -175,6 +175,10 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
 - **One print, one image amount.** Two image entries of the same amount with overlapping boxes are rejected; different amounts may overlap.
 - **Writers can cite words:** `pnpm ledger --details` lists every snapshot word with its index, line and box.
 
+**Fifth review of the key policy (2026-10-13, Andrei; plan checked by two critics).** Fixed before any key exists:
+- **Cited words follow the page.** `offerWords` was read in the order given, so "60p plus £3.00 for each item" [2,1,0,3,4,5] and "£3.00 60p" [0,2] were accepted. Now each text block is one unbroken run in order, blocks follow stream order, and every amount on a cited line is cited whole, however it is claimed. Leaving out a line's edge or another block order needs an `offerNote` Andrei confirms; a gap inside a block is never allowed.
+- **Running text reads amounts as `readMoney` does.** "CHF 1’200", "£7 500" and "-60p" read as one amount in offers and text, a space group never starts inside a number or runs into a unit ("4711 199,00 €", "£1 500g"), currency codes count after the amount, and a table cell with one amount reads as a price ("2 299,00", "45.–"). Known ceiling: "2 for £5 100 points" reads £5 100.
+
 **Key writing.**
 - **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.
 - **Isolated writers.** Each page gets its own folder outside the repo, holding:

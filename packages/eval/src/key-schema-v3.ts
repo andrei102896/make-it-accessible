@@ -45,6 +45,11 @@ const Claim = z.discriminatedUnion('kind', [
       role: Role.default('current'),
       offer: Condition,
       offerWords: z.array(z.number().int().nonnegative()).default([]),
+      // Why the cited words leave out the edge of a line, or leave stream order between blocks; Andrei confirms it.
+      offerNote: z
+        .object({ text: z.string().min(1), confirmed: z.boolean().default(false) })
+        .strict()
+        .optional(),
       currency: Currency.nullable().optional(),
       reason: z.string().min(1).optional(),
       ...Corrected,

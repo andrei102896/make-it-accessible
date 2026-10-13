@@ -80,3 +80,14 @@ test('a flagged page price is not taken by a product shown unflagged; the longes
   const specific = { textPrices: [offer(100, '1,00 €'), offer(100, 'Everything 1,00 €')] }
   assert.deepEqual((await score(specific, '<p>Everything 1,00 €</p><p>Delivery 1,00 €</p>')).c2.errors, [])
 })
+
+test('an offer with Swiss or space thousands or a pence minus scores as printed', async () => {
+  const chf = { textPrices: [offer(120000, 'Jahresabo CHF 1’200', { currency: 'CHF', printed: 'CHF 1’200' })] }
+  assert.deepEqual((await score(chf, '<p>Jahresabo CHF 1’200.00</p>')).c2.errors, [])
+  assert.match((await score(chf, '<p>Jahresabo CHF 1.00</p>')).c2.errors.join(' '), /missing/)
+  const gbp = { textPrices: [offer(750000, 'Deposit £7 500', { currency: 'GBP', printed: '£7 500' })] }
+  assert.deepEqual((await score(gbp, '<p>Deposit £7,500</p>')).c2.errors, [])
+  const pence = { textPrices: [offer(-60, 'Refill -60p', { currency: 'GBP', printed: '-60p', role: 'discount' })] }
+  assert.deepEqual((await score(pence, '<p>Refill -60p</p>')).c2.errors, [])
+  assert.match((await score(pence, '<p>Refill 60p</p>')).c2.errors.join(' '), /missing/)
+})

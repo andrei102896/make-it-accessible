@@ -59,23 +59,28 @@ export function readMoney(text: string): Money | null {
 
 // A key string that is nothing but an amount ("13.45", "-,65", "£7500") may be satisfied by the amount alone.
 export const isAmount = (s: string): boolean =>
-  /^[-\u2212]?(?:€|£|\$|CHF|Fr\.)?\s?[\d.,'\s]*\d[\d.,'\s]*(?:,-|\.–)?\s?(?:€|£|\$|p|CHF|EUR|GBP)?$|^-,\d{2}$/.test(
+  /^[-\u2212]?(?:€|£|\$|CHF|Fr\.)?\s?[\d.,'\u2019\s]*\d[\d.,'\u2019\s]*(?:,-|\.–)?\s?(?:€|£|\$|p|CHF|EUR|GBP)?$|^-,\d{2}$/.test(
     s.trim(),
   )
 
 // The text as the money reader sees it: NFKC, no-break spaces as spaces.
 export const moneyText = (text: string): string => text.normalize('NFKC').replace(/[\u00a0\u202f]/g, ' ')
 
-// Only € and CHF are printed after the amount; "59 £" is the end of one price and the start of the next.
-const IN_TEXT =
-  /(?:€|£|\$|CHF|Fr\.|EUR|GBP)\s?[-\u2212]?\d[\d.,]*(?:[.,][-–])?|[-\u2212]?\d[\d.,]*(?:[.,][-–])?\s?(?:€|CHF|EUR)|\d{1,3}(?:[.,]\d)?p\b|[-\u2212]?\d+[.,]\d{2}(?!\d)|-,\d{2}/g
+// A currency-marked amount reads as readMoney does ("CHF 1’200", "£7 500"); a space group never starts inside a number
+// or runs into a unit ("4711 199,00 €", "£1 500g"). Only codes, € and CHF follow an amount ("59 £" ends one price).
+const DIGITS = String.raw`(?:\d{1,3}(?:\s\d{3})+(?:[.,]\d{1,2})?(?![\d.,]|\p{L})|\d[\d.,'\u2019]*)(?:[.,][-–])?`
+// ponytail: "2 for £5 100 points" still reads £5 100; nothing in the text tells the two apart.
+const IN_TEXT = new RegExp(
+  String.raw`(?:€|£|\$|CHF|Fr\.|EUR|GBP|USD)\s?[-\u2212]?${DIGITS}|(?<![\d.,'\u2019])[-\u2212]?${DIGITS}\s?(?:€|CHF|EUR|GBP|USD|Fr\.)|\d{1,3}(?:[.,]\d)?p\b|[-\u2212]?\d+[.,]\d{2}(?!\d)|-,\d{2}`,
+  'gu',
+)
 
 // Every price written in running text, with where it stands in `moneyText(text)`.
 export function moneySpans(text: string): { at: number; end: number; money: Money }[] {
   const t = moneyText(text)
   return [...t.matchAll(IN_TEXT)].flatMap((m) => {
-    // "-£1.40": a minus standing alone before the currency symbol belongs to the amount.
-    const at = /(?:^|\s)[-\u2212]$/.test(t.slice(0, m.index)) && /^\D/.test(m[0]) ? m.index - 1 : m.index
+    // "-£1.40", "-60p": a minus standing alone right before the amount belongs to it.
+    const at = /(?:^|\s)[-\u2212]$/.test(t.slice(0, m.index)) ? m.index - 1 : m.index
     const money = readMoney(t.slice(at, m.index + m[0].length))
     return money ? [{ at, end: m.index + m[0].length, money }] : []
   })

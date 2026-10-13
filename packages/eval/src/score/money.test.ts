@@ -2,6 +2,20 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { isAmount, moneyInText, readMoney } from './money.ts'
 
+// Running text reads every currency-marked readMoney case the same way, offers included.
+const MARKED = [
+  'CHF 1’200',
+  '£7 500',
+  '-60p',
+  '1 299,00 €',
+  '€ 1 299,00',
+  "12'345 CHF",
+  'USD 5.00',
+  '5.00 GBP',
+  '45.– Fr.',
+  '-€1.40',
+]
+
 test('readMoney reads rendered and printed prices', () => {
   const cases: [string, number, string | null][] = [
     ['2,99\u00a0€', 299, 'EUR'],
@@ -69,4 +83,23 @@ test('moneyInText finds prices in running text and leaves other numbers alone', 
 test('isAmount accepts bare amounts only', () => {
   for (const s of ['13.45', '-,65', '£7500', '2,99 €', '99p', '€ 222,-']) assert.ok(isAmount(s), s)
   for (const s of ['2 € billiger', 'per Kilo', 'ab 18 Stück à -,55', 'UVP* 79,99']) assert.ok(!isAmount(s), s)
+})
+
+test('running text reads a currency-marked amount as readMoney does, without reaching into numbers or units', () => {
+  for (const t of MARKED) assert.deepEqual(moneyInText(t), [readMoney(t)], t)
+  const cases: [string, number[]][] = [
+    ['Art.-Nr. 4711 199,00 €', [19900]],
+    ['Modell 2024 499 €', [49900]],
+    ['Save £1 500g', [100]],
+    ['£10 250g pack', [1000]],
+    ['Pizza - £5', [500]],
+    ['pack - 60p', [60]],
+  ]
+  for (const [t, cents] of cases)
+    assert.deepEqual(
+      moneyInText(t).map((m) => m.cents),
+      cents,
+      t,
+    )
+  assert.ok(isAmount('CHF 1’200'))
 })

@@ -2,9 +2,14 @@ import type { ClaimV3, KeyPageV3 } from './key-schema-v3.ts'
 import { checkPrinted } from './key-v3-printed.ts'
 import { count, pricedCell, sources, valueOf, type Amount, type Source } from './key-v3.ts'
 import type { Occurrence } from './ledger.ts'
-import { moneyInText, readMoney } from './score/money.ts'
+import { moneyInText, readMoney, type Money } from './score/money.ts'
 import type { Word } from './words.ts'
 
+// A cell holding one amount reads as a price does ("2 299,00", "45.–"); a cell with several reads as running text.
+const cellMoney = (cell: string): Money[] => {
+  const one = readMoney(cell)
+  return one ? [one] : moneyInText(cell)
+}
 const cellKey = (t: number, r: number, c: number): string => `${String(t)}.${String(r)}.${String(c)}`
 type Valued = Extract<ClaimV3, { kind: 'price' | 'cell' | 'text' }>
 
@@ -159,7 +164,8 @@ function checkTables(page: KeyPageV3, all: Map<string, Source>, where: string): 
           if (claimed.length) problems.push(`${where}: cell ${key} is not a written cell but is claimed`)
           return
         }
-        const amounts = moneyInText(cell).map((m) => m.cents)
+        const read = cellMoney(cell)
+        const amounts = read.map((m) => m.cents)
         // A price cell claims each printed amount once; a spec value may be claimed as a cell or as not a price.
         if (pricedCell(page, ti, ci, cell) ? claimed.length !== amounts.length : claimed.length > amounts.length)
           problems.push(
@@ -167,7 +173,7 @@ function checkTables(page: KeyPageV3, all: Map<string, Source>, where: string): 
           )
         for (const { s, claim } of claimed) {
           const v = valueOf(claim, s)
-          const printed = moneyInText(cell).find((m) => m.cents === v?.cents)?.currency ?? null
+          const printed = read.find((m) => m.cents === v?.cents)?.currency ?? null
           if (v && printed !== null && v.currency !== null && printed !== v.currency)
             problems.push(`${where}: ${s.id} is ${v.currency}, cell ${key} prints ${printed}`)
           if (v && !amounts.includes(v.cents))

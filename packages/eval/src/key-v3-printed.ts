@@ -5,7 +5,7 @@ import type { Word } from './words.ts'
 
 // Words printed within this many box heights of an amount are taken as printed with it (a badge beside a price).
 const NEAR = 3
-// A glyph without a Unicode mapping hides one to three letters ("O�er"); this letter stands for it in tokens.
+// A glyph without a Unicode mapping hides one to three letters ("O\ufffder"); this letter stands for it in tokens.
 const HIDDEN = 'ǂ'
 type Box = { x: number; y: number; w: number; h: number }
 type Valued = Extract<ClaimV3, { kind: 'price' | 'cell' | 'text' }>
@@ -49,6 +49,17 @@ function printedNear(phrase: string, box: Box | undefined, words: readonly Word[
   )
 }
 
+// Which amount owns each word: manual amounts first (a split occurrence's words belong to its parts), merged parts
+// to the occurrence they merge into.
+function owners(page: KeyPageV3, all: Map<string, Source>): Map<number, string> {
+  const owner = new Map<number, string>()
+  for (const s of [...all.values()].sort((a, b) => Number(!a.manual) - Number(!b.manual))) {
+    const claim = page.occurrences[s.id]
+    for (const w of ownWords(s)) if (!owner.has(w)) owner.set(w, claim?.kind === 'merged' ? claim.into : s.id)
+  }
+  return owner
+}
+
 // The cited words as printed, each claimed amount among them standing once as its claimed value.
 function citedText(
   cited: readonly number[],
@@ -56,12 +67,7 @@ function citedText(
   all: Map<string, Source>,
   words: readonly Word[],
 ): string {
-  const owner = new Map<number, string>()
-  // Manual amounts own their words first: a split occurrence's words belong to its parts.
-  for (const s of [...all.values()].sort((a, b) => Number(!a.manual) - Number(!b.manual))) {
-    const claim = page.occurrences[s.id]
-    for (const w of ownWords(s)) if (!owner.has(w)) owner.set(w, claim?.kind === 'merged' ? claim.into : s.id)
-  }
+  const owner = owners(page, all)
   const parts: { text: string; word?: Word }[] = []
   const shown = new Set<string>()
   for (const i of cited) {
@@ -76,7 +82,7 @@ function citedText(
       shown.add(id)
       continue
     }
-    const text = w.str.replaceAll('�', HIDDEN)
+    const text = w.str.replaceAll('\ufffd', HIDDEN)
     const prev = parts.at(-1)
     // A word hyphenated at the end of a line goes on at the start of the next.
     if (prev?.word && prev.word.line !== w.line && prev.text.endsWith('-'))
@@ -101,6 +107,61 @@ const alike = (printed: Token, written: Token | undefined): boolean =>
           .join('\\p{L}{1,3}')}$`,
         'u',
       ).test(written)
+
+// Poppler's text block of a line id (flow.block.line).
+const blockOf = (line: string): string => line.split('.').slice(0, 2).join('.')
+
+// Cited words follow the page: in each text block one unbroken run, blocks in stream order. Leaving out the edge of a
+// line, or another block order, needs a note Andrei confirms; any amount on a cited line, however claimed, is cited whole.
+function citation(
+  cited: readonly number[],
+  words: readonly Word[],
+  page: KeyPageV3,
+  all: Map<string, Source>,
+): { problems: string[]; needsNote: boolean } {
+  const span = new Map<string, [number, number]>()
+  words.forEach((w, i) => {
+    const [lo, hi] = span.get(w.line) ?? [i, i]
+    span.set(w.line, [Math.min(lo, i), Math.max(hi, i)])
+  })
+  const runs: { block: string; at: number[] }[] = []
+  for (const i of cited) {
+    const w = words[i]
+    if (!w) continue
+    const last = runs.at(-1)
+    if (last?.block === blockOf(w.line)) last.at.push(i)
+    else runs.push({ block: blockOf(w.line), at: [i] })
+  }
+  const problems: string[] = []
+  const blocks = runs.map((r) => r.block)
+  if (new Set(blocks).size !== blocks.length) problems.push('cites a text block in pieces')
+  if (runs.some((r) => r.at.some((i, k) => k > 0 && i !== (r.at[k - 1] ?? NaN) + 1)))
+    problems.push('skips or reorders words inside a text block')
+  const firsts = runs.map((r) => r.at[0] ?? 0)
+  const reordered = firsts.some((f, k) => k > 0 && f < (firsts[k - 1] ?? 0))
+  const edge = runs.some((r) => {
+    const first = r.at[0] ?? 0
+    const last = r.at.at(-1) ?? 0
+    return span.get(words[first]?.line ?? '')?.[0] !== first || span.get(words[last]?.line ?? '')?.[1] !== last
+  })
+  const owner = owners(page, all)
+  const lines = new Set(cited.flatMap((i) => words[i]?.line ?? []))
+  const priced = new Set<string>()
+  words.forEach((w, i) => {
+    const id = owner.get(i)
+    if (id !== undefined && lines.has(w.line)) priced.add(id)
+  })
+  for (const id of priced) {
+    const s = all.get(id)
+    const merged = Object.entries(page.occurrences).flatMap(([part, c]) => {
+      const p = all.get(part)
+      return c.kind === 'merged' && c.into === id && p ? ownWords(p) : []
+    })
+    if (s && ![...ownWords(s), ...merged].every((i) => cited.includes(i)))
+      problems.push(`leaves out ${id}, an amount on a line it cites`)
+  }
+  return { problems, needsNote: reordered || edge }
+}
 
 function checkOffer(
   id: string,
@@ -129,17 +190,12 @@ function checkOffer(
   const [p, w] = [tokens(printed), tokens(offer)]
   if (p.length !== w.length || !p.every((t, i) => alike(t, w[i])))
     problems.push(`${at} does not read as its cited words "${printed}"`)
-  // Two page prices printed on one line are one offer, so neither can be keyed without the other's words.
-  const lines = new Set(ownWords(s).flatMap((i) => words[i]?.line ?? []))
-  for (const [other, c] of Object.entries(page.occurrences)) {
-    const o = all.get(other)
-    if (other === id || c.kind !== 'text' || !o) continue
-    if (
-      ownWords(o).some((i) => lines.has(words[i]?.line ?? '')) &&
-      !ownWords(o).every((i) => claim.offerWords.includes(i))
-    )
-      problems.push(`${at} leaves out ${other}, a page price on the same line`)
-  }
+  const order = citation(claim.offerWords, words, page, all)
+  order.problems.forEach((o) => problems.push(`${at} ${o}`))
+  if (order.needsNote && !claim.offerNote)
+    problems.push(`${at} leaves out the edge of a line or departs from stream order; say why in offerNote`)
+  else if (order.needsNote && !claim.offerNote?.confirmed)
+    problems.push(`${at}: offerNote "${claim.offerNote?.text ?? ''}" awaits Andrei's confirmation`)
   return problems
 }
 

@@ -23,6 +23,7 @@ Phase A, measurement first:
   - [x] Second policy review fixes: page prices scored, manual amounts (missed/split/image) and merged claims, one correction path for every destination, value consistency, frozen ledger and PDF hash, nth anchors, visual reconciliation (2026-10-13)
   - [x] Third policy review fixes: image amounts placed by box, no shared words between manual amounts, condition provenance, rendered table rows must be flagged, amounts counted one by one inside a block, `pnpm ledger` prints every hash (2026-10-13)
   - [x] Fourth policy review fixes: page prices keep their printed offer (cited words, scored word for word), render-read words judged at their place, one image entry per print, snapshot words in `pnpm ledger --details` (2026-10-13)
+  - [x] Fifth policy review fixes: cited offer words follow the page (one run per block, stream order, whole amounts, confirmed notes), running-text amounts read as `readMoney` (2026-10-13)
   - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
   - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
 - [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)
