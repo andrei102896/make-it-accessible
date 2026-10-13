@@ -1,9 +1,9 @@
-# Key policy (version-3 keys, draft for Andrei's approval, 2026-10-13)
+# Key policy (version-3 keys, approved by Andrei 2026-10-13)
 
 Rules every key writer follows, decided once so two writers do not settle the same question in two ways. File schema: `packages/eval/src/key-schema-v3.ts`; conventions: `validation/KEYS.md`. Examples are invented or come from dev documents only.
 
 ## What the writer gets and does
-- **The page.** A render (150 DPI, plus 300 DPI tiles), the frozen word snapshot and the **occurrence ledger** from `pnpm ledger <doc> <pdfPage> --details`. The ledger lists every printed amount the eval reader found in the text layer, each with an id (`o1`, `o2`, …), its words and the value read; `--details` also lists every snapshot word with its index, line and box, which manual amounts and offers cite. The staging folder adds a crop per occurrence. It also prints `pdfSha256` (copied to the document), `wordsSha256` and `ledgerSha256` (copied to the page); the writer never computes them.
+- **The page.** A render of the whole page and 300 DPI tiles with rulers in PDF points, the frozen word snapshot and the **occurrence ledger** from `pnpm ledger <doc> <pdfPage> --details`. The ledger lists every printed amount the eval reader found in the text layer, each with an id (`o1`, `o2`, …), its words and the value read; `--details` also lists every snapshot word with its index, line and box, which manual amounts and offers cite. The staging folder adds a crop per occurrence. It also prints `pdfSha256` (copied to the document), `wordsSha256` and `ledgerSha256` (copied to the page); the writer never computes them.
 - **One claim per occurrence.** The writer assigns every occurrence exactly once in `occurrences`:
   - `price`: belongs to product `product`, with `role` and `conditions`;
   - `cell`: a table cell (`table`, `row`, `col`, zero-based);

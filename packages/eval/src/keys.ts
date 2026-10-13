@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -75,7 +76,7 @@ export async function loadKeyFile(path: string, pdfOverride?: string): Promise<K
   if (!checked.success)
     throw path.startsWith(SEALED_DIR)
       ? new Error(`${path}: ${String(checked.error.issues.length)} schema problems`)
-      : checked.error
+      : new Error(`${path}:\n${z.prettifyError(checked.error)}`)
   const raw = checked.data
   const pdfPath = pdfOverride ?? join(DOCS_DIR, raw.pdf)
   // Every reader of a key (validation, runs, rescoring, aggregation) loads it here, so the evidence is checked here.

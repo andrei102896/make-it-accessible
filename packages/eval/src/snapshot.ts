@@ -13,7 +13,8 @@ type Where = { dir: string; doc: string }
 const wordsSha256 = (words: readonly Word[]): string => createHash('sha256').update(JSON.stringify(words)).digest('hex')
 
 // Named by document and page, so copies of the PDF under other names share one snapshot.
-const snapshotPath = (where: Where, page: number): string => join(where.dir, `${where.doc}-p${String(page)}.json`)
+export const snapshotPath = (where: Where, page: number): string =>
+  join(where.dir, `${where.doc}-p${String(page)}.json`)
 
 // The frozen words a key's occurrence ids refer to; written on first use, then read, so a Poppler upgrade cannot move them.
 export async function snapshotWords(

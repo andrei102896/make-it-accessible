@@ -28,6 +28,7 @@ pnpm adhoc <file.pdf> [--pages 1-5]     # any PDF without an answer key: validat
 pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
 pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
 pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
+pnpm keys:stage --set dev [--out <dir>] [--only <doc>-p<NN>]   # evidence folders for the blind key writers (default ../mia-keys)
 ```
 
 The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md) for URLs and hashes). Tests that need them are skipped when they are missing.
@@ -66,6 +67,9 @@ packages/eval/src/            evaluation harness, never shipped
   selection.ts                A4 page facts, eligibility, seeded draw and reserve (pure)
   select-pages.ts             CLI: the A4 page draw per document
   ledger-cli.ts               CLI: the occurrence ledger and snapshot words of one page (sealed pages print counts only)
+  stage.ts                    CLI: one folder per selected dev page: read-only evidence, a writer folder each, a record in validation/private/stage
+  stage-draw.ts               staged images from one 300 DPI render: tiles with point rulers, outlined overlays and crops, overview
+  stage-geometry.ts           where the staged images cut the page (pure)
   keys-check.ts               CLI: validate one key file; sealed keys print counts only
   manifest.ts                 split (tuning/dev/test) and layout-label manifests
   score/metrics.ts            C1, C3, C4 and C2 per page (pure)

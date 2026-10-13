@@ -181,13 +181,13 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
 
 **Key writing.**
 - **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.
-- **Isolated writers.** Each page gets its own folder outside the repo, holding:
-  - the PDF;
-  - renders at 150 DPI and 300 DPI tiles;
-  - the occurrence ledger and the snapshot's SHA-256 (`pnpm ledger <doc> <page> --details`), with a crop per occurrence;
-  - `pdftotext -layout` of that page;
-  - the schema and the policy.
-  The only repo commands a writer may run are `pnpm ledger` and `pnpm keys:check <file> --details`. Each transcript is audited against an allowlist (the folder plus those commands); any other path discards the key.
+- **Isolated writers.** `pnpm keys:stage --set dev` gives each page a folder outside the repo (`../mia-keys/dev/<doc>-p<NN>/`, plan checked by two critics):
+  - `evidence/`, read-only: the PDF (hash checked against the original), an overview and an overlay with every occurrence outlined and the trim box, 300 DPI tiles of at most 1092 px with rulers in PDF points (plain and outlined), a crop per occurrence, the ledger output, the snapshot words by Poppler line (`lines.txt`), a filled key skeleton, the key's JSON Schema, the policy and KEYS.md. No `pdftotext -layout`: it merges columns and suggests orders the validator rejects.
+  - `a/` and `b/`: one output folder per writer, each with `run.sh`, the only repo commands it may run (`./run.sh ledger`, `./run.sh check` on its own key). A writer works in its own folder and never reads the other's.
+  - The word snapshot is made read-only; `stage.json` (file hashes, evidence hashes, policy and schema hashes, commit) is copied to `validation/private/stage/`, out of the writers' reach, for the audit.
+  - Staging refuses uncommitted changes, so the recorded commit reproduces the evidence. An existing page folder is never overwritten; a failed run leaves only a `.partial` folder, which the next run rebuilds.
+  Each transcript is audited against an allowlist (its folder, the evidence, `run.sh`); any other path discards the key. The audit compares the key's hashes and the evidence with the record in the repo, not with the folder.
+- **Before the test half is staged:** a separate root the developer session never lists or reads, counts-only output, transcripts audited by a script, handbacks with a path and counts only, writers launched fresh (never forked).
 - **Double entry.** Two independent writers per page. A script compares the two keys occurrence by occurrence (claim kind, product, role, conditions loosely, value), then products by anchor, tables cell by cell and reading orders by text offsets.
 - **Arbiter.** It settles only differences it can prove from the 300 DPI crop. Anything uncertain goes to Andrei.
 - **No silencing.** Writers never change a key to silence the validator; what they cannot settle goes to `disputes`.
