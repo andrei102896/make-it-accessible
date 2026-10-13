@@ -6,7 +6,8 @@ You write the answer key for one page of a PDF: `{{doc}}`, PDF page {{pdfPage}}.
 - Read anything in `{{evidence}}` (the evidence, read-only) and in `{{own}}` (your folder).
 - Write and edit one file: `{{own}}/key.json`.
 - Run one command, exactly as written, with nothing added (no pipes, no redirects, no other commands): `{{own}}/run.sh`. It validates your key.
-- Anything else is refused, and an attempt to do anything else discards your key.
+- Read files with the Read tool; list them only with the Glob tool, with its path set to `{{evidence}}` or `{{own}}`. Never list or search the folder above them, and never use `ls`, `cat` or any other shell command.
+- Anything else is refused, and an attempt to do anything else, even one that is refused, discards your key.
 
 ## The page
 - Layout label: `{{layout}}` (single page, spread, cover spread or folded panels). If the page contradicts it, write a dispute.

@@ -91,3 +91,15 @@ test('an offer with Swiss or space thousands or a pence minus scores as printed'
   assert.deepEqual((await score(pence, '<p>Refill -60p</p>')).c2.errors, [])
   assert.match((await score(pence, '<p>Refill 60p</p>')).c2.errors.join(' '), /missing/)
 })
+
+test('a repeated heading is scored by its n-th occurrence in reading order', async () => {
+  const key = {
+    headings: [
+      { anchor: 'Optional Extras', level: 2 },
+      { anchor: 'Optional Extras', level: 3, occurrence: 2 },
+    ],
+  }
+  const body = (second: string): string => `<h3>Optional Extras</h3><p>a</p><${second}>Optional Extras</${second}>`
+  assert.equal((await score(key, body('h4'))).c5.headingsOk, 2)
+  assert.equal((await score(key, body('h3'))).c5.headingsOk, 1)
+})

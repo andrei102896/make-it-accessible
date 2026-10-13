@@ -74,7 +74,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
   - Anchors are unique on the page in canon form (Unicode NFKC, case and spacing ignored).
   - A block whose text repeats ("Add bacon" under two dishes) names which occurrence it means, counted in reading order: `{ "anchor": "Add bacon", "kind": "text", "occurrence": 2 }`.
   - On grids, list both row by row and column by column, as two alternative orders, whenever both are reasonable.
-- **Heading levels** are relative: the page's main heading is 1.
+- **Heading levels** are relative: the page's main heading is 1. A heading whose text repeats on the page ("Optional Extras" on each half of a price list) names its occurrence the same way, counted in reading order: `{ "anchor": "Optional Extras", "level": 2, "occurrence": 2 }`.
 - **`sections`:**
   - one entry per printed page, in reading order;
   - every key page appears, including unsupported ones;
@@ -89,6 +89,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
   - `{ "unchecked": "<reason>" }`: not scored (a picture-only cell); counted and reported;
   - `{ "same": "above" | "left" }`: a merged cell, printed once.
 - **Amounts.** A price cell (it prints a currency, or its column header does) claims each of its amounts once as `cell`. A spec value ("7.5 m", "2.2l") is claimed as `notPrice` (Andrei, 2026-10-13). A price-list row is a table row, not a product: its amounts are claimed `cell` and no product is keyed for it (Andrei, 2026-10-13). An unreadable or image-only cell keeps its text from the render, and the output row holding it must be flagged, as for any price read from the render.
+- **Words in a price cell** ("FOC", "POA", "Included", "T.B.D.") are the cell's text as printed; there is no amount to claim.
 - **Headers** are compared with the published header column by column; a full-width title or section row is not a column header.
 
 ## Unsupported pages

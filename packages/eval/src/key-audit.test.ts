@@ -71,4 +71,9 @@ test('the other writer, the repository, a piped command, a denial or an unfinish
   ])
     assert.match(problems, expected)
   assert.match(transcriptProblems([init], where).problems.join(), /no result event/)
+  const denied = { type: 'system', subtype: 'permission_denied', message: 'Permission to use Glob has been denied' }
+  assert.match(
+    transcriptProblems([init, denied, { ...result, permission_denials: [{}] }], where).problems.join(),
+    /1 denied/,
+  )
 })

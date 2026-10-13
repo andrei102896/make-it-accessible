@@ -134,7 +134,11 @@ function looseTable(table: Table, dom: DomPage, currency: Currency): Outcome {
 
 export function structureScore(key: KeyPage, dom: DomPage, currency: Currency): PageScore['c5'] {
   const matched = key.headings
-    .map((h) => ({ key: h.level, out: dom.headings.find((o) => loose(o.text).includes(loose(h.anchor)))?.level }))
+    // A repeated heading names its n-th occurrence, in reading order as in the output.
+    .map((h) => ({
+      key: h.level,
+      out: dom.headings.filter((o) => loose(o.text).includes(loose(h.anchor)))[(h.occurrence ?? 1) - 1]?.level,
+    }))
     .filter((m): m is { key: number; out: number } => m.out !== undefined)
   const keyMin = Math.min(...matched.map((m) => m.key))
   const outMin = Math.min(...matched.map((m) => m.out))

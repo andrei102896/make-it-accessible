@@ -36,9 +36,10 @@ const Event = z
   .object({
     type: z.string(),
     subtype: z.string().optional(),
-    message: z.object({ content: z.unknown() }).loose().optional(),
+    message: z.unknown().optional(),
   })
   .loose()
+const Message = z.object({ content: z.unknown() }).loose()
 const Init = z.object({
   cwd: z.string(),
   tools: z.array(z.string()),
@@ -111,7 +112,8 @@ export function transcriptProblems(lines: unknown[], where: Where): Omit<Audit, 
   const uses = new Map<string, z.infer<typeof ToolUse>>()
   const answered = new Set<string>()
   for (const e of events) {
-    const content = e.message?.content
+    // System events carry a string message; only assistant and user messages carry content blocks.
+    const content = Message.safeParse(e.message).data?.content
     if (!Array.isArray(content)) continue
     for (const raw of content) {
       const b = Block.parse(raw)

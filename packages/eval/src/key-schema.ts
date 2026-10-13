@@ -15,7 +15,14 @@ export const OrderEntry = z
     occurrence: z.number().int().positive().optional(),
   })
   .strict()
-export const Heading = z.object({ anchor: z.string().min(1), level: z.number().int().min(1).max(6) }).strict()
+// `occurrence`: the n-th time a repeated heading's text appears, counted in reading order, like reading-order entries.
+export const Heading = z
+  .object({
+    anchor: z.string().min(1),
+    level: z.number().int().min(1).max(6),
+    occurrence: z.number().int().positive().optional(),
+  })
+  .strict()
 export const PageText = z.union([
   z.string().min(1),
   z.object({ text: z.string().min(1), seen: z.literal(true) }).strict(),

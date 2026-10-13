@@ -166,7 +166,7 @@ function checkPage(page: KeyPage, c: Check, strict: boolean, fromRender: Readonl
       once(e.anchor, 'reading-order anchor', e.occurrence)
     })
   page.headings.forEach((h) => {
-    once(h.anchor, 'heading anchor')
+    once(h.anchor, 'heading anchor', h.occurrence)
   })
   // Header cells wrap over lines that the stream interleaves with other columns, so they are checked word by word.
   page.tables.forEach((t) => {
