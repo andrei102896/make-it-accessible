@@ -6,7 +6,13 @@ test(
   'manual amounts are confirmed, consistent and claimed; split parts are claimed as prices',
   { skip: !local && 'local only' },
   async () => {
-    const image = { source: 'image', printed: '£99', cents: 9900, currency: 'GBP' }
+    const image = {
+      source: 'image',
+      printed: '£99',
+      cents: 9900,
+      currency: 'GBP',
+      box: { x: 900, y: 900, w: 10, h: 10 },
+    }
     const withImage =
       (m: Record<string, unknown>) =>
       (_: Record<string, unknown>, page: Record<string, unknown>): void => {
@@ -99,7 +105,16 @@ test(
       (cell: string) =>
       (_: Record<string, unknown>, page: Record<string, unknown>): void => {
         page.tables = [{ header: ['Room', 'Price'], rows: [['Cosy Double', cell]] }]
-        page.manual = { m1: { source: 'image', printed: '£99', cents: 9900, currency: 'GBP', confirmed: true } }
+        page.manual = {
+          m1: {
+            source: 'image',
+            printed: '£99',
+            cents: 9900,
+            currency: 'GBP',
+            box: { x: 900, y: 900, w: 10, h: 10 },
+            confirmed: true,
+          },
+        }
         page.occurrences = { ...claims(page), m1: { kind: 'cell', table: 0, row: 0, col: 1 } }
       }
     assert.equal(await problemsOf(inCell('£99')), '')

@@ -72,16 +72,26 @@ type Table = KeyPage['tables'][number]
 type Outcome = { ok: number; silent: number; errors: string[]; headerErrors: string[] }
 
 // Version-3 keys: one output table answers each key table, its rows one to one, its headers column by column.
-function strictTable(table: Table, rows: readonly Row[], currency: Currency): Outcome {
+// rendered: key rows holding an amount read from the render; their output row must be flagged.
+function strictTable(table: Table, rows: readonly Row[], currency: Currency, rendered: ReadonlySet<number>): Outcome {
   const free = rows.filter((r) => !r.header)
   const out: Outcome = { ok: 0, silent: 0, errors: [], headerErrors: [] }
   // The most specific key rows choose first, so a row with unchecked cells cannot take another row's match.
   const specific = (r: readonly KeyCell[]): number => r.filter((c) => c !== null && c !== '').length
-  for (const cells of [...table.rows].sort((a, b) => specific(b) - specific(a))) {
-    const at = free.findIndex((r) => rowMatches(cells, true, r, currency))
-    if (at >= 0) {
+  const order = table.rows.map((cells, i) => ({ cells, i })).sort((a, b) => specific(b.cells) - specific(a.cells))
+  for (const { cells, i } of order) {
+    // A row read from the render prefers a flagged twin, any other row an unflagged one.
+    const matching = free.filter((r) => rowMatches(cells, true, r, currency))
+    const row = matching.find((r) => r.review === rendered.has(i)) ?? matching[0]
+    const at = row ? free.indexOf(row) : -1
+    if (row) {
       free.splice(at, 1)
-      out.ok++
+      if (rendered.has(i) && !row.review) {
+        out.silent++
+        out.errors.push(
+          `${cells.filter(Boolean).slice(0, 3).join(' | ')}: read from the render but not flagged (silent)`,
+        )
+      } else out.ok++
       continue
     }
     const flagged = closestFlagged(cells, rows, currency)
@@ -131,7 +141,14 @@ export function structureScore(key: KeyPage, dom: DomPage, currency: Currency): 
   const headingsOk = matched.filter((m) => m.key - keyMin === m.out - outMin).length
   const paired = key.strict ? pairTables(key.tables, dom, currency) : []
   const outcomes = key.tables.map((t, i) =>
-    key.strict ? strictTable(t, paired[i] ?? [], currency) : looseTable(t, dom, currency),
+    key.strict
+      ? strictTable(
+          t,
+          paired[i] ?? [],
+          currency,
+          new Set(key.renderedRows.filter(([ti]) => ti === i).map(([, r]) => r)),
+        )
+      : looseTable(t, dom, currency),
   )
   return {
     headingsOk,

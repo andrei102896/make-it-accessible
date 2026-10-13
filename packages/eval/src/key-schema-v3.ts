@@ -3,6 +3,12 @@ import { Cents, Currency, Dispute, Heading, OrderEntry, PageText, Role, Section 
 
 // What the page prints for a price, read from the render: for an unreadable, misread or manual amount.
 const Value = z.object({ printed: z.string().min(1), cents: Cents, currency: Currency.nullable() }).strict()
+// A condition read from the render (an offer printed only in the image) instead of the text layer; Andrei confirms it.
+const Condition = z.union([
+  z.string().min(1),
+  z.object({ text: z.string().min(1), seen: z.literal(true), confirmed: z.boolean().default(false) }).strict(),
+])
+const Box = z.object({ x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive() }).strict()
 // A value overriding a readable occurrence stays open until Andrei confirms it.
 const Misread = z.enum(['open', 'confirmed'])
 // Where a claimed amount goes; every destination takes the same value and misread fields.
@@ -13,7 +19,7 @@ const Claim = z.discriminatedUnion('kind', [
       kind: z.literal('price'),
       product: z.string().min(1),
       role: Role,
-      conditions: z.array(z.string().min(1)).default([]),
+      conditions: z.array(Condition).default([]),
       // The currency when the price prints none but the page states it; defaults to what the amount prints.
       currency: Currency.nullable().optional(),
       // Required with role `unknown`: why the page leaves the role open (an accepted, documented uncertainty).
@@ -35,7 +41,7 @@ const Claim = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('text'),
       role: Role.default('current'),
-      conditions: z.array(z.string().min(1)).default([]),
+      conditions: z.array(Condition).default([]),
       currency: Currency.nullable().optional(),
       reason: z.string().min(1).optional(),
       ...Corrected,
@@ -52,6 +58,8 @@ const Manual = z
   .object({
     source: z.enum(['missed', 'split', 'image']),
     words: z.array(z.number().int().nonnegative()).default([]),
+    // Where an image-only price sits, in the snapshot's coordinates (PDF points, top left), so it can be outlined.
+    box: Box.optional(),
     ...Value.shape,
     // Andrei confirms every manual amount before the freeze.
     confirmed: z.boolean().default(false),
@@ -115,3 +123,4 @@ export type KeyPageV3 = KeyDocV3['pages'][number]
 export type CellV3 = z.infer<typeof Cell>
 export type ClaimV3 = KeyPageV3['occurrences'][string]
 export type ManualV3 = z.infer<typeof Manual>
+export type ConditionV3 = z.infer<typeof Condition>

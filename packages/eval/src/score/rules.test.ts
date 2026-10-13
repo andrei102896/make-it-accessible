@@ -1,56 +1,6 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { test } from 'node:test'
-import { KeyDocSchema } from '../key-schema.ts'
-import type { KeyDoc } from '../keys.ts'
-import { scoreDocument } from './score.ts'
-import type { PageScore } from './types.ts'
-
-const price = (role: string, text: string, qualifier = '', flag = ''): string =>
-  `<span class="price" data-role="${role}"${flag}>${qualifier ? `<span class="qualifier">${qualifier}</span> ` : ''}${text}</span>`
-const product = (name: string, ...prices: string[]): string =>
-  `<li><p class="name">${name}</p><p>${prices.join(' ')}</p></li>`
-
-async function score(page: Record<string, unknown>, body: string): Promise<PageScore> {
-  const key: KeyDoc = {
-    ...KeyDocSchema.parse({
-      doc: 'rules',
-      pdf: 'none.pdf',
-      lang: 'de',
-      currency: 'EUR',
-      pages: [
-        {
-          pdfPage: 1,
-          keyPage: 1,
-          type: 'grid',
-          strict: true,
-          readingOrder: [[{ anchor: 'Top', kind: 'text' }]],
-          ...page,
-        },
-      ],
-    }),
-    pdfPath: '',
-  }
-  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>T</title></head><body><main><h1>T</h1><section aria-labelledby="a" data-page="1"><h2 id="a">Seite 1</h2><p>Top</p>${body}</section></main></body></html>`
-  const path = join(await mkdtemp(join(tmpdir(), 'mia-rules-')), 'index.html')
-  await writeFile(path, html)
-  const [result] = (await scoreDocument(path, key, [1])).pages
-  if (!result) throw new Error('no page score')
-  return result
-}
-const eur = (cents: number, role: string, conditions: string[] = []): Record<string, unknown> => ({
-  printed: (cents / 100).toFixed(2).replace('.', ','),
-  cents,
-  role,
-  currency: 'EUR',
-  conditions,
-})
-const list = (...items: string[]): string => `<ul class="products" role="list">${items.join('')}</ul>`
-const plus = {
-  products: [{ anchor: 'Kaffee', alt: null, prices: [eur(199, 'current', ['Lidl Plus']), eur(249, 'unknown')] }],
-}
+import { eur, list, price, product, score, plus } from './rules-fixture.ts'
 
 test('a card condition must sit on its own price, not negated, not on the other price', async () => {
   const right = await score(
@@ -138,16 +88,6 @@ test('an add-on may sit inside its parent; the parent still needs its own price'
   assert.match((await score(key, list(lost))).c2.errors.join(' '), /Grill: missing 49,99/)
 })
 
-test('a price that belongs to no product may be published as a product once per print', async () => {
-  const key = { textPrices: [eur(100, 'current')] }
-  assert.equal((await score(key, list(product('Alles', price('current', '1,00 €'))))).c2.errorProducts, 0)
-  const twice = await score(
-    key,
-    list(product('Alles', price('current', '1,00 €')), product('Nochmal', price('current', '1,00 €'))),
-  )
-  assert.equal(twice.c2.errorProducts, 1)
-})
-
 test('order inside one block counts, and a negated alt text does not name the product', async () => {
   const order = {
     readingOrder: [
@@ -163,15 +103,6 @@ test('order inside one block counts, and a negated alt text does not name the pr
     list(`<li><p class="name">Erbsen</p><p>${price('current', '0,99 €')}</p><img src="x.jpg" alt="${alt}"></li>`)
   assert.equal((await score(peas, pictured('Dose Erbsen'))).c4.ok, 1)
   assert.equal((await score(peas, pictured('Keine Erbsen abgebildet'))).c4.ok, 0)
-})
-
-test('a price that belongs to no product must be published; an invented unit price is extra on a complete key', async () => {
-  const key = { textPrices: [eur(100, 'current')] }
-  assert.match((await score(key, '<p>Alles 2,00 €</p>')).c2.errors.join(' '), /page price 1,00 missing/)
-  assert.deepEqual((await score(key, '<p>Alles 1,00 €</p>')).c2.errors, [])
-  const unit = { products: [{ anchor: 'Tee', alt: null, prices: [eur(199, 'current')] }] }
-  const invented = await score(unit, list(product('Tee', price('current', '1,99 €'), price('unit', '9,99 €', '1 kg'))))
-  assert.match(invented.c2.errors.join(' '), /extra 999/)
 })
 
 test('a flagged neighbour does not flag an unflagged image price', async () => {
@@ -245,13 +176,6 @@ test('strict tables keep empty columns, read headers above the body, and give ea
   assert.equal(specific.c5.rowsOk, 2)
 })
 
-test('a page price needs its amount, currency and offer words in one block', async () => {
-  const offer = { textPrices: [{ ...eur(100, 'current'), conditions: ['Alles für'] }] }
-  assert.deepEqual((await score(offer, '<p>Alles für 1,00 €</p>')).c2.errors, [])
-  assert.match((await score(offer, '<p>Alles</p><p>1,00 €</p>')).c2.errors.join(' '), /page price 1,00 missing/)
-  assert.match((await score(offer, '<p>Alles für 1,00 CHF</p>')).c2.errors.join(' '), /page price 1,00 missing/)
-})
-
 test('a reading-order entry may name the n-th block holding a repeated anchor', async () => {
   const order = {
     readingOrder: [
@@ -268,25 +192,6 @@ test('a reading-order entry may name the n-th block holding a repeated anchor', 
   assert.equal((await score(order, '<p>Rösti</p><p>Burger</p><p>Add bacon</p>')).c1.textOnly, 0.5)
 })
 
-test('identical page prices take one block each; one without a currency or read from the render is flagged', async () => {
-  const two = {
-    textPrices: [
-      { ...eur(100, 'current'), conditions: ['Alles für'] },
-      { ...eur(100, 'current'), conditions: ['Kinder essen'] },
-    ],
-  }
-  assert.deepEqual((await score(two, '<p>Alles für 1,00 €</p><p>Kinder essen 1,00 €</p>')).c2.errors, [])
-  const bare = { textPrices: [{ ...eur(100, 'current'), currency: null, conditions: ['Alles'] }] }
-  assert.match((await score(bare, '<p>Alles 1,00 CHF</p>')).c2.errors.join(' '), /page price 1,00 missing/)
-  assert.deepEqual((await score(bare, '<p data-review>Alles 1,00 CHF</p>')).c2.errors, [])
-  const seen = { textPrices: [{ ...eur(100, 'current'), seen: true, conditions: ['Alles'] }] }
-  assert.match((await score(seen, '<p>Alles 1,00 €</p>')).c2.errors.join(' '), /page price 1,00 missing/)
-  assert.deepEqual(
-    (await score(seen, '<figure data-review><img src="x.jpg" alt="Alles 1,00 €"></figure>')).c2.errors,
-    [],
-  )
-})
-
 test('repeated anchors inside one block are counted like the validator counts them', async () => {
   const order = {
     readingOrder: [
@@ -299,4 +204,23 @@ test('repeated anchors inside one block are counted like the validator counts th
     ],
   }
   assert.equal((await score(order, '<p>Rösti, add bacon. Burger, add bacon.</p>')).c1.textOnly, 1)
+})
+
+test('a row read from the render takes the flagged one of two twin output rows', async () => {
+  const twins = {
+    tables: [
+      {
+        header: ['Name', 'Preis'],
+        rows: [
+          ['Tee', '1,00 €'],
+          ['Tee', '1,00 €'],
+        ],
+      },
+    ],
+    renderedRows: [[0, 0]],
+  }
+  const body = `<table><tr><th scope="col">Name</th><th scope="col">Preis</th></tr><tr><td>Tee</td><td>1,00 €</td></tr><tr data-review><td>Tee</td><td>1,00 €</td></tr></table>`
+  const result = await score(twins, body)
+  assert.equal(result.c5.silentRows, 0)
+  assert.equal(result.c5.rowsOk, 2)
 })

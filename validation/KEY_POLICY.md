@@ -3,11 +3,11 @@
 Rules every key writer follows, decided once so two writers do not settle the same question in two ways. File schema: `packages/eval/src/key-schema-v3.ts`; conventions: `validation/KEYS.md`. Examples are invented or come from dev documents only.
 
 ## What the writer gets and does
-- **The page.** A render (150 DPI, plus 300 DPI tiles), the frozen word snapshot and the **occurrence ledger** from `pnpm ledger <doc> <pdfPage> --details`. The ledger lists every printed amount the eval reader found in the text layer, each with an id (`o1`, `o2`, …), its words, the value read and a crop. Its `wordsSha256` goes into the page as `wordsSha256`.
+- **The page.** A render (150 DPI, plus 300 DPI tiles), the frozen word snapshot and the **occurrence ledger** from `pnpm ledger <doc> <pdfPage> --details`. The ledger lists every printed amount the eval reader found in the text layer, each with an id (`o1`, `o2`, …), its words, the value read and a crop. It also prints `pdfSha256` (copied to the document), `wordsSha256` and `ledgerSha256` (copied to the page); the writer never computes them.
 - **One claim per occurrence.** The writer assigns every occurrence exactly once in `occurrences`:
   - `price`: belongs to product `product`, with `role` and `conditions`;
   - `cell`: a table cell (`table`, `row`, `col`, zero-based);
-  - `text`: a price that belongs to no product ("Everything £1", "£3.00 plus 60p for each item"); it must be published with its amount, currency and the offer words given as its `conditions`, flagged when it prints no currency or is read from the render;
+  - `text`: a price that belongs to no product ("Everything £1", "£3.00 plus 60p for each item"); it must be published with its amount, currency and the offer words given as its `conditions`, flagged when it prints no currency or is read from the render. Two page prices in one sentence each take their own amount;
   - `notPrice` with a `reason`: a date, a weight or dimension, an article or phone number.
 - **The rest of the page.** The writer also keys:
   - `readingOrder`, with alternatives;
@@ -27,7 +27,8 @@ Every destination (a product price, a table cell, a page price) takes the same c
 - **Manual amounts** (`manual`, ids `m1`, `m2`, …) are claimed in `occurrences` like ledger occurrences. Each one blocks the freeze until Andrei sets `confirmed: true`. There are three kinds:
   - `missed`: the text layer has the price, but the reader made no occurrence of it. Its `words` cite the snapshot words, which no occurrence may hold.
   - `split`: the reader joined several prices into one occurrence. That occurrence is claimed `{ "kind": "split", "into": ["m1", "m2"] }`. The parts are distinct `split` entries, each named by this one split, and together they cite each word of the occurrence exactly once.
-  - `image`: the price is only in the image (outlined, inside a picture). It cites no words. A price whose amount the text layer holds is never `image`: claim its occurrence.
+  - `image`: the price is only in the image (outlined, inside a picture). It cites no words and gives its `box` on the page (PDF points from the top left, as in the snapshot), so it can be outlined. It is rejected when any occurrence's centre lies in that box, whatever amount the reader made of it: then claim that occurrence, or correct it as unreadable or misread. The same amount elsewhere on the page is another price.
+  - No word is cited by two manual amounts.
 - **Merged occurrence** (the reader cut one price in two): one part is claimed with the whole price as a confirmed misread `value`, and the other is claimed `{ "kind": "merged", "into": "<the first part's id>" }`. The parts, joined in word order, must read as that value.
 - **Every value reads as itself:** `printed` must read as `cents` and, when it prints one, as `currency` ("£1" is never 200).
 - **Visual reconciliation.** Covering every ledger entry does not prove every price is covered. The arbiter and Andrei look at the page render with every occurrence and manual amount outlined, and any printed price without an outline becomes a `missed` or `image` entry before the freeze.
@@ -54,7 +55,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
 - **deposit:** "+0,25 Pfand", with "Pfand" as a condition.
 - **unknown:** only when the page leaves the role open, with a `reason` on the claim (product prices and page prices alike). This is an accepted, documented uncertainty, not an open dispute: it does not block the freeze and is reported as "role unverified" next to the headline. A question the writer cannot settle at all goes to `disputes`, which does block the freeze.
 
-**`conditions`** are words printed with the price, checked against the text layer. They must appear in that price's own label in the output, not anywhere in the product's text, and not negated ("ohne Lidl Plus"). Only when the output has no price element at all are they looked for in the product's text, and that price counts as "role unverified".
+**`conditions`** are words printed with the price, checked against the text layer. A condition printed only in the image ("2 for" on a badge) is written `{ "text": "2 for", "seen": true }` and waits for Andrei's `confirmed: true`, like any value read from the render; the price it belongs to must then be published flagged. Conditions of a page price are checked in its block as a whole, not tied to one amount in it. They must appear in that price's own label in the output, not anywhere in the product's text, and not negated ("ohne Lidl Plus"). Only when the output has no price element at all are they looked for in the product's text, and that price counts as "role unverified".
 - **Multibuy:** "2 for £5" is the amount £5, role `current`, condition "2 for".
 - **Percentages:** "-30%" is not a price. A badge goes in the product's `mustContain` when it is text, or in the page's `mustContain` with `seen` when it is only in the image.
 
@@ -79,7 +80,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
   - `""`: the cell is printed empty and must stay empty;
   - `{ "unchecked": "<reason>" }`: not scored (a picture-only cell); counted and reported;
   - `{ "same": "above" | "left" }`: a merged cell, printed once.
-- **Amounts.** A price cell (it prints a currency, or its column header does) claims each of its amounts once as `cell`. A spec value ("7.5 m") is claimed as `cell` or as `notPrice`. An unreadable cell keeps its text from the render.
+- **Amounts.** A price cell (it prints a currency, or its column header does) claims each of its amounts once as `cell`. A spec value ("7.5 m") is claimed as `cell` or as `notPrice`. An unreadable or image-only cell keeps its text from the render, and the output row holding it must be flagged, as for any price read from the render.
 - **Headers** are compared with the published header column by column; a full-width title or section row is not a column header.
 
 ## Unsupported pages

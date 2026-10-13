@@ -38,6 +38,7 @@ function stageZeroOnly(key: ReturnType<typeof KeyDocSchema.parse>): void {
       p.strict ||
       p.textPrices.length > 0 ||
       p.pricedCells !== undefined ||
+      p.renderedRows.length > 0 ||
       p.products.some((x) => x.prices !== undefined || x.id !== undefined || x.parent !== undefined),
   )
   if (misplaced) throw new Error(`${key.doc}: a stage-0 key uses version-3 fields; write it as version 3`)
@@ -51,7 +52,7 @@ async function parseKey(path: string): Promise<unknown> {
   }
 }
 
-const fileSha256 = async (path: string): Promise<string> =>
+export const fileSha256 = async (path: string): Promise<string> =>
   createHash('sha256')
     .update(await readFile(path))
     .digest('hex')

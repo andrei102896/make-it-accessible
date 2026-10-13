@@ -183,14 +183,14 @@ test(
     )
     assert.match(
       await problemsOf((_, page) => {
-        page.manual = { m1: { source: 'image', ...value, confirmed: true } }
+        page.manual = { m1: { source: 'image', ...value, box: { x: 0, y: 0, w: 2000, h: 2000 }, confirmed: true } }
         page.occurrences = {
           ...claims(page),
           o1: { kind: 'notPrice', reason: 'test' },
           m1: { kind: 'price', product: 'p1', role: 'current' },
         }
       }),
-      /m1 "£1,040" is in the text layer; claim its occurrence/,
+      /m1 sits on occurrence o1 "£1,040"/,
     )
     assert.match(
       await problemsOf((_, page) => {
@@ -230,6 +230,11 @@ test(
     const path = join(await mkdtemp(join(tmpdir(), 'mia-legacy-')), 'k.json')
     const withStrict = JSON.stringify(JSON.parse(legacy)).replace('"keyPage":4', '"keyPage":4,"strict":true')
     await writeFile(path, withStrict)
+    await assert.rejects(loadKeyFile(path), /stage-0 key uses version-3 fields/)
+    await writeFile(
+      path,
+      JSON.stringify(JSON.parse(legacy)).replace('"keyPage":4', '"keyPage":4,"renderedRows":[[0,0]]'),
+    )
     await assert.rejects(loadKeyFile(path), /stage-0 key uses version-3 fields/)
   },
 )

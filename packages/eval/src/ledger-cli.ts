@@ -1,13 +1,14 @@
 import { readdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
-import { wordsDir } from './keys.ts'
+import { ledgerSha256 } from './key-v3.ts'
+import { fileSha256, wordsDir } from './keys.ts'
 import { ledger } from './ledger.ts'
 import { loadSplit } from './manifest.ts'
 import { DOCS_DIR } from './paths.ts'
 import { snapshotWords } from './snapshot.ts'
 
-// What a key writer starts from: the frozen snapshot's SHA-256 and the page's money occurrences, as JSON.
+// What a key writer starts from: the hashes that fix the evidence and the page's money occurrences, as JSON.
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { pdf: { type: 'string' }, details: { type: 'boolean', default: false } },
@@ -20,11 +21,15 @@ const pdf = values.pdf
 const { words, sha256 } = await snapshotWords(pdf, Number(page), { dir: await wordsDir(doc), doc })
 const occurrences = ledger(words)
 const sealed = (await loadSplit())[doc] === 'test'
+// Everything that fixes the evidence's identity, copied into the key as printed: pdfSha256 on the document, the rest per page.
+const hashes = {
+  pdfSha256: await fileSha256(pdf),
+  wordsSha256: sha256,
+  ledgerSha256: ledgerSha256(occurrences),
+}
 console.info(
   JSON.stringify(
-    sealed && !values.details
-      ? { wordsSha256: sha256, occurrences: occurrences.length }
-      : { wordsSha256: sha256, occurrences },
+    sealed && !values.details ? { ...hashes, occurrences: occurrences.length } : { ...hashes, occurrences },
     null,
     2,
   ),

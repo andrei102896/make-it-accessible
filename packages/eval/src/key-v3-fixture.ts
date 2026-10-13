@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ledgerSha256 } from './key-v3.ts'
-import { loadKeyFile, validateKey } from './keys.ts'
+import { fileSha256, loadKeyFile, validateKey } from './keys.ts'
 import { ledger } from './ledger.ts'
 import { DOCS_DIR, WORDS_DIR } from './paths.ts'
 import { snapshotWords } from './snapshot.ts'
@@ -46,9 +45,7 @@ export async function v3Key(
     version: 3,
     doc: '04_stonehouse',
     pdf: STONE_HOUSE,
-    pdfSha256: createHash('sha256')
-      .update(await readFile(join(DOCS_DIR, STONE_HOUSE)))
-      .digest('hex'),
+    pdfSha256: await fileSha256(join(DOCS_DIR, STONE_HOUSE)),
     lang: 'en-GB',
     currency: 'GBP',
     pages: [page],

@@ -21,6 +21,7 @@ Phase A, measurement first:
   - [ ] Key policy approved by Andrei (`validation/KEY_POLICY.md`)
   - [x] Rules commit by Andrei (`17fbff2`) → page draw with its SHA → `validation/selection.json` frozen (2026-10-13)
   - [x] Second policy review fixes: page prices scored, manual amounts (missed/split/image) and merged claims, one correction path for every destination, value consistency, frozen ledger and PDF hash, nth anchors, visual reconciliation (2026-10-13)
+  - [x] Third policy review fixes: image amounts placed by box, no shared words between manual amounts, condition provenance, rendered table rows must be flagged, amounts counted one by one inside a block, `pnpm ledger` prints every hash (2026-10-13)
   - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
   - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
 - [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)

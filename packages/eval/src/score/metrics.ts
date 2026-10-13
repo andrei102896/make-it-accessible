@@ -122,28 +122,35 @@ export function productPrices(key: KeyPage, dom: DomPage, currency: Currency): P
   }
   // A complete key makes any other priced product in the output an error, except a price that belongs to no product.
   if (key.strict) {
-    // A price that belongs to no product must reach the reader: amount, currency and offer words in one block, each
-    // block answering one page price. One read from the render or printed without a currency must be flagged.
+    // A price that belongs to no product must reach the reader: its amount, currency and offer words in one block.
+    // Each printed amount in a block answers one page price; one read from the render or without a currency is flagged.
     const keyed = key.products.flatMap((p) => p.prices?.map((k) => k.cents) ?? [])
-    const fits = (k: KeyPrice, text: string): boolean =>
-      moneyInText(text).some((m) => m.cents === k.cents && (k.currency === null || m.currency === k.currency)) &&
-      k.conditions.every((c) => holds(c, text))
-    const mustFlag = (k: KeyPrice): boolean => k.seen === true || k.currency === null
     const blocks = [
       ...dom.leaves.map((l) => ({ text: l.text, flagged: l.review })),
       ...dom.flaggedAlts.map((text) => ({ text, flagged: true })),
-    ]
-    const used = new Set<number>()
-    const missing = key.textPrices.filter((k) => {
-      const at = blocks.findIndex((b, i) => !used.has(i) && fits(k, b.text) && (b.flagged || !mustFlag(k)))
-      // Without offer words a product's block with the same amount could answer it, so the product's own count is kept.
-      const free = k.conditions.length
-        ? at
-        : blocks.filter((b, i) => !used.has(i) && fits(k, b.text)).length > keyed.filter((c) => c === k.cents).length
-          ? at
-          : -1
-      if (free >= 0) used.add(free)
-      return free < 0
+    ].map((b) => ({ ...b, amounts: moneyInText(b.text), used: new Set<number>() }))
+    const mustFlag = (k: KeyPrice): boolean => k.seen === true || k.currency === null
+    const slots = (k: KeyPrice): { block: (typeof blocks)[number]; at: number }[] =>
+      blocks.flatMap((block) =>
+        k.conditions.every((c) => holds(c, block.text))
+          ? block.amounts.flatMap((m, at) =>
+              !block.used.has(at) && m.cents === k.cents && (k.currency === null || m.currency === k.currency)
+                ? [{ block, at }]
+                : [],
+            )
+          : [],
+      )
+    // The most specific page prices choose first, so one without offer words cannot take another's amount.
+    const bySpecificity = [...key.textPrices].sort((a, b) => b.conditions.length - a.conditions.length)
+    const missing = bySpecificity.filter((k) => {
+      const all = slots(k)
+      const open = mustFlag(k) ? all.filter((s) => s.block.flagged) : all
+      // Without offer words a product's amount could answer it; the keyed products take unflagged amounts first.
+      const keyedSame = k.conditions.length ? 0 : keyed.filter((c) => c === k.cents).length
+      const reserved = Math.max(0, keyedSame - (all.length - open.length))
+      const slot = open.length > reserved ? open[0] : undefined
+      slot?.block.used.add(slot.at)
+      return slot === undefined
     })
     missing.forEach((k) => {
       errorProducts++

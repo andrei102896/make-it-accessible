@@ -108,7 +108,16 @@ test('merged parts read, joined in word order, as the whole value', () => {
 test('a price only in the image is scored as read from the render', () => {
   const p = page({
     products: [{ id: 'p1', anchor: 'Tee', alt: null }],
-    manual: { m1: { source: 'image', printed: '3,00 €', cents: 300, currency: 'EUR', confirmed: true } },
+    manual: {
+      m1: {
+        source: 'image',
+        printed: '3,00 €',
+        cents: 300,
+        currency: 'EUR',
+        box: { x: 900, y: 900, w: 10, h: 10 },
+        confirmed: true,
+      },
+    },
     occurrences: { m1: { kind: 'price', product: 'p1', role: 'current' } },
   })
   assert.deepEqual(validateV3Page(p, [], [], TEXT), [])
@@ -124,4 +133,126 @@ test('a missed amount cites words no occurrence holds', () => {
     occurrences: { o1: { kind: 'notPrice', reason: 'test' }, m1: { kind: 'price', product: 'p1', role: 'current' } },
   })
   assert.match(validateV3Page(p, read, words, TEXT).join(), /m1 cites words an occurrence already holds/)
+})
+
+test('an image price is told from a text price by place; manual amounts never share a word', () => {
+  const words = [word('1,00', 0), word('25', 30)]
+  const read = [occurrence('o1', [0], '1,00', 100)]
+  const image = (box: { x: number; y: number; w: number; h: number }) =>
+    page({
+      manual: { m1: { source: 'image', printed: '1,00', cents: 100, currency: null, box, confirmed: true } },
+      occurrences: {
+        o1: { kind: 'price', product: 'p1', role: 'current' },
+        m1: { kind: 'price', product: 'p2', role: 'current' },
+      },
+    })
+  assert.deepEqual(validateV3Page(image({ x: 500, y: 500, w: 10, h: 10 }), read, words, TEXT), [])
+  assert.match(
+    validateV3Page(image({ x: 0, y: 0, w: 10, h: 10 }), read, words, TEXT).join(),
+    /m1 sits on occurrence o1 "1,00"/,
+  )
+  const twice = page({
+    manual: {
+      m1: { source: 'missed', words: [1], printed: '25', cents: 2500, currency: null, confirmed: true },
+      m2: { source: 'missed', words: [1], printed: '25', cents: 2500, currency: null, confirmed: true },
+    },
+    occurrences: {
+      o1: { kind: 'notPrice', reason: 'test' },
+      m1: { kind: 'price', product: 'p1', role: 'current' },
+      m2: { kind: 'price', product: 'p2', role: 'current' },
+    },
+  })
+  assert.match(
+    validateV3Page(twice, read, words, TEXT).join(),
+    /m2 cites word 1, which another manual amount also cites/,
+  )
+})
+
+test('a condition is proven by the text layer, or read from the render and confirmed', () => {
+  const words = [word('1,00', 0)]
+  const read = [occurrence('o1', [0], '1,00', 100)]
+  const claim = (condition: unknown) =>
+    page({
+      products: [{ id: 'p1', anchor: 'Tee', alt: null }],
+      occurrences: { o1: { kind: 'price', product: 'p1', role: 'current', conditions: [condition] } },
+    })
+  assert.match(
+    validateV3Page(claim('2 for'), read, words, TEXT).join(),
+    /price condition "2 for" not in the text layer/,
+  )
+  assert.match(
+    validateV3Page(claim({ text: '2 for', seen: true }), read, words, TEXT).join(),
+    /condition "2 for" read from the render awaits Andrei's confirmation/,
+  )
+  assert.deepEqual(validateV3Page(claim({ text: '2 for', seen: true, confirmed: true }), read, words, TEXT), [])
+  assert.match(
+    validateV3Page(claim({ text: 'Tee', seen: true, confirmed: true }), read, words, TEXT).join(),
+    /write it plainly/,
+  )
+  assert.deepEqual(
+    fromV3Page(claim({ text: '2 for', seen: true, confirmed: true }), read).products[0]?.prices?.[0]?.conditions,
+    ['2 for'],
+  )
+})
+
+test('a table cell read from the render is marked for the scorer', () => {
+  const p = page({
+    products: [],
+    readingOrder: [[{ anchor: 'Tee', kind: 'text' }]],
+    tables: [{ header: ['Name', 'Preis'], rows: [['Tee', '1,00 €']] }],
+    manual: {
+      m1: {
+        source: 'image',
+        printed: '1,00 €',
+        cents: 100,
+        currency: 'EUR',
+        box: { x: 500, y: 500, w: 9, h: 9 },
+        confirmed: true,
+      },
+    },
+    occurrences: { m1: { kind: 'cell', table: 0, row: 0, col: 1 } },
+  })
+  assert.deepEqual(validateV3Page(p, [], [], TEXT), [])
+  assert.deepEqual(fromV3Page(p, []).renderedRows, [[0, 0]])
+})
+
+test('an image amount on an unreadable or set-aside occurrence must correct that occurrence instead', () => {
+  const words = [word('1,\ufffd9', 0)]
+  const read = [occurrence('o1', [0], '1,\ufffd9', null)]
+  const p = page({
+    products: [{ id: 'p1', anchor: 'Tee', alt: null }],
+    manual: {
+      m1: {
+        source: 'image',
+        printed: '1,99',
+        cents: 199,
+        currency: null,
+        box: { x: 0, y: 0, w: 10, h: 10 },
+        confirmed: true,
+      },
+    },
+    occurrences: { o1: { kind: 'notPrice', reason: 'test' }, m1: { kind: 'price', product: 'p1', role: 'current' } },
+  })
+  assert.match(validateV3Page(p, read, words, TEXT).join(), /m1 sits on occurrence o1/)
+  const twice = page({
+    manual: { m1: { source: 'missed', words: [1, 1], printed: '25', cents: 2500, currency: null, confirmed: true } },
+    occurrences: { o1: { kind: 'notPrice', reason: 'test' }, m1: { kind: 'price', product: 'p1', role: 'current' } },
+  })
+  assert.match(validateV3Page(twice, read, [...words, word('25', 30)], TEXT).join(), /m1 cites a word twice/)
+})
+
+test('a condition read from the render puts its price under review', () => {
+  const read = [occurrence('o1', [0], '1,00', 100)]
+  const p = page({
+    products: [{ id: 'p1', anchor: 'Tee', alt: null }],
+    occurrences: {
+      o1: {
+        kind: 'price',
+        product: 'p1',
+        role: 'current',
+        conditions: [{ text: '2 for', seen: true, confirmed: true }],
+      },
+    },
+  })
+  assert.equal(fromV3Page(p, read).products[0]?.prices?.[0]?.seen, true)
 })

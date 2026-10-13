@@ -73,6 +73,8 @@ const KeyPage = z
     textPrices: z.array(KeyPrice).default([]),
     // Price cells claimed as printed amounts (version-3 keys).
     pricedCells: z.number().int().optional(),
+    // Rows (table, row) holding an amount read from the render: the output row must be flagged.
+    renderedRows: z.array(z.tuple([z.number().int(), z.number().int()])).default([]),
   })
   .strict()
 // Printed pages in reading order across the document: spreads and folded panels publish several per PDF page.

@@ -48,19 +48,36 @@ function checkManual(
 ): string[] {
   const problems: string[] = []
   const inLedger = new Set(occurrences.flatMap((o) => o.words))
-  const readable = occurrences.filter((o) => o.cents !== null)
   const named = Object.values(page.occurrences).flatMap((c) => (c.kind === 'split' ? c.into : []))
+  const cited = new Map<number, number>()
+  for (const m of Object.values(page.manual)) for (const w of new Set(m.words)) cited.set(w, (cited.get(w) ?? 0) + 1)
   for (const [id, m] of Object.entries(page.manual)) {
     problems.push(...consistent(m, `${where}: ${id}`))
     if (!m.confirmed) problems.push(`${where}: manual amount ${id} "${m.printed}" awaits Andrei's confirmation`)
     if (m.words.some((w) => !words[w])) problems.push(`${where}: ${id} cites a word the snapshot does not have`)
     if (m.source === 'image') {
       if (m.words.length) problems.push(`${where}: ${id} is only in the image and cites no words`)
-      const same = (o: Occurrence): boolean =>
-        o.cents === m.cents && (o.currency === null || m.currency === null || o.currency === m.currency)
-      if (readable.some(same))
-        problems.push(`${where}: ${id} "${m.printed}" is in the text layer; claim its occurrence`)
+      // The same amount elsewhere on the page is another price; only an occurrence at this place would be this one.
+      // An occurrence whose centre sits in the box is this place in the text layer: claim it, or correct it if misread.
+      const box = m.box
+      const inside = (o: Occurrence): boolean =>
+        box !== undefined &&
+        o.box.x + o.box.w / 2 >= box.x &&
+        o.box.x + o.box.w / 2 <= box.x + box.w &&
+        o.box.y + o.box.h / 2 >= box.y &&
+        o.box.y + o.box.h / 2 <= box.y + box.h
+      if (!box) problems.push(`${where}: ${id} is only in the image; give its box on the page`)
+      else
+        occurrences
+          .filter(inside)
+          .forEach((o) =>
+            problems.push(`${where}: ${id} sits on occurrence ${o.id} "${o.text}"; claim or correct that occurrence`),
+          )
     } else if (!m.words.length) problems.push(`${where}: ${id} cites the words it was read from`)
+    if (new Set(m.words).size !== m.words.length) problems.push(`${where}: ${id} cites a word twice`)
+    m.words
+      .filter((w, i) => m.words.indexOf(w) === i && (cited.get(w) ?? 0) > 1)
+      .forEach((w) => problems.push(`${where}: ${id} cites word ${String(w)}, which another manual amount also cites`))
     if (m.source === 'missed' && m.words.some((w) => inLedger.has(w)))
       problems.push(`${where}: ${id} cites words an occurrence already holds; split that occurrence instead`)
     const splits = named.filter((n) => n === id).length
@@ -225,10 +242,15 @@ export function validateV3Page(
     })
     if (!priced.has(p.id)) problems.push(`${where}: product ${p.id} has no price`)
   }
+  // A condition is proven by the text layer, or read from the render and confirmed by Andrei.
   Object.values(page.occurrences)
     .flatMap((c) => (c.kind === 'price' || c.kind === 'text' ? c.conditions : []))
     .forEach((c) => {
-      printed(c, 'price condition')
+      if (typeof c === 'string') printed(c, 'price condition')
+      else if (count(text, c.text) > 0)
+        problems.push(`${where}: condition "${c.text}" is in the text layer; write it plainly`)
+      else if (!c.confirmed)
+        problems.push(`${where}: condition "${c.text}" read from the render awaits Andrei's confirmation`)
     })
   return problems
 }

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { CellV3, ClaimV3, KeyPageV3, ManualV3 } from './key-schema-v3.ts'
+import type { CellV3, ClaimV3, ConditionV3, KeyPageV3, ManualV3 } from './key-schema-v3.ts'
 import type { KeyPage, KeyPrice, KeyProduct } from './key-schema.ts'
 import type { Occurrence } from './ledger.ts'
 import { CURRENCY_HEADER, moneyInText, type Currency } from './score/money.ts'
@@ -30,8 +30,10 @@ export function valueOf(claim: ClaimV3, source: Source): Amount | null {
   return o && !o.unreadable && o.cents !== null ? { printed: o.text, cents: o.cents, currency: o.currency } : null
 }
 
+export const conditionText = (c: ConditionV3): string => (typeof c === 'string' ? c : c.text)
+
 // Not provable from the text layer: an unreadable occurrence or a price only in the image.
-const fromRender = (s: Source): boolean => s.occurrence?.unreadable === true || s.manual?.source === 'image'
+export const fromRender = (s: Source): boolean => s.occurrence?.unreadable === true || s.manual?.source === 'image'
 
 // Merged cells repeat their neighbour; unchecked cells become null, the scorer's "not checked".
 function resolveCells(rows: readonly (readonly CellV3[])[]): (string | null)[][] {
@@ -67,8 +69,9 @@ function claimedPrices(page: KeyPageV3, all: Map<string, Source>): Map<string, K
         cents: value?.cents ?? 0,
         role: claim.role,
         currency: claim.currency !== undefined ? claim.currency : (value?.currency ?? null),
-        conditions: claim.conditions,
-        ...(fromRender(source) ? { seen: true as const } : {}),
+        conditions: claim.conditions.map(conditionText),
+        // A price or a condition read from the render puts the price under review.
+        ...(fromRender(source) || claim.conditions.some((c) => typeof c !== 'string') ? { seen: true as const } : {}),
       },
     ])
   }
@@ -91,6 +94,10 @@ export function fromV3Page(page: KeyPageV3, occurrences: readonly Occurrence[]):
     ...(p.parent === undefined ? {} : { parent: p.parent }),
     ...(p.articleNo === undefined ? {} : { articleNo: p.articleNo }),
   }))
+  const renderedRows = Object.entries(page.occurrences).flatMap(([id, c]): [number, number][] => {
+    const source = all.get(id)
+    return c.kind === 'cell' && source && fromRender(source) ? [[c.table, c.row]] : []
+  })
   const pricedCells = Object.values(page.occurrences).filter((c) => {
     if (c.kind !== 'cell') return false
     const cell = page.tables[c.table]?.rows[c.row]?.[c.col]
@@ -111,5 +118,6 @@ export function fromV3Page(page: KeyPageV3, occurrences: readonly Occurrence[]):
     strict: true,
     textPrices: prices.get('') ?? [],
     pricedCells,
+    renderedRows,
   }
 }

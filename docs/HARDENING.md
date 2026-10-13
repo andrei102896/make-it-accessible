@@ -161,6 +161,13 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
 - **Repeated anchors.** Reading-order entries may name the n-th occurrence of a repeated anchor.
 - **Visual reconciliation.** The arbiter and Andrei check each page render with every occurrence outlined, because covering every ledger entry does not prove every price is covered.
 
+**Third review of the key policy (2026-10-13, Andrei).** Fixed before any key exists:
+- **Image-only amounts have a place.** Each one gives a `box`. Any occurrence whose centre lies in it must be claimed or corrected instead, so an image entry cannot stand in for a misread or unreadable text price. The same amount elsewhere is another price. No word may be cited twice, within one manual amount or across two.
+- **Conditions have provenance.** A condition comes from the text layer, or is read from the render and confirmed by Andrei; a render-read condition puts its price under review (flag duty).
+- **Table cells read from the render keep their review duty.** The output row holding one must be flagged; otherwise it is a silent row error.
+- **Amounts inside a block are counted one by one.** Two page prices in one sentence each take their own amount; the most specific page price chooses first, and a product shown unflagged keeps its amount without blocking a flagged page price.
+- **`pnpm ledger` prints every hash a key needs:** `pdfSha256`, `wordsSha256` and `ledgerSha256`.
+
 **Key writing.**
 - **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.
 - **Isolated writers.** Each page gets its own folder outside the repo, holding:
