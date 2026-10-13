@@ -25,6 +25,9 @@ pnpm stage0 --effort high --model claude-opus-5-5
 pnpm stage0 --rescore out/<run>         # rescore a copy of a saved run (out/<run>-rescore-<time>), no model calls
 pnpm aggregate <run> <run> <run> [--before <run> ...]   # 3-run pass rule, price bounds, decisions, regressions
 pnpm adhoc <file.pdf> [--pages 1-5]     # any PDF without an answer key: validator findings, axe, cost
+pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
+pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
+pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
 ```
 
 The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md) for URLs and hashes). Tests that need them are skipped when they are missing.
@@ -47,11 +50,23 @@ packages/pipeline/src/        product code, reused by the MVP
   validate/validate.ts        provenance, price, coverage and alt-text checks
   html/document.ts            deterministic accessible HTML renderer
 packages/eval/src/            evaluation harness, never shipped
-  key-schema.ts               answer-key schema (v2: prices per amount, page type, printed pages)
-  keys.ts                     key loader and validation against the PDF text layer
+  key-schema.ts               key schema as the scorer reads it (stage-0 files parse into it directly)
+  key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds
+  key-v3.ts                   version-3 claims into per-product prices; claim, product and anchor validation
+  ledger.ts                   money occurrences of a page from its words (glyph runs, chained cents, unreadable)
+  snapshot.ts                 frozen word snapshots of keyed pages, drift check
+  keys.ts                     key loader (sealed keys from validation/sealed/) and validation against the text layer
+  key-proof.ts                amounts the text layer proves for stage-0 keys, eval-owned
+  words.ts                    the eval's own word boxes (pdftotext -tsv), independent of the pipeline
+  selection.ts                A4 page facts, eligibility, seeded draw and reserve (pure)
+  select-pages.ts             CLI: the A4 page draw per document
+  ledger-cli.ts               CLI: the occurrence ledger of one page (sealed pages print counts only)
+  keys-check.ts               CLI: validate one key file; sealed keys print counts only
   manifest.ts                 split (tuning/dev/test) and layout-label manifests
   score/metrics.ts            C1, C3, C4 and C2 per page (pure)
-  score/prices.ts             C2 per product: amount, role, currency, qualifier
+  score/prices.ts             C2 per output product: amount, accepted roles, currency, conditions, add-ons sharing it
+  score/conditions.ts         a condition is a whole, non-negated phrase of the price's own label
+  score/coverage.ts           C3 whole-text coverage (reported, not gating)
   score/tables.ts             C5 headings and table rows
   score/layout.ts             printed pages: order, labels, anchor placement
   score/decisions.ts          review decisions per page
@@ -83,6 +98,14 @@ out/                          run outputs (local only)
 - **Rescoring never writes into a run.** `--rescore` copies the run first; the originals are the evidence for past decisions.
 - **Findings mark the narrowest element.** A product, product list or table is marked only for a grouping doubt; a cell finding marks its row (`rows[r][c]` paths, a bug that left every row unmarked until 2026-10-13).
 - **The scorer must score a perfect page at 100 %** (`score.test.ts`). It caught a false "repeated sentence = invented" rule.
+- **Key validation never uses the pipeline's extraction or price reading** (only the shared `canon` text form). It read euro/cent pairs through the pipeline's `centPartner`, so a pairing bug could prove its own key. Words come from `words.ts`, occurrences from `ledger.ts`.
+- **Every money occurrence of a version-3 page is claimed exactly once.** Counting values let one duplicated £5 cover another £5 left out of the key, and a missing product hid a wrong price on it (`keys.test.ts`). Do not go back to value counts.
+- **Conditions are read from the price's own label, not the product text.** With the product text, a card price swapped onto the regular price passed, and "ohne Lidl Plus" satisfied "Lidl Plus" (`rules.test.ts`). Only an output without any price element falls back to the product text, and those prices count as "role unverified".
+- **A price's flag is its own.** One flagged price made every error in its product "flagged", including an unflagged image price beside it (`rules.test.ts`).
+- **The ledger never ends a price on "£" or "$", and two whole prices never join.** "4.59 £ 5.99" gave "4.59 £" and a currency-less 5.99; "£1 £2" set close vanished (`ledger.test.ts`).
+- **Text is never read as prices where price elements exist.** A parent with no price of its own passed on its nested add-on's amount (`rules.test.ts`).
+- **An unmapped glyph ("£�.99") reads as nothing, never as an amount.** It read as 99p; such occurrences carry their value from the render (`money.test.ts`, `ledger.test.ts`).
+- **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
 ## Dead ends
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.

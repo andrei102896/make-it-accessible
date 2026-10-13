@@ -1,86 +1,133 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
-import { centPartner, joinRuns } from '@make-it-accessible/pipeline/pdf/runs'
-import { type Run } from '@make-it-accessible/pipeline/pdf/types'
-import { moneyFromParts, parseMoney } from '@make-it-accessible/pipeline/text/money'
 import { canon } from '@make-it-accessible/pipeline/text/normalize'
-import { KeyDocSchema, type KeyPage, type KeyProduct } from './key-schema.ts'
-import type { KeySet } from './manifest.ts'
-import { DOCS_DIR, KEYS_DIR } from './paths.ts'
-import { readMoney } from './score/money.ts'
+import { provenAmounts } from './key-proof.ts'
+import { KeyDocV3Schema, type KeyDocV3 } from './key-schema-v3.ts'
+import { KeyDocSchema, type KeyPage, type KeyProduct, type KeySection } from './key-schema.ts'
+import { fromV3Page, validateV3Page } from './key-v3.ts'
+import { ledger, type Occurrence } from './ledger.ts'
+import { loadSplit, type KeySet } from './manifest.ts'
+import { DOCS_DIR, KEYS_DIR, SEALED_DIR, WORDS_DIR } from './paths.ts'
+import { snapshotWords } from './snapshot.ts'
+import { pageWords, type Word } from './words.ts'
 
 export type { KeyPage, KeyPrice, KeyProduct, KeySection } from './key-schema.ts'
-export type KeyDoc = ReturnType<typeof KeyDocSchema.parse> & { pdfPath: string }
-
-export async function loadKey(doc: string): Promise<KeyDoc> {
-  const parsed = KeyDocSchema.parse(JSON.parse(await readFile(join(KEYS_DIR, `${doc}.json`), 'utf8')))
-  return { ...parsed, pdfPath: join(DOCS_DIR, parsed.pdf) }
+type Evidence = { words: Word[]; occurrences: Occurrence[]; text: string; sha256: string }
+// v3: the file as written and, per key page, the snapshot evidence its claims refer to.
+export type KeyDoc = ReturnType<typeof KeyDocSchema.parse> & {
+  pdfPath: string
+  v3?: { raw: KeyDocV3; evidence: Map<number, Evidence> }
 }
 
-// Amounts printed on the page; `pairs` only those printed as large euros with small cents (two words).
-function pageAmounts(runs: readonly Run[]): { amounts: Set<number>; pairs: Set<number> } {
-  const amounts = new Set<number>()
-  const pairs = new Set<number>()
-  for (const r of runs) {
-    const cents = centPartner(r, runs)
-    const value = cents
-      ? moneyFromParts([
-          { str: r.str, height: r.box.h },
-          { str: cents.str, height: cents.box.h },
-        ])
-      : /[.,€£$]/.test(r.str)
-        ? parseMoney(r.str)
-        : null
-    if (value !== null) amounts.add(value)
-    if (value !== null && cents) pairs.add(value)
+export const keyPath = (doc: string): string => {
+  const sealed = join(SEALED_DIR, `${doc}.json`)
+  return existsSync(sealed) ? sealed : join(KEYS_DIR, `${doc}.json`)
+}
+
+// The test half's word snapshots are sealed like its keys, wherever the key file is being written.
+export const wordsDir = async (doc: string): Promise<string> =>
+  (await loadSplit())[doc] === 'test' ? join(SEALED_DIR, 'words') : WORDS_DIR
+
+// Version-3 fields have no meaning in a stage-0 file; finding one means the file is not what it claims to be.
+function stageZeroOnly(key: ReturnType<typeof KeyDocSchema.parse>): void {
+  const misplaced = key.pages.some(
+    (p) =>
+      p.strict ||
+      p.textPrices.length > 0 ||
+      p.pricedCells !== undefined ||
+      p.products.some((x) => x.prices !== undefined || x.id !== undefined || x.parent !== undefined),
+  )
+  if (misplaced) throw new Error(`${key.doc}: a stage-0 key uses version-3 fields; write it as version 3`)
+}
+
+async function parseKey(path: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(path, 'utf8'))
+  } catch {
+    throw new Error(`${path} is not valid JSON`)
   }
-  return { amounts, pairs }
+}
+
+export async function loadKeyFile(path: string, pdfOverride?: string): Promise<KeyDoc> {
+  const json = await parseKey(path)
+  const version = typeof json === 'object' && json !== null && 'version' in json ? json.version : undefined
+  if (version !== 3) {
+    const parsed = KeyDocSchema.parse(json)
+    stageZeroOnly(parsed)
+    // Stage-0 keys write an unchecked cell as "".
+    const pages = parsed.pages.map((p) => ({
+      ...p,
+      tables: p.tables.map((t) => ({ ...t, rows: t.rows.map((r) => r.map((c) => (c === '' ? null : c))) })),
+    }))
+    return { ...parsed, pages, pdfPath: pdfOverride ?? join(DOCS_DIR, parsed.pdf) }
+  }
+  const checked = KeyDocV3Schema.safeParse(json)
+  // A sealed key's schema errors would quote its content.
+  if (!checked.success)
+    throw path.startsWith(SEALED_DIR)
+      ? new Error(`${path}: ${String(checked.error.issues.length)} schema problems`)
+      : checked.error
+  const raw = checked.data
+  const pdfPath = pdfOverride ?? join(DOCS_DIR, raw.pdf)
+  const where = { dir: await wordsDir(raw.doc), doc: raw.doc }
+  const evidence = new Map<number, Evidence>()
+  const pages: KeyPage[] = []
+  for (const page of raw.pages) {
+    const { words, sha256 } = await snapshotWords(pdfPath, page.pdfPage, where)
+    const occurrences = ledger(words)
+    evidence.set(page.keyPage, { words, occurrences, text: canon(words.map((w) => w.str).join(' ')), sha256 })
+    pages.push(fromV3Page(page, occurrences))
+  }
+  const { doc, pdf, lang, currency, sections, sectionOrders, disputes } = raw
+  const meta = { doc, pdf, lang, currency, sectionOrders, disputes, ...(sections ? { sections } : {}) }
+  return { ...meta, pages, pdfPath, v3: { raw, evidence } }
+}
+
+export const loadKey = (doc: string): Promise<KeyDoc> => loadKeyFile(keyPath(doc))
+
+// The text layer of each key page: the frozen snapshot for version-3 keys, a live extraction for stage-0 keys.
+export async function keyWords(key: KeyDoc): Promise<Map<number, Word[]>> {
+  const words = new Map<number, Word[]>()
+  for (const page of key.pages)
+    words.set(page.keyPage, key.v3?.evidence.get(page.keyPage)?.words ?? (await pageWords(key.pdfPath, page.pdfPage)))
+  return words
 }
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(canon(needle)).length - 1
 
-type Check = { where: string; text: string; amounts: Set<number>; pairs: Set<number>; problems: string[] }
+type Check = { where: string; text: string; amounts: Set<number>; problems: string[] }
 
-function checkProduct(p: KeyProduct, c: Check, set: KeySet, currency: string): void {
-  const mustExist = (s: string, what: string): void => {
-    if (occurrences(c.text, s) === 0) c.problems.push(`${c.where}: ${what} "${s}" not in the text layer`)
-  }
+// Stage-0 products: amounts per product, proven against the text layer.
+function checkLegacyProduct(p: KeyProduct, c: Check): void {
   p.mustContain.forEach((s) => {
-    mustExist(s, `mustContain of ${p.anchor}`)
+    if (occurrences(c.text, s) === 0)
+      c.problems.push(`${c.where}: mustContain of ${p.anchor} "${s}" not in the text layer`)
   })
-  if (p.articleNo) mustExist(p.articleNo, 'article number')
-  else if (occurrences(c.text, p.anchor) !== 1)
+  if (p.articleNo) {
+    if (occurrences(c.text, p.articleNo) === 0)
+      c.problems.push(`${c.where}: article number "${p.articleNo}" not in the text layer`)
+  } else if (occurrences(c.text, p.anchor) !== 1)
     c.problems.push(`${c.where}: product anchor "${p.anchor}" occurs ${occurrences(c.text, p.anchor)} times`)
   if (p.prices) {
-    for (const price of p.prices) {
-      const read = readMoney(price.printed)
-      // Euros with small cents are two words; such an amount is proven by the pair, not by the printed string.
-      const printed = occurrences(c.text, price.printed) > 0 || c.pairs.has(price.cents)
-      if (!printed) c.problems.push(`${c.where}: ${p.anchor} price "${price.printed}" not printed on the page`)
-      if (read?.cents !== price.cents && !c.pairs.has(price.cents))
-        c.problems.push(`${c.where}: ${p.anchor} "${price.printed}" does not read as ${price.cents}`)
-      if (read?.currency && read.currency !== price.currency)
-        c.problems.push(
-          `${c.where}: ${p.anchor} "${price.printed}" is ${read.currency}, keyed ${String(price.currency)}`,
-        )
-      if (price.currency !== null && price.currency !== currency && !read?.currency)
-        c.problems.push(
-          `${c.where}: ${p.anchor} "${price.printed}" has no printed currency but differs from the document's`,
-        )
-    }
-  } else {
-    if (set !== 'tuning') c.problems.push(`${c.where}: ${p.anchor} uses stage-0 money fields; new keys use prices`)
-    const money = p.money ?? []
-    for (const m of [...money, ...p.optional])
-      if (!c.amounts.has(m)) c.problems.push(`${c.where}: ${p.anchor} amount ${m} not printed on the page`)
-    if (!p.roleFree.every((o) => money.includes(o)))
-      c.problems.push(`${c.where}: ${p.anchor} roleFree amount not in money`)
-    if (!p.old.every((o) => money.includes(o))) c.problems.push(`${c.where}: ${p.anchor} old price not in money`)
+    c.problems.push(`${c.where}: ${p.anchor} keys prices per amount; new keys use version 3`)
+    return
   }
+  const money = p.money ?? []
+  for (const m of [...money, ...p.optional])
+    if (!c.amounts.has(m)) c.problems.push(`${c.where}: ${p.anchor} amount ${m} not printed on the page`)
+  if (!p.roleFree.every((o) => money.includes(o)))
+    c.problems.push(`${c.where}: ${p.anchor} roleFree amount not in money`)
+  if (!p.old.every((o) => money.includes(o))) c.problems.push(`${c.where}: ${p.anchor} old price not in money`)
 }
 
-function checkPage(page: KeyPage, c: Check, set: KeySet, currency: string): void {
+// Rules every key shares: anchors, tables, required and slug text.
+function checkPage(page: KeyPage, c: Check, strict: boolean): void {
+  const once = (s: string, what: string): void => {
+    const n = occurrences(c.text, s)
+    if (n === 0) c.problems.push(`${c.where}: ${what} "${s}" not in the text layer`)
+    else if (n > 1 && strict) c.problems.push(`${c.where}: ${what} "${s}" occurs ${n} times; anchors are unique`)
+  }
   const mustExist = (s: string, what: string): void => {
     if (occurrences(c.text, s) === 0) c.problems.push(`${c.where}: ${what} "${s}" not in the text layer`)
   }
@@ -89,16 +136,15 @@ function checkPage(page: KeyPage, c: Check, set: KeySet, currency: string): void
     if (content.some((list) => list.length)) c.problems.push(`${c.where}: an unsupported page keys no content`)
     return
   }
-  if (page.scope === 'full' && !page.readingOrder.length)
-    c.problems.push(`${c.where}: a full key needs a reading order`)
+  if (!page.readingOrder.length) c.problems.push(`${c.where}: a full key needs a reading order`)
   page.readingOrder
     .flat()
     .filter((e) => e.kind === 'text')
     .forEach((e) => {
-      mustExist(e.anchor, 'reading-order anchor')
+      once(e.anchor, 'reading-order anchor')
     })
   page.headings.forEach((h) => {
-    mustExist(h.anchor, 'heading anchor')
+    once(h.anchor, 'heading anchor')
   })
   // Header cells wrap over lines that the stream interleaves with other columns, so they are checked word by word.
   page.tables.forEach((t) => {
@@ -108,9 +154,9 @@ function checkPage(page: KeyPage, c: Check, set: KeySet, currency: string): void
         mustExist(w, 'table header word')
       })
     t.rows.flat().forEach((cell) => {
-      mustExist(cell, 'table cell')
+      if (cell) mustExist(cell, 'table cell')
     })
-    if (set !== 'tuning' && t.rows.some((r) => r.length !== t.header.length))
+    if (strict && t.rows.some((r) => r.length !== t.header.length))
       c.problems.push(`${c.where}: new keys write every table row as wide as its header`)
   })
   page.mustContain.forEach((m) => {
@@ -121,27 +167,71 @@ function checkPage(page: KeyPage, c: Check, set: KeySet, currency: string): void
   page.outsideTrim.forEach((s) => {
     mustExist(s, 'outside-trim text')
   })
-  page.products.forEach((p) => {
-    checkProduct(p, c, set, currency)
-  })
 }
+
+function checkSections(key: KeyDoc, texts: Map<number, string>, strict: boolean, problems: string[]): void {
+  const orders: KeySection[][] = key.sections ? [key.sections, ...key.sectionOrders] : key.sectionOrders
+  if (!key.sections && key.sectionOrders.length) problems.push(`${key.doc}: sectionOrders without sections`)
+  for (const order of orders) {
+    if (key.sections && strict)
+      key.pages
+        .filter((p) => !order.some((s) => s.keyPage === p.keyPage))
+        .forEach((p) => problems.push(`${key.doc}: key page ${p.keyPage} is missing from a section order`))
+    for (const section of order) {
+      const text = texts.get(section.keyPage)
+      if (text === undefined) problems.push(`${key.doc}: section for unknown key page ${section.keyPage}`)
+      else
+        section.anchors.forEach((a) => {
+          const n = occurrences(text, a)
+          if (n === 0) problems.push(`${key.doc} p${section.keyPage}: section anchor "${a}" not in the text layer`)
+          else if (n > 1 && strict)
+            problems.push(`${key.doc} p${section.keyPage}: section anchor "${a}" occurs ${n} times`)
+        })
+    }
+  }
+}
+
+// What `keys:check` and the tests print: a sealed key shows only its problem count unless asked for details.
+export const visibleProblems = (problems: readonly string[], sealed: boolean, details: boolean): string[] => [
+  ...(sealed && !details ? [] : problems),
+  problems.length ? `${String(problems.length)} problems` : 'key valid',
+]
 
 export async function validateKey(key: KeyDoc, set: KeySet = 'tuning'): Promise<string[]> {
   const problems: string[] = []
   const texts = new Map<number, string>()
+  if (set !== 'tuning' && !key.v3) problems.push(`${key.doc}: dev and test keys use version 3`)
   for (const page of key.pages) {
-    const { runs } = await extractPage(key.pdfPath, page.pdfPage)
-    const text = canon(joinRuns(runs))
+    const where = `${key.doc} p${page.keyPage}`
+    const evidence = key.v3?.evidence.get(page.keyPage)
+    const rawPage = key.v3?.raw.pages.find((p) => p.keyPage === page.keyPage)
+    if (evidence && rawPage) {
+      texts.set(page.keyPage, evidence.text)
+      if (rawPage.wordsSha256 !== evidence.sha256)
+        problems.push(`${where}: the word snapshot is not the one the key was written against`)
+      problems.push(...validateV3Page(rawPage, evidence.occurrences, evidence.text).map((p) => `${key.doc} ${p}`))
+      checkPage(page, { where, text: evidence.text, amounts: new Set(), problems }, true)
+      continue
+    }
+    const words = await pageWords(key.pdfPath, page.pdfPage)
+    const text = canon(words.map((w) => w.str).join(' '))
     texts.set(page.keyPage, text)
-    checkPage(page, { where: `${key.doc} p${page.keyPage}`, text, ...pageAmounts(runs), problems }, set, key.currency)
+    const check = { where, text, amounts: provenAmounts(words), problems }
+    checkPage(page, check, false)
+    if (page.expect === 'content')
+      page.products.forEach((p) => {
+        checkLegacyProduct(p, check)
+      })
   }
-  for (const section of key.sections ?? []) {
-    const text = texts.get(section.keyPage)
-    if (text === undefined) problems.push(`${key.doc}: section for unknown key page ${section.keyPage}`)
-    else
-      section.anchors
-        .filter((a) => occurrences(text, a) === 0)
-        .forEach((a) => problems.push(`${key.doc} p${section.keyPage}: section anchor "${a}" not in the text layer`))
-  }
+  checkSections(key, texts, key.v3 !== undefined, problems)
+  // Decisions per printed page count only printed pages with products, found through their product anchors.
+  if (key.v3 && key.sections)
+    for (const page of key.pages.filter((p) => p.products.length)) {
+      const anchors = page.products.map((p) => p.anchor)
+      const own = key.sections.filter((s) => s.keyPage === page.keyPage)
+      if (own.length && !own.some((s) => s.anchors.some((a) => anchors.includes(a))))
+        problems.push(`${key.doc} p${page.keyPage}: no printed page of it names a product anchor`)
+    }
+  key.disputes.forEach((d) => problems.push(`${key.doc} p${d.keyPage}: open dispute: ${d.note}`))
   return problems
 }

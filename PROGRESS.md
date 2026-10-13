@@ -1,9 +1,9 @@
 # Make It Accessible — Progress
 
-Last updated: 2026-10-12. Read this first in every new session.
+Last updated: 2026-10-13. Read this first in every new session.
 
 ## Status
-Idea validated on the supply side; demand will be validated by launching. Stage 0 in progress (plan: `docs/STAGE0.md`). Days 0–3 done (log at the end of `docs/STAGE0.md`; model calls run on Andrei's Claude subscription via Claude Code headless mode; Bedrock deferred to the MVP). Day 3 result: all 6 tuning pages pass C1–C4 in 2 of the last 3 runs, 0 silent price errors, ~$0.08/page. Prompt frozen after a cost round (~$0.07/page, see docs/STAGE0.md). Day 4: held-out keys for Honda/Stone House/Bannatyne frozen; two blockers found before the runs (pound prices unreadable, tables not in the gate; see the Day 4 log). Both fixed before any run (Andrei's go). Held-out runs done (Day 5 log): 0 silent price errors in 156 checks. **Stage 0 verdict: GO (Andrei, 2026-10-12).** Hardening under way (`docs/HARDENING.md`, tracker `docs/ROADMAP.md`): A1 decisions and pre-registration, A2 harness done 2026-10-13; next A3 corpus. Then SPEC rewrite, then MVP with payments from day one.
+Idea validated on the supply side; demand will be validated by launching. Stage 0 in progress (plan: `docs/STAGE0.md`). Days 0–3 done (log at the end of `docs/STAGE0.md`; model calls run on Andrei's Claude subscription via Claude Code headless mode; Bedrock deferred to the MVP). Day 3 result: all 6 tuning pages pass C1–C4 in 2 of the last 3 runs, 0 silent price errors, ~$0.08/page. Prompt frozen after a cost round (~$0.07/page, see docs/STAGE0.md). Day 4: held-out keys for Honda/Stone House/Bannatyne frozen; two blockers found before the runs (pound prices unreadable, tables not in the gate; see the Day 4 log). Both fixed before any run (Andrei's go). Held-out runs done (Day 5 log): 0 silent price errors in 156 checks. **Stage 0 verdict: GO (Andrei, 2026-10-12).** Hardening under way (`docs/HARDENING.md`, tracker `docs/ROADMAP.md`): A1–A3 and A5 done 2026-10-13; A4 (blind keys) under way: harness step done, key policy and page draw next. Then SPEC rewrite, then MVP with payments from day one.
 
 Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre-registration recorded 2026-10-12).
 
@@ -36,7 +36,7 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 - **Payments from day one**: monthly subscription via Stripe (Checkout + Customer Portal + webhooks + Stripe Tax). No 100 % free launch. Free = limited trial only (free checker without account; a small document trial), not a free product.
 - Quotas = page credits, not document counts (review finding B2: document quotas allowed processing cost above revenue).
 - Launch is the demand test; define kill criteria before launch (proposal: at 30 days ≥ 300 free checks, ≥ 10 % sign-up conversion, ≥ 1 paying customer; otherwise stop/pivot).
-- No real-estate direction. The repository never mentions or references the author's employer.
+- No real-estate direction. The repository records every choice as its own decision and never says where a design came from (Andrei, 2026-10-13).
 
 ## Decisions still open (ask Andrei)
 1. Tagged PDF in v1: recommendation = HTML primary ("publish this instead of the PDF") + a rebuilt tagged PDF generated from our HTML (Chromium tagged PDF), clearly labelled as redesigned; layout-preserving tagging deferred.
@@ -77,5 +77,5 @@ Goal: an end-to-end flow that works flawlessly and is tested at every step.
 - Never push (Andrei pushes; hand over the exact commands); commit only when asked; no Co-Authored-By lines.
 - Docs in English; replies in natural Romanian (full sentences, English tech terms kept).
 - Avoid the words "dedupe", "verbatim", "clamp", "prune" in prose and code.
-- Never mention the author's employer or his other personal projects anywhere in the repository.
+- Never write where a design or code came from, and never mention Andrei's other personal projects in the repository.
 - Honest claims only: never "compliant", "certified", "100 %".

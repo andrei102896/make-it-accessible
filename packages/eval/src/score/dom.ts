@@ -16,19 +16,26 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
         return {
           text: el.innerText,
           alts: [...product.querySelectorAll('img')].map((img) => img.getAttribute('alt') ?? ''),
-          prices: [...el.querySelectorAll<HTMLElement>('.price')].map((p) => {
-            const qualifier = p.querySelector<HTMLElement>('.qualifier')?.innerText ?? ''
-            return {
-              role: p.dataset.role ?? '',
-              text: p.innerText.slice(qualifier.length).trim(),
-              qualifier: qualifier.trim(),
-              review: p.matches('[data-review]'),
-            }
-          }),
+          // A product's own prices: a nested product (an add-on) owns its prices, a table inside the product does not.
+          prices: [...el.querySelectorAll<HTMLElement>('.price')]
+            .filter((p) => (el.matches('.products > li') ? p.closest('.products > li') : p.closest('li, tr')) === el)
+            .map((p) => {
+              const qualifier = p.querySelector<HTMLElement>('.qualifier')?.innerText ?? ''
+              return {
+                role: p.dataset.role ?? '',
+                text: p.innerText.slice(qualifier.length).trim(),
+                qualifier: qualifier.trim(),
+                review: p.matches('[data-review]'),
+              }
+            }),
           review:
             el.querySelector('.price[data-review]') !== null ||
             el.matches('tr[data-review]') ||
             el.closest(GROUPING) !== null,
+          altReview: product.querySelector('img[data-review]') !== null,
+          grouping: el.matches('tr[data-review]') || el.closest(GROUPING) !== null,
+          row: el.tagName === 'TR',
+          anyPrice: el.querySelector('.price') !== null,
         }
       })
       const headings = [...section.querySelectorAll<HTMLElement>('h3, h4, h5, h6')].map((h) => ({
@@ -36,7 +43,7 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
         text: h.innerText,
       }))
       // Merged cells are repeated on every row and column they span, as a screen reader announces them.
-      const rows = [...section.querySelectorAll('table')].flatMap((table) => {
+      const rows = [...section.querySelectorAll('table')].flatMap((table, tableIndex) => {
         const grid: ({ text: string; prices: string[] } | undefined)[][] = []
         ;[...table.rows].forEach((tr, ri) => {
           let ci = 0
@@ -54,6 +61,7 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
           }
         })
         return [...table.rows].map((tr, ri) => ({
+          table: tableIndex,
           text: tr.innerText,
           header: tr.querySelector('td') === null,
           review: tr.matches('[data-review]') || tr.closest(GROUPING) !== null,
@@ -75,6 +83,9 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
   })
 }
 
+// Table ids stay distinct across the sections of one key page.
+const TABLES_PER_SECTION = 1000
+
 // A spread or panel layout publishes one key page as several sections; they are scored together, in DOM order.
 export function pageDom(sections: readonly DomSection[], keyPage: number): DomPage {
   const own = sections.filter((s) => s.page === keyPage)
@@ -83,7 +94,7 @@ export function pageDom(sections: readonly DomSection[], keyPage: number): DomPa
     leaves: own.flatMap((s) => s.leaves),
     containers: own.flatMap((s) => s.containers),
     headings: own.flatMap((s) => s.headings),
-    rows: own.flatMap((s) => s.rows),
+    rows: own.flatMap((s, i) => s.rows.map((r) => ({ ...r, table: i * TABLES_PER_SECTION + r.table }))),
     text: own.map((s) => s.text).join('\n'),
     alts: own.flatMap((s) => s.alts),
     unsupported: own.length > 0 && own.every((s) => s.unsupported),

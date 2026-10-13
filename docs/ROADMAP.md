@@ -2,7 +2,7 @@
 
 Single place for progress. Updated in the same change as the work (AGENTS.md "Docs upkeep"). Status: `[x]` done (date), `[~]` in progress, `[ ]` to do. Estimates are working days, not calendar promises; robustness wins over dates.
 
-**Where we are (2026-10-13):** M0 done (GO). M1: A1–A3 done; next A4 (blind keys). Engine ready = M1 + M2 done, estimated ~4–5 weeks of work. Website and pricing (M3–M4) start after that.
+**Where we are (2026-10-13):** M0 done (GO). M1: A1–A3 and A5 done; A4 under way (harness step done, page draw next). Engine ready = M1 + M2 done, estimated ~4–5 weeks of work. Website and pricing (M3–M4) start after that.
 
 ## M0 — Stage 0 quality gate · done 2026-10-12
 - [x] Pipeline, scorer, keys for 5 documents, prompt frozen (2026-10-12)
@@ -13,8 +13,16 @@ Phase A, measurement first:
 - [x] A1 Decisions and pre-registration (2026-10-12)
 - [x] A2 Harness: scorer reads visible prices with its own parser, prices keyed per amount (role, currency, qualifier), narrow review marks (row-mark bug fixed), merged sections and printed-page checks, page type/scope/unsupported, zero-tolerance image text and slug text, split and layout manifests, sealed-test guard, rescore to a copy, decisions metric, 3-run aggregator (2026-10-13)
 - [x] A3 Corpus: 22 new PDFs, 402 pages (Lidl GB, B&M, Keystore, Kaufland, Lidl DE/CH, Landi, Swift ×2, Elddis ×2, Coachman, 7 menus/price lists incl. Canva, scan, image-only, unreadable fonts, Sanford), sources and hashes in `validation/SOURCES.md`; all 501 corpus pages labelled for layout; Andrei's local copies (Sanford, Lidl NL) recorded as such (2026-10-13)
-- [ ] A4 Blind keys (≥ 12 grid pages / ≥ 150 items full keys, price-only keys to ~300 items, 4 menus, 10 spreads, 2 trifold sides, 4 text), Andrei's spot-check, freeze · 3 d
-- [ ] A5 Dev / sealed test split · 0.5 d
+- [~] A4 Blind keys, amended after two critics (`docs/HARDENING.md` "A4 and A5 as amended") · ~5 d
+  - [x] Harness before keys: eval reader fixes, key validation without the pipeline, completeness (`notPrices`), unique anchors, `seen` prices, section orders, disputes, unkeyed products in the output, merged cells, per-page decisions bound, sealed keys, `keys:check`, seeded `select-pages` (2026-10-13)
+  - [x] Repair plan after Andrei's policy review and two critics: occurrences instead of values (2026-10-13)
+  - [x] Eval reader fixes (decimal pence, unmapped glyphs, NFKC, thousands with spaces, suffix currency) and the occurrence ledger, checked against renders of Lidl GB p7, Lidl CH p16, Lidl NL p15 (2026-10-13)
+  - [x] Key v3 (writers claim occurrences), scorer conditions/roles/claims and add-ons, strict tables, C1 in-block order, C3 coverage reported (calibrated on stage-0 runs), C4 lexical rename, word snapshots, spares before the reserve (2026-10-13)
+  - [ ] Key policy approved by Andrei (`validation/KEY_POLICY.md`)
+  - [ ] Rules commit by Andrei → page draw with its SHA → `validation/selection.json` frozen
+  - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
+  - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
+- [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)
 - [ ] A6 Baseline on dev, stage-0 commit, 3 runs · 0.5 d
 Phase B, fixes on dev:
 - [ ] B1 Currency per price, formats "99p", "12,50€", "12.5", "-.99", CHF · 2 d
@@ -39,6 +47,7 @@ Remaining hardening (after C):
 
 ## M3 — SPEC rewrite and pricing · ~2–3 days
 - [ ] SPEC.md rewrite from CLIENT_FLOW, HARDENING results and review findings
+- [ ] Stack decision with hosting, from `docs/INFRA_RESEARCH.md` (2026-10-13 research: RDS + S3/CloudFront + Lambda per page under Step Functions proposed; Supabase rejected on PITR/SOC 2 cost and coupling)
 - [ ] Prices and plans from the measured cost per A4 page (≤ 25 % of revenue), credit allowances, add-ons
 
 ## M4 — MVP web app · ~4–6 weeks

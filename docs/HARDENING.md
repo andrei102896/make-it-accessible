@@ -62,9 +62,114 @@ Minimum set:
 - **Trifolds:** 2 sides.
 - **Text pages:** 4, for regression only.
 
-A5. **Split** 60 % dev / 40 % sealed test, stratified by type, no document in both halves. Nobody opens the test half until phase C.
+A5. **Split** 60 % dev / 40 % sealed test, stratified by type, no document in both halves. Nobody opens the test half until phase C. (Amended below: split by publisher group, about half the pages in test.)
 
 A6. **Baseline** on dev with the stage-0 commit, 3 runs per page. Diagnosis uses dev only.
+
+### A4 and A5 as amended (2026-10-13, after two critics; Andrei's go)
+The A4/A5 draft was challenged by two critics (measurement validity, key correctness). What changed and why:
+
+**Split (A5), by publisher group, decided before any page is chosen.**
+- Groups: Lidl {06, 10, 11, 27}, Swift {13, 14}, Elddis {15, 17}; every other document alone. A group never sits in two halves (shared templates).
+- Test: 07 B&M, 08 Keystore, 09 Kaufland, 12 Landi, 13 + 14 Swift, 16 Coachman, 18 Akash, 21 Café Friedrich, 26 Sanford, 20 scan, 25 fonts without Unicode.
+- Dev: 06 / 10 / 11 / 27 Lidl, 15 + 17 Elddis, 19 Sondergeld, 22 LAMH, 24 Savoyen, 23 image flyer; the tuning documents 01–05 are also dev material.
+- Coachman and Sanford are in test because they hold the only priced tables outside Elddis; without them "price on the wrong row" would never be measured on test.
+- About half the selected pages are test, not 40 %: the claim rests on the test half, so it gets the items it needs. Dev keeps the tuning documents.
+- **Not covered by the test half, stated next to every result:** prices printed without a currency, prices set glyph by glyph, text hidden under an overlay (all dev only).
+
+**Page selection, mechanical and seeded** (`packages/eval/src/selection.ts`, `pnpm select-pages`).
+- The rules and the plan per document are committed first. The seed is the SHA of that commit, so nobody can steer the draw.
+- Facts per page come from the eval's own text reader:
+  - amounts with a currency;
+  - amounts of any kind;
+  - numbers set ≥ 1.8× the page's median height (leaflet prices whose cents or currency are separate glyphs).
+- Eligibility:
+  - **priced:** single, spread or panels; ≥ 30 words; and one of ≥ 3 currency amounts, ≥ 3 large numbers, or ≥ 3 bare amounts in a document that prints no currency at all;
+  - **text:** single, spread or panels; inner page; no amounts and no large numbers; ≥ 150 words;
+  - **empty:** no words;
+  - **spread:** labelled spread.
+- "Fixed" pages carry a trait recorded in `validation/SOURCES.md` before selection:
+  - 13 p17: spec table across the gutter;
+  - 14 p1: cover spread;
+  - 27 p5: overlay; 27 p21: screenshot;
+  - 26 p15: image only;
+  - 16, 17, 18, 22: both sides;
+  - 23: the only page.
+- Every selected page is keyed in full (no price-only keys).
+- **Replacement:** a page selected as priced whose key has no priced item is replaced by the next ranked page of its document, logged in KEYS.md.
+- **Test minimums**, checked after keying:
+  - ≥ 150 priced items on grid pages;
+  - ≥ 250 priced items in total;
+  - ≥ 2 pages with priced tables.
+  - If one is missed, the next ranked priced page of each test document is added in plan order, at most 4 pages per document.
+- **Spares and reserve:** `validation/selection.json` records, after the drawn pages, the next 3 ranked priced pages of each document as spares (used in order for replacement and top-up), then for each test document the next 3 as the reserve, never rendered or keyed: the unseen pages for a retest if a target is missed.
+
+**Harness before any key** (done 2026-10-13, each with a test):
+- **Eval reader fixes:** "+60p", "Price Marked 75p", "0.59 0.99" (two numbers, not one), "-10%" (not an amount), "Fr. 65.–" in running text.
+- **Key validation never uses the pipeline's extraction or price reading** (only the shared `canon` text form). It reads words with its own `pdftotext -tsv` call. A printed price is proven by its string, or by euros chained to smaller top-aligned cents (`key-proof.ts`). The euro/cent pair proof from the pipeline is gone.
+- **Completeness** (superseded the same day by occurrence claims, below): every amount written as money on the page must be one of:
+  - a keyed price;
+  - a table cell;
+  - required text;
+  - listed in `notPrices` with a reason.
+  This stops a missing product from hiding a wrong price, or from inventing an "extra".
+- **Validator rules for new keys:**
+  - reading-order, heading and section anchors occur exactly once;
+  - every key page appears in each section order;
+  - `sectionOrders` lists other acceptable orders of printed pages;
+  - open `disputes` block the freeze.
+- **`seen` prices:** a price visible only in the render. It is allowed only when its amount is absent from the text layer. It must be published flagged, in the text or in a flagged picture's alt. Results report how many items are `seen`.
+- **Scorer changes:**
+  - on a fully keyed page, any other priced product in the output is an error, silent unless flagged;
+  - one output cell may hold adjacent key cells;
+  - the decisions bound counts each grid page once, at its worst run, over printed pages that carry products.
+- **Sealed test keys** live in `validation/sealed/` (gitignored, Andrei keeps the backup); `validation/KEYS.md` holds their hashes. Tests, `pnpm stage0` and `pnpm keys:check` print only problem counts for them (`--details` is for the key writers and Andrei).
+
+**Repair before the rules commit (2026-10-13, after Andrei's review of the key policy and two more critics).**
+- **Occurrences, not values.**
+  - The eval segments each page's frozen word snapshot into non-overlapping money occurrences (`ledger.ts`): runs of price glyphs on one line, kerned and tracked digits joined, dates and leading-zero numbers excluded, an unmapped glyph making the occurrence unreadable, chained small cents.
+  - Writers claim every occurrence exactly once (price, table cell, page text, not a price), so completeness holds by construction and two writers are compared occurrence by occurrence.
+  - Checked against renders of Lidl GB p7 (38 occurrences, 10 unreadable "£�.99"), Lidl CH p16 (7), Lidl NL p15 (13): no price missed, no date or size taken for a price.
+- **Eval reader:** decimal pence ("16.7p"), unmapped glyphs read as nothing (not as a wrong amount), NFKC superscripts, thousands with spaces and decimals; "59 £" is no longer a price (the pound sign precedes).
+- **Key version 3** (`key-schema-v3.ts`, `key-v3.ts`):
+  - `optional` prices are gone; uncertain association is a `parent` product;
+  - roles add `previousUnit`, `deposit` and `unknown` (reported as "role unverified");
+  - conditions replace the qualifier;
+  - a readable occurrence overridden as misread stays open until Andrei confirms it;
+  - word snapshots are frozen per page with their SHA-256 in the key; a Poppler drift only warns.
+- **Scorer:**
+  - conditions must be whole phrases of that price's own label, not negated;
+  - one constant table says which output roles each key role accepts;
+  - each output product answers one key product (an add-on may share its parent's);
+  - a product's own prices exclude a nested product's, and text is never read as prices where price elements exist;
+  - a price that belongs to no product may appear as an output product at most as often as it is printed;
+  - strict tables: `""` must stay empty, unchecked cells are counted, one output table answers a key table, rows match one to one, headers column by column;
+  - C1 positions include the offset inside a block.
+- **Pre-registration amendments, before any dev or test key exists:**
+  - **C3 whole-text coverage is reported, not gating.** It counts the text layer's words found in the output one to one, prices and unmapped glyphs left out, same tokenization on both sides. On the five stage-0 reference runs it is 95–100 %, and the misses are mostly line-end hyphenation, broken ligatures and logo text, so no threshold separates good from bad output. Order is not measured there: the text stream is not reading order, and C1 owns order.
+  - **C4 is "product alt names the product (lexical)".** A negation within three words before the name fails it. It is not presented as a rate of correct descriptions. Alt fidelity is scored by hand by Andrei on 30 seeded test alts in phase C (correct / essential detail missing / false information) and reported with its bound (0 of 30 gives 9.5 %), not gating.
+  - **"Role unverified"** (prices whose role the output does not show, or that the key leaves open) is reported next to the silent-price headline.
+- **Page draw:** `selection.json` records 3 spares per document (replacement and top-up, in order) before the 3 reserve pages of each test document.
+
+**Key writing.**
+- **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.
+- **Isolated writers.** Each page gets its own folder outside the repo, holding:
+  - the PDF;
+  - renders at 150 DPI and 300 DPI tiles;
+  - the occurrence ledger and the snapshot's SHA-256 (`pnpm ledger <doc> <page> --details`), with a crop per occurrence;
+  - `pdftotext -layout` of that page;
+  - the schema and the policy.
+  The only repo commands a writer may run are `pnpm ledger` and `pnpm keys:check <file> --details`. Each transcript is audited against an allowlist (the folder plus those commands); any other path discards the key.
+- **Double entry.** Two independent writers per page. A script compares the two keys occurrence by occurrence (claim kind, product, role, conditions loosely, value), then products by anchor, tables cell by cell and reading orders by text offsets.
+- **Arbiter.** It settles only differences it can prove from the 300 DPI crop. Anything uncertain goes to Andrei.
+- **No silencing.** Writers never change a key to silence the validator; what they cannot settle goes to `disputes`.
+- **Developer sees counts only.** The developer of the phase-B fixes never reads test pages, test keys or the arbiter's notes. Handbacks carry only a path and counts.
+- **Andrei checks before the freeze:**
+  - every test occurrence on a crop sheet with its claim: amount, role, currency, conditions and product, or why it is not a price;
+  - 6 pages structurally (3 dev, 3 test, seeded);
+  - the uncertain layout labels (17, 23, 24 p2–4).
+  An error he finds triggers a mechanical recheck or his own recheck of that kind of entry, never the same agents again.
+- **Test-only formats.** Formats known only from test documents are never copied into unit-test fixtures; fixtures for phase B are synthetic. Their list is kept outside git (`validation/private/`), so this file carries no test-half content. The scorer's reader was fixed for whole-unit prices with a dash and "Fr." on 2026-10-13: that is the measuring tool reading pages correctly, not a pipeline change.
 
 ## Phase B — fixes, developed on dev
 Deterministic changes are measured by rescoring copies of saved outputs (no model variance). Model-input changes run 3 times per dev page.

@@ -6,9 +6,17 @@ import { pageDom, readSections } from './dom.ts'
 import { printedPages } from './layout.ts'
 import { altText, productPrices, readingOrder, textFidelity } from './metrics.ts'
 import { structureScore } from './tables.ts'
+import { coverage, pageTokens } from './coverage.ts'
+import type { Word } from '../words.ts'
 import type { DocScore, PageScore } from './types.ts'
 
-export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: readonly number[]): Promise<DocScore> {
+// words: the text layer per key page, for the reported whole-text coverage.
+export async function scoreDocument(
+  htmlPath: string,
+  key: KeyDoc,
+  keyPages: readonly number[],
+  words: ReadonlyMap<number, readonly Word[]> = new Map(),
+): Promise<DocScore> {
   const browser = await chromium.launch()
   try {
     const tab = await (await browser.newContext()).newPage()
@@ -22,11 +30,17 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
         const dom = pageDom(sections, p.keyPage)
         const c1 = readingOrder(p, dom)
         const c2 = productPrices(p, dom, key.currency)
-        const c3 = textFidelity(p, dom)
+        const pageWords = words.get(p.keyPage)
+        const c3 = {
+          ...textFidelity(p, dom),
+          coverage: pageWords
+            ? coverage(pageTokens(pageWords, [...p.outsideTrim, ...p.mustNotAppear]), [dom.text, ...dom.alts].join(' '))
+            : null,
+        }
         const c4 = altText(p, dom)
         const c5 = structureScore(p, dom, key.currency)
         const layout = key.sections ? (printed.get(p.keyPage) ?? []) : null
-        const full = p.scope === 'full' && p.expect === 'content'
+        const full = p.expect === 'content'
         const when = (applies: boolean, ok: boolean): boolean | null => (applies ? ok : null)
         // An unsupported page passes only when it is marked so and publishes no prices.
         const unsupported =
@@ -52,7 +66,7 @@ export async function scoreDocument(htmlPath: string, key: KeyDoc, keyPages: rea
                 !c3.outsideTrim.length,
             ),
             c4: when(full, c4.total === 0 || c4.ok / c4.total >= 0.8),
-            c5: when(full, c5.rowsOk === c5.rows),
+            c5: when(full, c5.rowsOk === c5.rows && !c5.headerErrors.length),
             layout: layout && layout.length === 0,
             unsupported,
           },

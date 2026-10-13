@@ -1,10 +1,12 @@
 import { z } from 'zod'
+import type { KeyDoc, KeyPage } from '../keys.ts'
+import { CURRENCY_HEADER, isAmount, readMoney } from './money.ts'
 
 // The part of a saved page score the summary reads; score.json files are parsed against it.
 export const RunScore = z.object({
   keyPage: z.number(),
   pass: z.record(z.string(), z.boolean().nullable()),
-  c2: z.object({ silent: z.number() }),
+  c2: z.object({ silent: z.number(), unverified: z.number().default(0) }),
   c5: z.object({ silentRows: z.number() }),
   decisions: z.number().nullable(),
 })
@@ -15,6 +17,9 @@ export type PageRuns = {
   type: string
   keyPage: number
   items: number
+  // Priced items read from the render (image-only or unreadable glyphs), reported apart: nothing mechanical checks their key.
+  seenItems: number
+  // Printed pages that carry products.
   printedPages: number
   runs: RunScore[]
 }
@@ -31,6 +36,9 @@ export type PageSummary = {
 export type Summary = {
   pages: PageSummary[]
   items: number
+  seenItems: number
+  // Worst run per page, summed: prices whose role was not checked.
+  unverified: number
   pricedPages: number
   silentPriceErrors: number
   itemBound: number | null
@@ -86,16 +94,21 @@ export function summarize(pages: readonly PageRuns[]): Summary {
   const grid = pages.filter((p) => p.type === 'grid')
   const gridUnits = grid.reduce((n, p) => n + p.printedPages * p.runs.length, 0)
   const gridDecisions = grid.reduce((n, p) => n + p.runs.reduce((m, r) => m + (r.decisions ?? 0), 0), 0)
+  // Runs of one page are not independent, so the bound counts each page once, at its worst run.
+  const worstDecisions = grid.reduce((n, p) => n + Math.max(0, ...p.runs.map((r) => r.decisions ?? 0)), 0)
+  const gridPages = grid.reduce((n, p) => n + p.printedPages, 0)
   const items = priced.reduce((n, p) => n + p.items, 0)
   return {
     pages: summaries,
     items,
+    seenItems: priced.reduce((n, p) => n + p.seenItems, 0),
+    unverified: pages.reduce((n, p) => n + Math.max(0, ...p.runs.map((r) => r.c2.unverified)), 0),
     pricedPages: priced.length,
     silentPriceErrors: silent,
     itemBound: silent === 0 ? zeroFailureBound(items) : null,
     pageBound: silent === 0 ? zeroFailureBound(priced.length) : null,
     gridDecisionsPerPage: gridUnits ? gridDecisions / gridUnits : null,
-    gridDecisionsBound: poissonBound(gridDecisions, gridUnits),
+    gridDecisionsBound: poissonBound(worstDecisions, gridPages),
   }
 }
 
@@ -105,4 +118,33 @@ export function regressions(before: readonly PageSummary[], after: readonly Page
     const b = before.find((x) => x.doc === a.doc && x.keyPage === a.keyPage)
     return b && b.passed === b.runs && a.passed <= 1 ? [`${a.doc} p${String(a.keyPage)}`] : []
   })
+}
+
+// Distinct priced items on a key page: keyed prices, plus price cells of table rows that are not a keyed product.
+export function pricedItems(page: KeyPage): number {
+  const products = page.products.reduce(
+    (n, p) => n + (p.prices ? p.prices.length : (p.money ?? []).length),
+    page.textPrices.length,
+  )
+  if (page.pricedCells !== undefined) return products + page.pricedCells
+  const articles = page.products.flatMap((p) => (p.articleNo ? [p.articleNo] : []))
+  // A cell is a price when it prints a currency or sits under a currency header ("€"); spec values are not.
+  const cells = page.tables.flatMap((t) =>
+    t.rows
+      .filter((r) => !r.some((c) => c !== null && articles.includes(c)))
+      .flatMap((r) =>
+        r.filter(
+          (c, i): c is string =>
+            c !== null && isAmount(c) && (readMoney(c)?.currency != null || CURRENCY_HEADER.test(t.header[i] ?? '')),
+        ),
+      ),
+  ).length
+  return products + cells
+}
+
+// Printed pages that carry products: a spread's photo-only half does not dilute decisions per page.
+export function productPages(key: KeyDoc, page: KeyPage): number {
+  const anchors = page.products.map((p) => p.anchor)
+  const own = key.sections?.filter((s) => s.keyPage === page.keyPage) ?? []
+  return own.filter((s) => s.anchors.some((a) => anchors.includes(a))).length || 1
 }

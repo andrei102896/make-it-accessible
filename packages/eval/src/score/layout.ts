@@ -1,20 +1,18 @@
 import { norm } from '@make-it-accessible/pipeline/text/normalize'
-import type { KeyDoc } from '../keys.ts'
+import type { KeyDoc, KeySection } from '../keys.ts'
 import type { DomSection } from './dom.ts'
 import { loose } from './text.ts'
 
 const labelled = (heading: string, label: string): boolean =>
   new RegExp(`(^|\\W)${norm(label).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\W|$)`).test(norm(heading))
 
-// Printed pages in the expected order, each with its label and the anchors that must land on it; problems per key page.
-export function printedPages(
-  key: KeyDoc,
+function checkOrder(
+  order: readonly KeySection[],
   sections: readonly DomSection[],
   keyPages: readonly number[],
 ): Map<number, string[]> {
   const problems = new Map<number, string[]>()
-  if (!key.sections) return problems
-  const expected = key.sections.filter((s) => keyPages.includes(s.keyPage))
+  const expected = order.filter((s) => keyPages.includes(s.keyPage))
   const found = sections.filter((s) => keyPages.includes(s.page))
   const add = (page: number, problem: string): void => {
     problems.set(page, [...(problems.get(page) ?? []), problem])
@@ -36,4 +34,17 @@ export function printedPages(
       })
   })
   return problems
+}
+
+// Printed pages in an accepted order, each with its label and the anchors that must land on it; problems per key page.
+export function printedPages(
+  key: KeyDoc,
+  sections: readonly DomSection[],
+  keyPages: readonly number[],
+): Map<number, string[]> {
+  if (!key.sections) return new Map()
+  const count = (m: Map<number, string[]>): number => [...m.values()].reduce((n, p) => n + p.length, 0)
+  return [key.sections, ...key.sectionOrders]
+    .map((order) => checkOrder(order, sections, keyPages))
+    .reduce((best, m) => (count(m) < count(best) ? m : best))
 }

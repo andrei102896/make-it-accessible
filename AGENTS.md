@@ -18,7 +18,7 @@ A SaaS that turns a designed PDF (retail leaflet, catalog, brochure) into an acc
 
 ## Project rules
 - Honest claims only: never "compliant", "certified", "100 %" in code, docs or copy.
-- Never mention or reference the author's employer or its code anywhere in this repository.
+- Never write where a design or code came from (no "inspired by", no source attribution) in code, docs or commits: every choice is recorded as a decision taken in this project.
 - Publishers' PDFs and anything derived from them (renders, text, competitor output) stay local and out of git; see `validation/SOURCES.md`.
 - Answer keys under `validation/keys/` are frozen by SHA-256 in `validation/KEYS.md`. Any edit is logged there with the reason before it is used.
 - Never name competitors next to our test results in tracked files; comparisons stay in `validation/private/` (local only).

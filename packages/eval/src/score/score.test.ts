@@ -4,9 +4,20 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { loadKey, type KeyPage, type KeyProduct } from '../keys.ts'
+import type { KeyRole } from '../key-schema.ts'
 import type { DocScore, PageScore } from './types.ts'
 import { scoreDocument } from './score.ts'
 
+// The role a perfect output renders for each key role (the pipeline has current, previous, unit and discount).
+const OUTPUT_ROLE: Record<KeyRole, string> = {
+  current: 'current',
+  previous: 'previous',
+  unit: 'unit',
+  previousUnit: 'previous',
+  discount: 'discount',
+  deposit: 'current',
+  unknown: 'current',
+}
 const money = (cents: number, currency: string | null): string =>
   currency
     ? new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(cents / 100)
@@ -15,7 +26,7 @@ const picture = (p: KeyProduct): string =>
   p.alt === null ? '' : `<img src="x.jpg" alt="${(p.alt ?? p.anchor).split('|')[0] ?? ''}">`
 const plainTable = (t: KeyPage['tables'][number]): string =>
   `<table><tr>${t.header.map((h) => `<th scope="col">${h}</th>`).join('')}</tr>${t.rows
-    .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`)
+    .map((r) => `<tr>${r.map((c) => `<td>${c ?? ''}</td>`).join('')}</tr>`)
     .join('')}</table>`
 
 function perfectSection(page: KeyPage, currency: string): string {
@@ -27,7 +38,7 @@ function perfectSection(page: KeyPage, currency: string): string {
   const priced = (p: KeyProduct): string =>
     (p.prices
       ? p.prices.map((k) =>
-          span(k.role === 'any' ? 'current' : k.role, money(k.cents, k.currency), k.qualifier, k.currency === null),
+          span(OUTPUT_ROLE[k.role], money(k.cents, k.currency), k.conditions.join(' '), k.currency === null || k.seen),
         )
       : (p.money ?? []).map((m) => span(p.old.includes(m) ? 'previous' : 'current', money(m, currency)))
     ).join(' ')

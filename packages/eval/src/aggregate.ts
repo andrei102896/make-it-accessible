@@ -2,30 +2,18 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { loadKey, type KeyPage } from './keys.ts'
-import { regressions, RunScore, summarize, type PageRuns, type Summary } from './score/aggregate.ts'
-import { isAmount, readMoney } from './score/money.ts'
+import { loadKey } from './keys.ts'
+import {
+  pricedItems,
+  productPages,
+  regressions,
+  RunScore,
+  summarize,
+  type PageRuns,
+  type Summary,
+} from './score/aggregate.ts'
 
 const ScoreFile = z.object({ pages: z.array(RunScore) })
-const CURRENCY_HEADER = /[€£$]|\bCHF\b|\bEUR\b|\bGBP\b/
-
-// Distinct priced items on a key page: keyed prices, plus price cells in table rows that are not a keyed product.
-function pricedItems(page: KeyPage): number {
-  const products = page.products.reduce(
-    (n, p) => n + (p.prices ? p.prices.filter((k) => !k.optional).length : (p.money ?? []).length),
-    0,
-  )
-  const articles = page.products.flatMap((p) => (p.articleNo ? [p.articleNo] : []))
-  // A cell is a price when it prints a currency or sits under a currency header ("€"); spec values are not.
-  const cells = page.tables.flatMap((t) =>
-    t.rows
-      .filter((r) => !r.some((c) => articles.includes(c)))
-      .flatMap((r) =>
-        r.filter((c, i) => isAmount(c) && (readMoney(c)?.currency != null || CURRENCY_HEADER.test(t.header[i] ?? ''))),
-      ),
-  ).length
-  return products + cells
-}
 
 async function collect(runs: readonly string[]): Promise<PageRuns[]> {
   const pages = new Map<string, PageRuns>()
@@ -44,7 +32,8 @@ async function collect(runs: readonly string[]): Promise<PageRuns[]> {
           type: page.type,
           keyPage: page.keyPage,
           items: pricedItems(page),
-          printedPages: key.sections?.filter((s) => s.keyPage === page.keyPage).length || 1,
+          seenItems: [...page.products.flatMap((p) => p.prices ?? []), ...page.textPrices].filter((k) => k.seen).length,
+          printedPages: productPages(key, page),
           runs: [],
         }
         entry.runs.push(score)
@@ -65,9 +54,11 @@ function print(label: string, s: Summary): void {
     )
   const pct = (v: number | null): string => (v === null ? '-' : `${(v * 100).toFixed(1)} %`)
   console.info(
-    `silent price errors ${String(s.silentPriceErrors)} in ${String(s.items)} distinct priced items on ${String(s.pricedPages)} pages;` +
+    `silent price errors ${String(s.silentPriceErrors)} in ${String(s.items)} distinct priced items` +
+      ` (${String(s.seenItems)} read from the render) on ${String(s.pricedPages)} pages;` +
       ` 95 % upper bound per item ${pct(s.itemBound)}, per page ${pct(s.pageBound)}`,
   )
+  console.info(`prices whose role the output does not show or the key leaves open: ${String(s.unverified)}`)
   console.info(
     `grid decisions per printed page ${s.gridDecisionsPerPage?.toFixed(2) ?? '-'} (95 % upper bound ${s.gridDecisionsBound?.toFixed(2) ?? '-'})`,
   )

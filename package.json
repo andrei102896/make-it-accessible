@@ -15,7 +15,10 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "stage0": "node packages/eval/src/run.ts",
     "adhoc": "node packages/eval/src/adhoc.ts",
-    "aggregate": "node packages/eval/src/aggregate.ts"
+    "aggregate": "node packages/eval/src/aggregate.ts",
+    "keys:check": "node packages/eval/src/keys-check.ts",
+    "select-pages": "node packages/eval/src/select-pages.ts",
+    "ledger": "node packages/eval/src/ledger-cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

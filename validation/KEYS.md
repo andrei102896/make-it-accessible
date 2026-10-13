@@ -42,10 +42,19 @@ Manifest changes after the freeze:
 | Date | File | Change | Reason | New SHA-256 | Effect |
 |---|---|---|---|---|---|
 | 2026-10-13 | `layout-labels.json` | added 27_lidl_nl_actie_week31_2026.pdf: 21 × single (every page viewed as a render) | document added to the corpus after the first freeze; no existing label changed | `4120b2c0570035d4d2d77ba41fa110ff0be7444f66fdf1852ce5d3068c48ba7b` | none |
+| 2026-10-13 | `split.json` | added the 22 corpus documents 06–27: 12 test, 10 dev, by publisher group (`docs/HARDENING.md`, A4 and A5 as amended); the five stage-0 documents stay tuning | A5, decided before any A4 page is drawn or keyed | `bf932831a5e7f0fe158c916ca509d8a9d2a91291a072172ffc0a171961193773` | none (no dev or test key exists yet) |
 
-Conventions for keys written from 2026-10-13 (schema v2, `packages/eval/src/key-schema.ts`):
+Conventions for keys written from 2026-10-13 (schema v2, superseded the same day by version 3 below before any key used it; roles `any`, `qualifier` and `optional` no longer parse):
 - Every price is keyed per amount: `printed` as on the page, `cents`, `role` (current, previous, unit, discount, any), `currency` (null only when the document prints none; the output must then flag it), optional `qualifier`. Unit prices are keyed whenever printed.
 - Table rows are as wide as the header (positional); `""` is an unchecked cell.
 - Image text containing a digit goes into the page `mustContain` as `{ "text", "seen": true }`; slug text outside the trim box into `outsideTrim`.
 - Pages that must not be processed (scans, imposed sheets) are keyed `"expect": "unsupported"` with no content.
 - Spreads and folded panels list the document's printed pages in `sections` (key page, printed label or null, anchors that must land on that printed page), in reading order.
+- From A4 on (2026-10-13), dev and test keys are version 3 (`packages/eval/src/key-schema-v3.ts`) and follow `validation/KEY_POLICY.md`:
+  - every money occurrence of the eval ledger is claimed once (price, cell, page text, not a price);
+  - unreadable occurrences carry their value from the render;
+  - misreads stay open until Andrei confirms them;
+  - anchors of the reading order, headings and sections occur once;
+  - open `disputes` block the freeze.
+- Each version-3 page records the SHA-256 of its word snapshot (`validation/words/`, or `validation/sealed/words/` for the test half; not in git). Occurrence ids refer to that snapshot, so it is frozen with the key.
+- Sealed test keys live in `validation/sealed/` (not in git); this file records their SHA-256 at the freeze.

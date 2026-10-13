@@ -5,9 +5,9 @@ import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { SYSTEM_PROMPT } from '@make-it-accessible/pipeline/model/prompt'
 import { popplerVersion } from '@make-it-accessible/pipeline/pdf/poppler'
-import { loadKey, validateKey, type KeySection } from './keys.ts'
+import { keyPath, loadKey, validateKey, type KeySection } from './keys.ts'
 import { loadSplit, type KeySet } from './manifest.ts'
-import { KEYS_DIR, OUT_DIR, ROOT } from './paths.ts'
+import { OUT_DIR, ROOT } from './paths.ts'
 import { PRICES, processPage, type PageResult } from './process.ts'
 import { rescore } from './rescore.ts'
 import { buildAndScore, printScore } from './scoring.ts'
@@ -17,7 +17,9 @@ const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex
 async function assertKeysValid(docs: readonly string[], split: Record<string, KeySet>): Promise<void> {
   for (const doc of docs) {
     const problems = await validateKey(await loadKey(doc), split[doc])
-    if (problems.length) throw new Error(`answer key ${doc} is invalid:\n${problems.join('\n')}`)
+    // A sealed key's problems would show its content; the count is enough to stop the run.
+    const shown = split[doc] === 'test' ? `${String(problems.length)} problems` : problems.join('\n')
+    if (problems.length) throw new Error(`answer key ${doc} is invalid:\n${shown}`)
   }
 }
 
@@ -37,12 +39,12 @@ if (values.rescore) {
   console.info(`rescored copy ${await rescore(values.rescore)}`)
 } else {
   const set = z.enum(['tuning', 'dev', 'test', 'all']).parse(values.pages)
-  // The sealed half is opened once, at the end (docs/HARDENING.md phase C); this flag makes that deliberate.
-  if (set === 'test' && !values['sealed-test'])
-    throw new Error('--pages test opens the sealed test half; add --sealed-test')
   const split = await loadSplit()
   const inSet = Object.keys(split).filter((d) => set === 'all' || split[d] === set)
   const docs = positionals.length ? positionals.filter((d) => inSet.includes(d)) : inSet
+  // The sealed half is opened once, at the end (docs/HARDENING.md phase C); this flag makes that deliberate.
+  if (docs.some((d) => split[d] === 'test') && !values['sealed-test'])
+    throw new Error('these pages include the sealed test half; add --sealed-test')
   if (!docs.length) throw new Error(`no ${set} documents among ${positionals.join(', ') || 'the split'}`)
   const options = { model: values.model, effort: values.effort }
   if (!PRICES[options.model]) throw new Error(`unknown model ${options.model}`)
@@ -53,10 +55,7 @@ if (values.rescore) {
   await mkdir(runDir, { recursive: true })
   const keysSha256 = Object.fromEntries(
     await Promise.all(
-      docs.map(async (d): Promise<[string, string]> => [
-        d,
-        sha256(await readFile(join(KEYS_DIR, `${d}.json`), 'utf8')),
-      ]),
+      docs.map(async (d): Promise<[string, string]> => [d, sha256(await readFile(keyPath(d), 'utf8'))]),
     ),
   )
   const layouts: Record<string, { sections: KeySection[] | null; detected: null }> = {}

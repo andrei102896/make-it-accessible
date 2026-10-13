@@ -90,4 +90,12 @@ Public documents from the publishers' own websites or CDNs (never from viewer pl
 | 26_sanford_benefits_2026.pdf | `46db03e800ced73b8cab7986af69cb4afc5810bd3a4963b89a7e506ce0835197` |
 | 27_lidl_nl_actie_week31_2026.pdf | `aa143417a5fec2104dc3513ec54a89205896c834ee60c58eca6e15662a80cc8b` |
 
+Pages chosen for a trait in A4 (recorded before the page draw; the draw itself is seeded, `docs/HARDENING.md`):
+- 13 Swift p17: the spec table continued across the gutter;
+- 14 Swift spec p1: the cover spread;
+- 16 Coachman, 17 Elddis price list, 18 Akash, 22 LAMH: both sides (two-page documents);
+- 23 SCHNIZZ p1: its only page (image, no text layer);
+- 26 Sanford p15: the page that is a low-resolution image only;
+- 27 Lidl NL p5: text hidden under an overlay; p21: a screenshot page with no text layer.
+
 Known gaps: no price table that runs across a spread's gutter (only spec tables do: Swift); all spreads with tables come from UK caravan makers; no supermarket loyalty-card prices other than Lidl Plus and Kaufland Card; no Tesco/Sainsbury's/Aldi (no public PDF or download blocked).
