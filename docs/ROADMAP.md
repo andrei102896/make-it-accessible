@@ -55,14 +55,14 @@ Remaining hardening (after C):
 ## M3 — SPEC rewrite and pricing · ~2–3 days
 - [ ] SPEC.md rewrite from CLIENT_FLOW, HARDENING results and review findings
 - [ ] Stack decision with hosting, from `docs/INFRA_RESEARCH.md` (2026-10-13 research: RDS + S3/CloudFront + Lambda per page under Step Functions proposed; Supabase rejected on PITR/SOC 2 cost and coupling)
-- [ ] Prices and plans from the measured cost per A4 page (≤ 25 % of revenue), credit allowances, add-ons
+- [ ] Prices and plans from the measured cost per A4 page (≤ 25 % of revenue), credit allowances, add-ons; first numbers and the NAT decision in `docs/COSTS.md`
 
 ## M4 — MVP web app · ~4–6 weeks
 - [ ] Free checker (no account, no AI)
 - [ ] Auth, upload, layout confirmation, processing queue, spend cap
 - [ ] Review editor (three labels, edit text/alt/order/headings/grouping)
 - [ ] Report page, publish (hosted link, embed, ZIP), versions at a stable URL
-- [ ] Stripe subscriptions, page credits, portal; legal pages (privacy, DPA, terms, imprint)
+- [ ] Paddle subscriptions, page credits, portal; legal pages (privacy, DPA, terms, imprint)
 
 ## M5 — Launch
-- [ ] Kill criteria fixed before launch; LinkedIn, German/English SEO, agencies
+- [ ] Kill criteria fixed before launch; LinkedIn, English SEO first (US, UK), German second, agencies
