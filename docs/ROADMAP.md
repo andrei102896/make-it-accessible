@@ -25,6 +25,7 @@ Phase A, measurement first:
   - [x] Fourth policy review fixes: page prices keep their printed offer (cited words, scored word for word), render-read words judged at their place, one image entry per print, snapshot words in `pnpm ledger --details` (2026-10-13)
   - [x] Fifth policy review fixes: cited offer words follow the page (one run per block, stream order, whole amounts, confirmed notes), running-text amounts read as `readMoney` (2026-10-13)
   - [x] Staging tool for the 24 dev pages (`pnpm keys:stage`, run from a clean commit): read-only evidence, one folder and `run.sh` per writer, record in `validation/private/stage/` (2026-10-13)
+  - [x] Confined writer runs and their audit (`pnpm keys:write`), writer brief, Andrei's three policy decisions (RRP, spec values, price-list rows) (2026-10-13)
   - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
   - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
 - [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)

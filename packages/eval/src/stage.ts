@@ -2,10 +2,11 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
 import { parseArgs, promisify } from 'node:util'
 import { z } from 'zod'
 import { KeyDocV3Schema } from './key-schema-v3.ts'
+import { hashes } from './file-hashes.ts'
 import { fileSha256 } from './keys.ts'
 import { ledger } from './ledger.ts'
 import { DOCS_DIR, ROOT, WORDS_DIR } from './paths.ts'
@@ -62,14 +63,11 @@ const lines = (words: readonly Word[]): string => {
   return rows.map((r) => `${r.line} |${r.text}\n`).join('')
 }
 
+// The only repository command a writer runs: the check of its own key, bound to its own page. The ledger's output is
+// already in the evidence.
 const runSh = (doc: string, page: number, key: string, pdf: string): string => `#!/bin/sh
-# The only repository commands this writer runs: the page's ledger, and the check of its own key.
 set -eu
-case "\${1:-}" in
-  ledger) exec node '${join(ROOT, 'packages/eval/src/ledger-cli.ts')}' '${doc}' '${String(page)}' --details ;;
-  check) exec node '${join(ROOT, 'packages/eval/src/keys-check.ts')}' '${key}' --pdf '${pdf}' --details ;;
-  *) echo 'usage: ./run.sh ledger | ./run.sh check' >&2; exit 2 ;;
-esac
+exec node '${join(ROOT, 'packages/eval/src/keys-check.ts')}' '${key}' --pdf '${pdf}' --details --expect '${doc}:${String(page)}'
 `
 
 const README = (dpi: number): string => `# Evidence for one page (read-only)
@@ -80,22 +78,12 @@ const README = (dpi: number): string => `# Evidence for one page (read-only)
   same tiles with the outlines. \`tiles.json\` gives each tile's and crop's box in PDF points from the top left, the frame of
   the snapshot words and of an image amount's \`box\`.
 - \`crops/<id>.png\`: each occurrence with its surroundings, at the DPI listed in \`tiles.json\`.
-- \`ledger.json\`: the output of \`./run.sh ledger\`: the hashes to copy into the key, the occurrences, every snapshot word with
+- \`ledger.json\`: the output of \`pnpm ledger <doc> <page> --details\`: the hashes to copy into the key, the occurrences, every snapshot word with
   its index \`i\`. \`lines.txt\`: the same words by Poppler line (\`flow.block.line | [index]word …\`); a word's text block is the
   first two parts of its line id.
 - \`key.skeleton.json\`: the key to fill (the hashes and every occurrence id are in it); \`key.schema.json\`: its JSON Schema.
 - \`KEY_POLICY.md\`: the rules; \`KEYS.md\`: key conventions and freeze log.
 `
-
-async function hashes(dir: string): Promise<Record<string, string>> {
-  const files: Record<string, string> = {}
-  for (const entry of await readdir(dir, { recursive: true, withFileTypes: true }))
-    if (entry.isFile()) {
-      const path = join(entry.parentPath, entry.name)
-      files[relative(dir, path)] = await fileSha256(path)
-    }
-  return files
-}
 
 async function readOnly(dir: string): Promise<void> {
   for (const entry of await readdir(dir, { recursive: true, withFileTypes: true }))

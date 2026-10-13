@@ -29,6 +29,7 @@ pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one k
 pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
 pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
 pnpm keys:stage --set dev [--out <dir>] [--only <doc>-p<NN>]   # evidence folders for the blind key writers (default ../mia-keys)
+pnpm keys:write --page <doc>-p<NN> --writer a|b [--model --effort --budget --minutes]   # one confined key writer, then its audit
 ```
 
 The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md) for URLs and hashes). Tests that need them are skipped when they are missing.
@@ -70,6 +71,9 @@ packages/eval/src/            evaluation harness, never shipped
   stage.ts                    CLI: one folder per selected dev page: read-only evidence, a writer folder each, a record in validation/private/stage
   stage-draw.ts               staged images from one 300 DPI render: tiles with point rulers, outlined overlays and crops, overview
   stage-geometry.ts           where the staged images cut the page (pure)
+  write-key.ts                CLI: one blind writer as a headless Claude Code process confined to its folder (dontAsk, path rules, no user settings)
+  key-audit.ts                a writer run's audit: transcript against the allowlist, unchanged evidence, key on the staged page
+  file-hashes.ts              SHA-256 of every file under a folder
   keys-check.ts               CLI: validate one key file; sealed keys print counts only
   manifest.ts                 split (tuning/dev/test) and layout-label manifests
   score/metrics.ts            C1, C3, C4 and C2 per page (pure)

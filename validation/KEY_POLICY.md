@@ -48,7 +48,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
 **`role`** is decided by what the page prints, never by guessing:
 - **current:** the price paid now.
 - **Loyalty card prices:** both prices are `current`. The card price has the card text as its condition ("Lidl Plus"). The other price is `current` with no condition, or with what the page prints for it ("Regular price").
-- **previous:** struck through, or labelled "statt", "was", "UVP", "Letzter Preis", "Adv. prijs" or "RRP"; the label is a condition.
+- **previous:** struck through, or labelled "statt", "was", "UVP", "Letzter Preis" or "Adv. prijs"; the label is a condition. "RRP" is `previous` only when a lower current price is printed with it; an RRP printed alone is the asking price: `current`, with "RRP" as its condition (Andrei, 2026-10-13).
 - **unit:** a price per kg, l, 100 g or piece; the unit text is a condition ("1 kg", "per capsule"). Always keyed when printed.
 - **previousUnit:** a previous price per unit ("1 kg: 9,99, statt 12,99" → 12,99 is `previousUnit` with conditions "statt" and "1 kg").
 - **discount:** a money-off amount ("-2€", "Save £1", "2 € billiger"), with the amount as it reads and the wording as a condition.
@@ -72,7 +72,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
 ## Reading order, headings, printed pages
 - **Reading order.** One anchor per block (heading, product, paragraph, table).
   - Anchors are unique on the page in canon form (Unicode NFKC, case and spacing ignored).
-  - A block whose text repeats ("Add bacon" under two dishes) names which occurrence it means: `{ "anchor": "Add bacon", "kind": "text", "occurrence": 2 }`.
+  - A block whose text repeats ("Add bacon" under two dishes) names which occurrence it means, counted in reading order: `{ "anchor": "Add bacon", "kind": "text", "occurrence": 2 }`.
   - On grids, list both row by row and column by column, as two alternative orders, whenever both are reasonable.
 - **Heading levels** are relative: the page's main heading is 1.
 - **`sections`:**
@@ -88,8 +88,8 @@ Every destination (a product price, a table cell, a page price) takes the same c
   - `""`: the cell is printed empty and must stay empty;
   - `{ "unchecked": "<reason>" }`: not scored (a picture-only cell); counted and reported;
   - `{ "same": "above" | "left" }`: a merged cell, printed once.
-- **Amounts.** A price cell (it prints a currency, or its column header does) claims each of its amounts once as `cell`. A spec value ("7.5 m") is claimed as `cell` or as `notPrice`. An unreadable or image-only cell keeps its text from the render, and the output row holding it must be flagged, as for any price read from the render.
+- **Amounts.** A price cell (it prints a currency, or its column header does) claims each of its amounts once as `cell`. A spec value ("7.5 m", "2.2l") is claimed as `notPrice` (Andrei, 2026-10-13). A price-list row is a table row, not a product: its amounts are claimed `cell` and no product is keyed for it (Andrei, 2026-10-13). An unreadable or image-only cell keeps its text from the render, and the output row holding it must be flagged, as for any price read from the render.
 - **Headers** are compared with the published header column by column; a full-width title or section row is not a column header.
 
 ## Unsupported pages
-`expect: "unsupported"` with no content when the page has no usable text layer: a scan, text outlined to vectors, fonts without a Unicode map, or a page that is one image.
+`expect: "unsupported"` with no content when the page has no usable text layer: a scan, text outlined to vectors, fonts without a Unicode map, or a page that is one image. A page with a text layer but no prices (a photo page with folios, a text page) is keyed as usual, with no price claims.

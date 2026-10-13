@@ -166,8 +166,11 @@ function checkTables(page: KeyPageV3, all: Map<string, Source>, where: string): 
         }
         const read = cellMoney(cell)
         const amounts = read.map((m) => m.cents)
-        // A price cell claims each printed amount once; a spec value may be claimed as a cell or as not a price.
-        if (pricedCell(page, ti, ci, cell) ? claimed.length !== amounts.length : claimed.length > amounts.length)
+        // A price cell claims each printed amount once; a spec value ("7.5 m") is claimed as not a price (Andrei, 2026-10-13).
+        if (!pricedCell(page, ti, ci, cell)) {
+          if (claimed.length)
+            problems.push(`${where}: cell ${key} "${cell}" is a spec value; claim its amounts notPrice`)
+        } else if (claimed.length !== amounts.length)
           problems.push(
             `${where}: cell ${key} "${cell}" has ${String(amounts.length)} amounts, claimed ${String(claimed.length)}`,
           )

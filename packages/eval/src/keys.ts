@@ -12,7 +12,7 @@ import { fromV3Page, ledgerSha256 } from './key-v3.ts'
 import { ledger, type Occurrence } from './ledger.ts'
 import { loadSplit, type KeySet } from './manifest.ts'
 import { DOCS_DIR, KEYS_DIR, SEALED_DIR, WORDS_DIR } from './paths.ts'
-import { snapshotWords } from './snapshot.ts'
+import { frozenWords } from './snapshot.ts'
 import { pageWords, type Word } from './words.ts'
 
 export type { KeyPage, KeyPrice, KeyProduct, KeySection, TextPrice } from './key-schema.ts'
@@ -82,11 +82,13 @@ export async function loadKeyFile(path: string, pdfOverride?: string): Promise<K
   // Every reader of a key (validation, runs, rescoring, aggregation) loads it here, so the evidence is checked here.
   if (raw.pdfSha256 !== (await fileSha256(pdfPath)))
     throw new Error(`${raw.doc}: the PDF is not the one the key was written against`)
+  // The document id names files; only a document of the split may.
+  if ((await loadSplit())[raw.doc] === undefined) throw new Error(`${raw.doc}: not a document of validation/split.json`)
   const where = { dir: await wordsDir(raw.doc), doc: raw.doc }
   const evidence = new Map<number, Evidence>()
   const pages: KeyPage[] = []
   for (const page of raw.pages) {
-    const { words, sha256 } = await snapshotWords(pdfPath, page.pdfPage, where)
+    const { words, sha256 } = await frozenWords(where, page.pdfPage)
     const occurrences = ledger(words)
     const at = `${raw.doc} p${String(page.keyPage)}`
     if (page.wordsSha256 !== sha256)

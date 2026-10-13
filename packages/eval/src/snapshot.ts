@@ -33,6 +33,15 @@ export async function snapshotWords(
   return { words, sha256: wordsSha256(words) }
 }
 
+// The frozen words of a keyed page, never written here: reading a key must not create evidence (pnpm ledger and
+// keys:stage do).
+export async function frozenWords(where: Where, page: number): Promise<{ words: Word[]; sha256: string }> {
+  const path = snapshotPath(where, page)
+  if (!existsSync(path)) throw new Error(`${where.doc} p${String(page)}: no word snapshot; run pnpm ledger first`)
+  const words = Words.parse(JSON.parse(await readFile(path, 'utf8')))
+  return { words, sha256: wordsSha256(words) }
+}
+
 // True when Poppler now extracts other words than the snapshot holds; the snapshot stays authoritative.
 export async function snapshotDrift(pdfPath: string, page: number, where: Where): Promise<boolean> {
   const { sha256 } = await snapshotWords(pdfPath, page, where)

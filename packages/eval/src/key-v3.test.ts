@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { promisify } from 'node:util'
 import { claims, local, problemsOf, products, v3Key } from './key-v3-fixture.ts'
 import { keyPath, loadKey, loadKeyFile, validateKey } from './keys.ts'
 
@@ -236,5 +238,32 @@ test(
       JSON.stringify(JSON.parse(legacy)).replace('"keyPage":4', '"keyPage":4,"renderedRows":[[0,0]]'),
     )
     await assert.rejects(loadKeyFile(path), /stage-0 key uses version-3 fields/)
+  },
+)
+
+test(
+  'a key names a document of the split and its own page; reading it never writes evidence',
+  { skip: !local && 'local only' },
+  async () => {
+    await assert.rejects(
+      v3Key((key) => {
+        key.doc = '../../x'
+      }),
+      /not a document of validation\/split.json/,
+    )
+    await assert.rejects(
+      v3Key((_, page) => {
+        page.pdfPage = 99
+      }),
+      /no word snapshot; run pnpm ledger first/,
+    )
+    const path = join(await mkdtemp(join(tmpdir(), 'mia-expect-')), 'key.json')
+    await writeFile(path, JSON.stringify({ doc: '04_stonehouse', pages: [{ pdfPage: 5 }] }))
+    const cli = join(import.meta.dirname, 'keys-check.ts')
+    const run = promisify(execFile)
+    await assert.rejects(
+      run('node', [cli, path, '--expect', '04_stonehouse:4']),
+      /must be the key of 04_stonehouse:4 alone/,
+    )
   },
 )

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
@@ -12,10 +13,23 @@ const { values, positionals } = parseArgs({
     pdf: { type: 'string' },
     set: { type: 'string', default: 'dev' },
     details: { type: 'boolean', default: false },
+    expect: { type: 'string' },
   },
 })
 const [file] = positionals
-if (!file) throw new Error('usage: pnpm keys:check <key.json> [--pdf <file.pdf>] [--set dev|test] [--details]')
+if (!file)
+  throw new Error(
+    'usage: pnpm keys:check <key.json> [--pdf <file.pdf>] [--set dev|test] [--details] [--expect <doc>:<pdfPage>]',
+  )
+// A key writer's key may name only its own page: its doc and pages pick the files validation reads.
+if (values.expect) {
+  const [doc, page] = values.expect.split(':')
+  const own = z
+    .object({ doc: z.literal(doc), pages: z.array(z.object({ pdfPage: z.literal(Number(page)) }).loose()).length(1) })
+    .loose()
+    .safeParse(JSON.parse(await readFile(resolve(file), 'utf8')))
+  if (!own.success) throw new Error(`the key must be the key of ${values.expect} alone`)
+}
 const key = await loadKeyFile(resolve(file), values.pdf === undefined ? undefined : resolve(values.pdf))
 const set = z.enum(['dev', 'test']).parse(values.set)
 const sealed = set === 'test' || (await loadSplit())[key.doc] === 'test'

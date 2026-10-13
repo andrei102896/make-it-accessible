@@ -179,3 +179,19 @@ test('a table cell holding one amount reads as a price does', () => {
   const words = [word('2', 0), word('299,00', 12), word('45.–', 0, 'm', 20)]
   assert.deepEqual(validateV3Page(p, cells, words, TEXT), [])
 })
+
+test('a spec value in a table is not a price: its amounts are claimed notPrice', () => {
+  const table = (claim: Record<string, unknown>) =>
+    page({
+      products: [],
+      tables: [{ header: ['Modell', 'Länge'], rows: [['A', '7.50']] }],
+      occurrences: { o1: claim },
+    })
+  const cells = [occurrence('o1', [0], '7.50', 750)]
+  const words = [word('7.50', 0)]
+  assert.match(
+    validateV3Page(table({ kind: 'cell', table: 0, row: 0, col: 1 }), cells, words, TEXT).join(),
+    /is a spec value; claim its amounts notPrice/,
+  )
+  assert.deepEqual(validateV3Page(table({ kind: 'notPrice', reason: 'a length' }), cells, words, TEXT), [])
+})
