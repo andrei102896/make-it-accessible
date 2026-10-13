@@ -48,7 +48,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
 **`role`** is decided by what the page prints, never by guessing:
 - **current:** the price paid now.
 - **Loyalty card prices:** both prices are `current`. The card price has the card text as its condition ("Lidl Plus"). The other price is `current` with no condition, or with what the page prints for it ("Regular price").
-- **previous:** struck through, or labelled "statt", "was", "UVP", "Letzter Preis" or "Adv. prijs"; the label is a condition. "RRP" is `previous` only when a lower current price is printed with it; an RRP printed alone is the asking price: `current`, with "RRP" as its condition (Andrei, 2026-10-13).
+- **previous:** struck through, or labelled "statt", "was" or "Letzter Preis"; the label is a condition. A recommended price ("RRP", "UVP", "Adv. prijs") is `previous` only when a lower current price is printed with it; printed alone it is the asking price: `current`, with its label as the condition (Andrei, 2026-10-13).
 - **unit:** a price per kg, l, 100 g or piece; the unit text is a condition ("1 kg", "per capsule"). Always keyed when printed.
 - **previousUnit:** a previous price per unit ("1 kg: 9,99, statt 12,99" → 12,99 is `previousUnit` with conditions "statt" and "1 kg").
 - **discount:** a money-off amount ("-2€", "Save £1", "2 € billiger"), with the amount as it reads and the wording as a condition.
