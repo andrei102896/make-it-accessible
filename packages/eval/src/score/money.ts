@@ -63,14 +63,23 @@ export const isAmount = (s: string): boolean =>
     s.trim(),
   )
 
-// Every price written in running text, for containers that print prices without a price element.
-export function moneyInText(text: string): Money[] {
-  // Only € and CHF are printed after the amount; "59 £" is the end of one price and the start of the next.
-  const found = text
-    .normalize('NFKC')
-    .replace(/[\u00a0\u202f]/g, ' ')
-    .match(
-      /(?:€|£|\$|CHF|Fr\.|EUR|GBP)\s?[-\u2212]?\d[\d.,]*(?:[.,][-–])?|[-\u2212]?\d[\d.,]*(?:[.,][-–])?\s?(?:€|CHF|EUR)|\d{1,3}(?:[.,]\d)?p\b|[-\u2212]?\d+[.,]\d{2}(?!\d)|-,\d{2}/g,
-    )
-  return (found ?? []).flatMap((m) => readMoney(m) ?? [])
+// The text as the money reader sees it: NFKC, no-break spaces as spaces.
+export const moneyText = (text: string): string => text.normalize('NFKC').replace(/[\u00a0\u202f]/g, ' ')
+
+// Only € and CHF are printed after the amount; "59 £" is the end of one price and the start of the next.
+const IN_TEXT =
+  /(?:€|£|\$|CHF|Fr\.|EUR|GBP)\s?[-\u2212]?\d[\d.,]*(?:[.,][-–])?|[-\u2212]?\d[\d.,]*(?:[.,][-–])?\s?(?:€|CHF|EUR)|\d{1,3}(?:[.,]\d)?p\b|[-\u2212]?\d+[.,]\d{2}(?!\d)|-,\d{2}/g
+
+// Every price written in running text, with where it stands in `moneyText(text)`.
+export function moneySpans(text: string): { at: number; end: number; money: Money }[] {
+  const t = moneyText(text)
+  return [...t.matchAll(IN_TEXT)].flatMap((m) => {
+    // "-£1.40": a minus standing alone before the currency symbol belongs to the amount.
+    const at = /(?:^|\s)[-\u2212]$/.test(t.slice(0, m.index)) && /^\D/.test(m[0]) ? m.index - 1 : m.index
+    const money = readMoney(t.slice(at, m.index + m[0].length))
+    return money ? [{ at, end: m.index + m[0].length, money }] : []
+  })
 }
+
+// Every price written in running text, for containers that print prices without a price element.
+export const moneyInText = (text: string): Money[] => moneySpans(text).map((s) => s.money)

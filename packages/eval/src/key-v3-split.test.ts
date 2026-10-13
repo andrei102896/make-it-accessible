@@ -2,49 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { validateV3Page } from './key-v3-check.ts'
 import { fromV3Page } from './key-v3.ts'
-import { KeyDocV3Schema } from './key-schema-v3.ts'
-import type { Occurrence } from './ledger.ts'
-import type { Word } from './words.ts'
+import { occurrence, page, TEXT, word } from './key-v3-page-fixture.ts'
 
-const SHA = 'a'.repeat(64)
-const word = (str: string, x: number): Word => ({ str, x, y: 0, w: 10, h: 10, line: 'l' })
-const occurrence = (id: string, words: number[], text: string, cents: number | null): Occurrence => ({
-  id,
-  words,
-  text,
-  cents,
-  currency: null,
-  unreadable: cents === null,
-  box: { x: 0, y: 0, w: 1, h: 1 },
-})
-function page(extra: Record<string, unknown>) {
-  const [p] = KeyDocV3Schema.parse({
-    version: 3,
-    doc: 'd',
-    pdf: 'd.pdf',
-    pdfSha256: SHA,
-    lang: 'de',
-    currency: 'EUR',
-    pages: [
-      {
-        pdfPage: 1,
-        keyPage: 1,
-        type: 'grid',
-        wordsSha256: SHA,
-        ledgerSha256: SHA,
-        readingOrder: [[{ anchor: 'Tee', kind: 'text' }]],
-        products: [
-          { id: 'p1', anchor: 'Tee', alt: null },
-          { id: 'p2', anchor: 'Milch', alt: null },
-        ],
-        ...extra,
-      },
-    ],
-  }).pages
-  if (!p) throw new Error('no page')
-  return p
-}
-const TEXT = 'teemilch'
 const part = (words: number[], printed: string, cents: number) => ({
   source: 'split',
   words,
@@ -168,31 +127,31 @@ test('an image price is told from a text price by place; manual amounts never sh
   )
 })
 
-test('a condition is proven by the text layer, or read from the render and confirmed', () => {
-  const words = [word('1,00', 0)]
-  const read = [occurrence('o1', [0], '1,00', 100)]
+test('a condition is proven by the text layer, or read from the render, confirmed and judged at its place', () => {
+  const read = [occurrence('o1', [0], '1,00', 100, { box: { x: 0, y: 0, w: 10, h: 10 } })]
+  // "2 for" is extractable far away (another offer), or on the price's own line.
+  const far = [word('1,00', 0), word('2', 500, 'f', 500), word('for', 512, 'f', 500)]
+  const near = [word('1,00', 0), word('2', 12), word('for', 24)]
   const claim = (condition: unknown) =>
     page({
       products: [{ id: 'p1', anchor: 'Tee', alt: null }],
       occurrences: { o1: { kind: 'price', product: 'p1', role: 'current', conditions: [condition] } },
     })
   assert.match(
-    validateV3Page(claim('2 for'), read, words, TEXT).join(),
+    validateV3Page(claim('2 for'), read, [word('1,00', 0)], TEXT).join(),
     /price condition "2 for" not in the text layer/,
   )
   assert.match(
-    validateV3Page(claim({ text: '2 for', seen: true }), read, words, TEXT).join(),
+    validateV3Page(claim({ text: '2 for', seen: true }), read, far, `${TEXT}2for`).join(),
     /condition "2 for" read from the render awaits Andrei's confirmation/,
   )
-  assert.deepEqual(validateV3Page(claim({ text: '2 for', seen: true, confirmed: true }), read, words, TEXT), [])
+  const confirmed = claim({ text: '2 for', seen: true, confirmed: true })
+  assert.deepEqual(validateV3Page(confirmed, read, far, `${TEXT}2for`), [])
   assert.match(
-    validateV3Page(claim({ text: 'Tee', seen: true, confirmed: true }), read, words, TEXT).join(),
-    /write it plainly/,
+    validateV3Page(confirmed, read, near, `${TEXT}2for`).join(),
+    /"2 for" of o1 is in the text layer at its place/,
   )
-  assert.deepEqual(
-    fromV3Page(claim({ text: '2 for', seen: true, confirmed: true }), read).products[0]?.prices?.[0]?.conditions,
-    ['2 for'],
-  )
+  assert.deepEqual(fromV3Page(confirmed, read).products[0]?.prices?.[0]?.conditions, ['2 for'])
 })
 
 test('a table cell read from the render is marked for the scorer', () => {

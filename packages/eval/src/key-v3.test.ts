@@ -170,7 +170,7 @@ test(
     )
     assert.match(
       await problemsOf((_, page) => {
-        page.occurrences = { ...claims(page), o1: { kind: 'text', value } }
+        page.occurrences = { ...claims(page), o1: { kind: 'text', offer: '£1,040', value } }
         page.products = [...products(page).filter((p) => p.id !== 'p1')]
       }),
       /o1 "£1,040" overrides a readable value/,

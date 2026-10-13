@@ -54,7 +54,9 @@ packages/eval/src/            evaluation harness, never shipped
   key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds
   key-v3.ts                   version-3 claims and manual amounts into per-product prices; ledger hash
   key-v3-check.ts             version-3 validation: claims, corrections, manual amounts, split/merged, cells, products
+  key-v3-printed.ts           words printed with a price, proven at its place: page-price offers, render-read conditions
   key-v3-fixture.ts           test fixture: a tuning page written as a version-3 key
+  key-v3-page-fixture.ts      test fixture: a synthetic version-3 page with given words and occurrences
   score/rules-fixture.ts      test fixture: a strict key page and a minimal accessible page, scored in the browser
   ledger.ts                   money occurrences of a page from its words (glyph runs, chained cents, unreadable)
   snapshot.ts                 frozen word snapshots of keyed pages, drift check
@@ -63,12 +65,12 @@ packages/eval/src/            evaluation harness, never shipped
   words.ts                    the eval's own word boxes (pdftotext -tsv), independent of the pipeline
   selection.ts                A4 page facts, eligibility, seeded draw and reserve (pure)
   select-pages.ts             CLI: the A4 page draw per document
-  ledger-cli.ts               CLI: the occurrence ledger of one page (sealed pages print counts only)
+  ledger-cli.ts               CLI: the occurrence ledger and snapshot words of one page (sealed pages print counts only)
   keys-check.ts               CLI: validate one key file; sealed keys print counts only
   manifest.ts                 split (tuning/dev/test) and layout-label manifests
   score/metrics.ts            C1, C3, C4 and C2 per page (pure)
   score/prices.ts             C2 per output product: amount, accepted roles, currency, conditions, add-ons sharing it
-  score/conditions.ts         a condition is a whole, non-negated phrase of the price's own label
+  score/conditions.ts         a condition is a whole, non-negated phrase of its label; a page-price offer printed word for word
   score/coverage.ts           C3 whole-text coverage (reported, not gating)
   score/tables.ts             C5 headings and table rows
   score/layout.ts             printed pages: order, labels, anchor placement
@@ -102,6 +104,7 @@ out/                          run outputs (local only)
 - **Findings mark the narrowest element.** A product, product list or table is marked only for a grouping doubt; a cell finding marks its row (`rows[r][c]` paths, a bug that left every row unmarked until 2026-10-13).
 - **The scorer must score a perfect page at 100 %** (`score.test.ts`). It caught a false "repeated sentence = invented" rule.
 - **Key validation never uses the pipeline's extraction or price reading** (only the shared `canon` text form). It read euro/cent pairs through the pipeline's `centPartner`, so a pairing bug could prove its own key. Words come from `words.ts`, occurrences from `ledger.ts`.
+- **A page price is scored by its whole printed offer, never by words anywhere in a block.** Block-level conditions let "60p plus £3.00 for each item" pass for "£3.00 plus 60p for each item" (`score/page-prices.test.ts`). The offer is proven by cited words, not searched for: leaflets stream a price and its badge in separate flows.
 - **Every money occurrence of a version-3 page is claimed exactly once.** Counting values let one duplicated £5 cover another £5 left out of the key, and a missing product hid a wrong price on it (`keys.test.ts`). Do not go back to value counts.
 - **Conditions are read from the price's own label, not the product text.** With the product text, a card price swapped onto the regular price passed, and "ohne Lidl Plus" satisfied "Lidl Plus" (`rules.test.ts`). Only an output without any price element falls back to the product text, and those prices count as "role unverified".
 - **A price's flag is its own.** One flagged price made every error in its product "flagged", including an unflagged image price beside it (`rules.test.ts`).

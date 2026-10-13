@@ -61,7 +61,7 @@ test('priced items: version-3 pages count claimed price cells; product pages nee
         keyPage: 1,
         type: 'grid',
         products: [{ anchor: 'Tee', prices: [{ printed: '1,99', cents: 199, role: 'current', currency: 'EUR' }] }],
-        textPrices: [{ printed: '1,00', cents: 100, role: 'current', currency: 'EUR' }],
+        textPrices: [{ printed: '1,00', cents: 100, role: 'current', currency: 'EUR', offer: '1,00' }],
         tables: [{ header: ['Maß', 'Preis'], rows: [['7.5 m', '5,00 €']] }],
         pricedCells: 1,
       },

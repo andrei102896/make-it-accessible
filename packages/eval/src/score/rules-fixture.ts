@@ -46,6 +46,15 @@ export const eur = (cents: number, role: string, conditions: string[] = []): Rec
   currency: 'EUR',
   conditions,
 })
+// A price that belongs to no product, with the words that state it.
+export const offer = (cents: number, words: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+  printed: (cents / 100).toFixed(2).replace('.', ','),
+  cents,
+  role: 'current',
+  currency: 'EUR',
+  offer: words,
+  ...extra,
+})
 export const list = (...items: string[]): string => `<ul class="products" role="list">${items.join('')}</ul>`
 export const plus = {
   products: [{ anchor: 'Kaffee', alt: null, prices: [eur(199, 'current', ['Lidl Plus']), eur(249, 'unknown')] }],

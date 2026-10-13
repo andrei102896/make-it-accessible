@@ -8,9 +8,20 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
     // A doubt about grouping marks the whole product, product list or table; other findings mark one element.
     const GROUPING = '.products > li[data-review], ul.products[data-review], div.table[data-review]'
     return [...document.querySelectorAll<HTMLElement>('section[data-page]')].map((section) => {
-      const leaves = [...section.querySelectorAll<HTMLElement>('p, h3, h4, h5, h6, li, td, th, caption')]
-        .filter((el) => !el.querySelector('p, ul, ol, table, li'))
-        .map((el) => ({ text: el.innerText, review: el.closest('[data-review]') !== null }))
+      const leafElements = [...section.querySelectorAll<HTMLElement>('p, h3, h4, h5, h6, li, td, th, caption')].filter(
+        (el) => !el.querySelector('p, ul, ol, table, li'),
+      )
+      const leaves = leafElements.map((el) => ({ text: el.innerText, review: el.closest('[data-review]') !== null }))
+      // Where a page price's offer can stand: one block per leaf, but a product's own leaves read as one block,
+      // since a page price published as a product splits its offer between name and price.
+      const offers = new Map<Element, { text: string; review: boolean }>()
+      for (const el of leafElements) {
+        const owner = el.closest('.products > li') ?? el
+        const block = offers.get(owner) ?? { text: '', review: false }
+        block.text = block.text ? `${block.text}\n${el.innerText}` : el.innerText
+        block.review ||= el.closest('[data-review]') !== null || el.querySelector('[data-review]') !== null
+        offers.set(owner, block)
+      }
       const containers = [...section.querySelectorAll<HTMLElement>('li, tr')].map((el) => {
         const product = el.closest<HTMLElement>('.products > li') ?? el
         return {
@@ -72,6 +83,7 @@ export async function readSections(tab: Page): Promise<DomSection[]> {
         page: Number(section.dataset.page),
         label: section.querySelector('h2')?.innerText ?? '',
         leaves,
+        offers: [...offers.values()],
         containers,
         headings,
         rows,
@@ -95,6 +107,7 @@ export function pageDom(sections: readonly DomSection[], keyPage: number): DomPa
   return {
     page: keyPage,
     leaves: own.flatMap((s) => s.leaves),
+    offers: own.flatMap((s) => s.offers),
     containers: own.flatMap((s) => s.containers),
     headings: own.flatMap((s) => s.headings),
     rows: own.flatMap((s, i) => s.rows.map((r) => ({ ...r, table: i * TABLES_PER_SECTION + r.table }))),

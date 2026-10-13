@@ -32,6 +32,8 @@ const KeyPrice = z
     seen: z.literal(true).optional(),
   })
   .strict()
+// A price that belongs to no product: published with its printed offer word for word ("£3.00 plus 60p for each item").
+const TextPrice = KeyPrice.omit({ conditions: true }).extend({ offer: z.string().min(1) })
 const Product = z
   .object({
     id: z.string().optional(),
@@ -70,7 +72,7 @@ const KeyPage = z
     // Version-3 keys: "" is an empty cell, headers are checked, rows match one output table one to one.
     strict: z.boolean().default(false),
     // Prices that belong to no product ("Everything £1"): published as text or as a price.
-    textPrices: z.array(KeyPrice).default([]),
+    textPrices: z.array(TextPrice).default([]),
     // Price cells claimed as printed amounts (version-3 keys).
     pricedCells: z.number().int().optional(),
     // Rows (table, row) holding an amount read from the render: the output row must be flagged.
@@ -102,6 +104,7 @@ export const KeyDocSchema = z
   .strict()
 
 export type KeyPrice = z.infer<typeof KeyPrice>
+export type TextPrice = z.infer<typeof TextPrice>
 export type KeyProduct = z.infer<typeof Product>
 export type KeyPage = z.infer<typeof KeyPage>
 export type KeySection = z.infer<typeof Section>

@@ -19,6 +19,8 @@ export type Row = { table: number; text: string; header: boolean; review: boolea
 export type DomPage = {
   page: number
   leaves: Leaf[]
+  // Blocks a page price's offer is looked for in: leaves, a product's own leaves joined as one.
+  offers: Leaf[]
   containers: Container[]
   headings: Heading[]
   rows: Row[]

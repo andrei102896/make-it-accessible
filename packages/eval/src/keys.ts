@@ -14,7 +14,7 @@ import { DOCS_DIR, KEYS_DIR, SEALED_DIR, WORDS_DIR } from './paths.ts'
 import { snapshotWords } from './snapshot.ts'
 import { pageWords, type Word } from './words.ts'
 
-export type { KeyPage, KeyPrice, KeyProduct, KeySection } from './key-schema.ts'
+export type { KeyPage, KeyPrice, KeyProduct, KeySection, TextPrice } from './key-schema.ts'
 type Evidence = { words: Word[]; occurrences: Occurrence[]; text: string; sha256: string }
 // v3: the file as written and, per key page, the snapshot evidence its claims refer to.
 export type KeyDoc = ReturnType<typeof KeyDocSchema.parse> & {

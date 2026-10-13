@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
+import { canon } from '@make-it-accessible/pipeline/text/normalize'
 import type { CellV3, ClaimV3, ConditionV3, KeyPageV3, ManualV3 } from './key-schema-v3.ts'
-import type { KeyPage, KeyPrice, KeyProduct } from './key-schema.ts'
+import type { KeyPage, KeyPrice, KeyProduct, TextPrice } from './key-schema.ts'
 import type { Occurrence } from './ledger.ts'
 import { CURRENCY_HEADER, moneyInText, type Currency } from './score/money.ts'
 
@@ -30,6 +31,9 @@ export function valueOf(claim: ClaimV3, source: Source): Amount | null {
   return o && !o.unreadable && o.cents !== null ? { printed: o.text, cents: o.cents, currency: o.currency } : null
 }
 
+// How often the canon page text prints `needle`.
+export const count = (text: string, needle: string): number => text.split(canon(needle)).length - 1
+
 export const conditionText = (c: ConditionV3): string => (typeof c === 'string' ? c : c.text)
 
 // Not provable from the text layer: an unreadable occurrence or a price only in the image.
@@ -54,34 +58,39 @@ function resolveCells(rows: readonly (readonly CellV3[])[]): (string | null)[][]
 export const pricedCell = (page: KeyPageV3, t: number, c: number, cell: string): boolean =>
   moneyInText(cell).some((m) => m.currency !== null) || CURRENCY_HEADER.test(page.tables[t]?.header[c] ?? '')
 
-function claimedPrices(page: KeyPageV3, all: Map<string, Source>): Map<string, KeyPrice[]> {
+type Claimed = { prices: Map<string, KeyPrice[]>; textPrices: TextPrice[] }
+
+function claimedPrices(page: KeyPageV3, all: Map<string, Source>): Claimed {
   const prices = new Map<string, KeyPrice[]>()
+  const textPrices: TextPrice[] = []
   const claims = Object.entries(page.occurrences).sort(([a], [b]) => order(a) - order(b))
   for (const [id, claim] of claims) {
     const source = all.get(id)
     if (!source || (claim.kind !== 'price' && claim.kind !== 'text')) continue
     const value = valueOf(claim, source)
-    const owner = claim.kind === 'price' ? claim.product : ''
-    prices.set(owner, [
-      ...(prices.get(owner) ?? []),
-      {
-        printed: value?.printed ?? source.text,
-        cents: value?.cents ?? 0,
-        role: claim.role,
-        currency: claim.currency !== undefined ? claim.currency : (value?.currency ?? null),
-        conditions: claim.conditions.map(conditionText),
-        // A price or a condition read from the render puts the price under review.
-        ...(fromRender(source) || claim.conditions.some((c) => typeof c !== 'string') ? { seen: true as const } : {}),
-      },
-    ])
+    const words = claim.kind === 'price' ? claim.conditions : [claim.offer]
+    const amount = {
+      printed: value?.printed ?? source.text,
+      cents: value?.cents ?? 0,
+      role: claim.role,
+      currency: claim.currency !== undefined ? claim.currency : (value?.currency ?? null),
+      // A price or its words read from the render put the price under review.
+      ...(fromRender(source) || words.some((c) => typeof c !== 'string') ? { seen: true as const } : {}),
+    }
+    if (claim.kind === 'text') textPrices.push({ ...amount, offer: conditionText(claim.offer) })
+    else
+      prices.set(claim.product, [
+        ...(prices.get(claim.product) ?? []),
+        { ...amount, conditions: claim.conditions.map(conditionText) },
+      ])
   }
-  return prices
+  return { prices, textPrices }
 }
 
 // A version-3 page as the scorer reads it: prices come from the claimed amounts.
 export function fromV3Page(page: KeyPageV3, occurrences: readonly Occurrence[]): KeyPage {
   const all = sources(page, occurrences)
-  const prices = claimedPrices(page, all)
+  const { prices, textPrices } = claimedPrices(page, all)
   const products = page.products.map((p): KeyProduct => ({
     id: p.id,
     anchor: p.anchor,
@@ -116,7 +125,7 @@ export function fromV3Page(page: KeyPageV3, occurrences: readonly Occurrence[]):
     mustContain: page.mustContain,
     outsideTrim: page.outsideTrim,
     strict: true,
-    textPrices: prices.get('') ?? [],
+    textPrices,
     pricedCells,
     renderedRows,
   }

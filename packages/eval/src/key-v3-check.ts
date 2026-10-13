@@ -1,11 +1,10 @@
-import { canon } from '@make-it-accessible/pipeline/text/normalize'
 import type { ClaimV3, KeyPageV3 } from './key-schema-v3.ts'
-import { pricedCell, sources, valueOf, type Amount, type Source } from './key-v3.ts'
+import { checkPrinted } from './key-v3-printed.ts'
+import { count, pricedCell, sources, valueOf, type Amount, type Source } from './key-v3.ts'
 import type { Occurrence } from './ledger.ts'
 import { moneyInText, readMoney } from './score/money.ts'
 import type { Word } from './words.ts'
 
-const count = (text: string, needle: string): number => text.split(canon(needle)).length - 1
 const cellKey = (t: number, r: number, c: number): string => `${String(t)}.${String(r)}.${String(c)}`
 type Valued = Extract<ClaimV3, { kind: 'price' | 'cell' | 'text' }>
 
@@ -51,6 +50,19 @@ function checkManual(
   const named = Object.values(page.occurrences).flatMap((c) => (c.kind === 'split' ? c.into : []))
   const cited = new Map<number, number>()
   for (const m of Object.values(page.manual)) for (const w of new Set(m.words)) cited.set(w, (cited.get(w) ?? 0) + 1)
+  // One print is one image entry: two boxes of the same amount that overlap are the same print. Different amounts may
+  // overlap ("£3" stamped over a struck "£5").
+  const images = Object.entries(page.manual).flatMap(([id, m]) =>
+    m.source === 'image' && m.box ? [{ id, box: m.box, cents: m.cents }] : [],
+  )
+  images.forEach((a, i) => {
+    images.slice(i + 1).forEach((b) => {
+      const w = Math.min(a.box.x + a.box.w, b.box.x + b.box.w) - Math.max(a.box.x, b.box.x)
+      const h = Math.min(a.box.y + a.box.h, b.box.y + b.box.h) - Math.max(a.box.y, b.box.y)
+      if (a.cents === b.cents && w > 0 && h > 0)
+        problems.push(`${where}: image amounts ${a.id} and ${b.id} are one print; key it once`)
+    })
+  })
   for (const [id, m] of Object.entries(page.manual)) {
     problems.push(...consistent(m, `${where}: ${id}`))
     if (!m.confirmed) problems.push(`${where}: manual amount ${id} "${m.printed}" awaits Andrei's confirmation`)
@@ -223,7 +235,11 @@ export function validateV3Page(
     return content.some((list) => list.length) ? [`${where}: an unsupported page keys no content`] : []
   }
   const all = sources(page, occurrences)
-  const problems = [...checkClaims(page, all, where), ...checkManual(page, occurrences, words, where)]
+  const problems = [
+    ...checkClaims(page, all, where),
+    ...checkManual(page, occurrences, words, where),
+    ...checkPrinted(page, all, words, text, where),
+  ]
   const printed = (s: string, what: string): void => {
     if (count(text, s) === 0) problems.push(`${where}: ${what} "${s}" not in the text layer`)
   }
@@ -242,15 +258,5 @@ export function validateV3Page(
     })
     if (!priced.has(p.id)) problems.push(`${where}: product ${p.id} has no price`)
   }
-  // A condition is proven by the text layer, or read from the render and confirmed by Andrei.
-  Object.values(page.occurrences)
-    .flatMap((c) => (c.kind === 'price' || c.kind === 'text' ? c.conditions : []))
-    .forEach((c) => {
-      if (typeof c === 'string') printed(c, 'price condition')
-      else if (count(text, c.text) > 0)
-        problems.push(`${where}: condition "${c.text}" is in the text layer; write it plainly`)
-      else if (!c.confirmed)
-        problems.push(`${where}: condition "${c.text}" read from the render awaits Andrei's confirmation`)
-    })
   return problems
 }

@@ -8,7 +8,7 @@ import { loadSplit } from './manifest.ts'
 import { DOCS_DIR } from './paths.ts'
 import { snapshotWords } from './snapshot.ts'
 
-// What a key writer starts from: the hashes that fix the evidence and the page's money occurrences, as JSON.
+// What a key writer starts from: the hashes that fix the evidence, the page's money occurrences and its words, as JSON.
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { pdf: { type: 'string' }, details: { type: 'boolean', default: false } },
@@ -29,7 +29,10 @@ const hashes = {
 }
 console.info(
   JSON.stringify(
-    sealed && !values.details ? { ...hashes, occurrences: occurrences.length } : { ...hashes, occurrences },
+    sealed && !values.details
+      ? { ...hashes, occurrences: occurrences.length }
+      : // Writers cite snapshot words by index (manual amounts, offers), with the line and box that place them.
+        { ...hashes, occurrences, words: words.map((w, i) => ({ i, ...w })) },
     null,
     2,
   ),

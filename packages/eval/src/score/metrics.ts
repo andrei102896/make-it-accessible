@@ -1,7 +1,7 @@
 import { norm } from '@make-it-accessible/pipeline/text/normalize'
-import type { KeyPage, KeyPrice, KeyProduct } from '../keys.ts'
-import { holds } from './conditions.ts'
-import { moneyInText, readMoney, type Currency } from './money.ts'
+import type { KeyPage, KeyProduct, TextPrice } from '../keys.ts'
+import { findOffer, isMoney, tokens } from './conditions.ts'
+import { readMoney, type Currency } from './money.ts'
 import { checkContainer } from './prices.ts'
 import { loose } from './text.ts'
 import type { Container, DomPage, PageScore } from './types.ts'
@@ -122,31 +122,40 @@ export function productPrices(key: KeyPage, dom: DomPage, currency: Currency): P
   }
   // A complete key makes any other priced product in the output an error, except a price that belongs to no product.
   if (key.strict) {
-    // A price that belongs to no product must reach the reader: its amount, currency and offer words in one block.
+    // A price that belongs to no product must reach the reader as its printed offer, word for word (`findOffer`).
     // Each printed amount in a block answers one page price; one read from the render or without a currency is flagged.
     const keyed = key.products.flatMap((p) => p.prices?.map((k) => k.cents) ?? [])
     const blocks = [
-      ...dom.leaves.map((l) => ({ text: l.text, flagged: l.review })),
+      ...dom.offers.map((l) => ({ text: l.text, flagged: l.review })),
       ...dom.flaggedAlts.map((text) => ({ text, flagged: true })),
-    ].map((b) => ({ ...b, amounts: moneyInText(b.text), used: new Set<number>() }))
-    const mustFlag = (k: KeyPrice): boolean => k.seen === true || k.currency === null
-    const slots = (k: KeyPrice): { block: (typeof blocks)[number]; at: number }[] =>
-      blocks.flatMap((block) =>
-        k.conditions.every((c) => holds(c, block.text))
-          ? block.amounts.flatMap((m, at) =>
-              !block.used.has(at) && m.cents === k.cents && (k.currency === null || m.currency === k.currency)
-                ? [{ block, at }]
-                : [],
-            )
-          : [],
+    ].map((b) => {
+      const t = tokens(b.text)
+      return { ...b, tokens: t, amounts: t.filter(isMoney), used: new Set<number>() }
+    })
+    const mustFlag = (k: TextPrice): boolean => k.seen === true || k.currency === null
+    const slots = (k: TextPrice): { block: (typeof blocks)[number]; at: number }[] => {
+      const offer = tokens(k.offer)
+      // The offer's own amounts for this price: those printing its value.
+      const own = offer.filter(isMoney).flatMap((m, i) => (m.cents === k.cents ? [i] : []))
+      return blocks.flatMap((block) =>
+        findOffer(offer, block.tokens).flatMap((aligned) =>
+          own.flatMap((i) => {
+            const at = aligned[i]
+            const shown = at === undefined ? undefined : block.amounts[at]
+            const ok =
+              at !== undefined && !block.used.has(at) && (k.currency === null || shown?.currency === k.currency)
+            return ok ? [{ block, at }] : []
+          }),
+        ),
       )
-    // The most specific page prices choose first, so one without offer words cannot take another's amount.
-    const bySpecificity = [...key.textPrices].sort((a, b) => b.conditions.length - a.conditions.length)
+    }
+    // The longest offers choose first, so a bare amount cannot take an amount another offer prints.
+    const bySpecificity = [...key.textPrices].sort((a, b) => tokens(b.offer).length - tokens(a.offer).length)
     const missing = bySpecificity.filter((k) => {
       const all = slots(k)
       const open = mustFlag(k) ? all.filter((s) => s.block.flagged) : all
-      // Without offer words a product's amount could answer it; the keyed products take unflagged amounts first.
-      const keyedSame = k.conditions.length ? 0 : keyed.filter((c) => c === k.cents).length
+      // A bare amount could be a product's; the keyed products take unflagged amounts first.
+      const keyedSame = tokens(k.offer).every(isMoney) ? keyed.filter((c) => c === k.cents).length : 0
       const reserved = Math.max(0, keyedSame - (all.length - open.length))
       const slot = open.length > reserved ? open[0] : undefined
       slot?.block.used.add(slot.at)

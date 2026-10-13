@@ -36,12 +36,15 @@ const Claim = z.discriminatedUnion('kind', [
       ...Corrected,
     })
     .strict(),
-  // A price that belongs to no product ("Everything £1"); its conditions are the words of the offer printed with it.
+  // A price that belongs to no product ("Everything £1"). `offer`: the printed words that state it, its amount included
+  // ("£3.00 plus 60p for each item"); the prices of one sentence share it. `offerWords`: the snapshot words it is read
+  // from, in reading order; an offer read from the render cites none.
   z
     .object({
       kind: z.literal('text'),
       role: Role.default('current'),
-      conditions: z.array(Condition).default([]),
+      offer: Condition,
+      offerWords: z.array(z.number().int().nonnegative()).default([]),
       currency: Currency.nullable().optional(),
       reason: z.string().min(1).optional(),
       ...Corrected,

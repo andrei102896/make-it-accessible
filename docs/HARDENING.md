@@ -168,6 +168,13 @@ The A4/A5 draft was challenged by two critics (measurement validity, key correct
 - **Amounts inside a block are counted one by one.** Two page prices in one sentence each take their own amount; the most specific page price chooses first, and a product shown unflagged keeps its amount without blocking a flagged page price.
 - **`pnpm ledger` prints every hash a key needs:** `pdfSha256`, `wordsSha256` and `ledgerSha256`.
 
+**Fourth review of the key policy (2026-10-13, Andrei; plan checked by two critics).** Fixed before any key exists:
+- **A page price keeps its offer.** Conditions checked against a whole output block let "60p plus £3.00 for each item" pass for "£3.00 plus 60p for each item". A `text` claim now carries its printed `offer` and the snapshot words it cites; the output must print the offer word for word in one block (amounts by value and currency, sign included, not negated). Two page prices on one line must share their words, so neither can be keyed bare.
+- **Proof of an offer is its cited words, not a search.** Leaflets stream a price and its badge in separate flows, so a window around the amount could not find a correct offer and could find a wrong one. Claimed amounts among the cited words read as their claimed values; unmapped glyphs and line-end hyphens are tolerated in the validator only.
+- **Words read from the render are judged at their place.** A seen condition or offer is rejected only when a text line within three box heights of its amount prints it; elsewhere on the page it is another offer, and Andrei's confirmation decides.
+- **One print, one image amount.** Two image entries of the same amount with overlapping boxes are rejected; different amounts may overlap.
+- **Writers can cite words:** `pnpm ledger --details` lists every snapshot word with its index, line and box.
+
 **Key writing.**
 - **Rules first.** Writers follow `validation/KEY_POLICY.md`, approved by Andrei before any writer runs.
 - **Isolated writers.** Each page gets its own folder outside the repo, holding:
