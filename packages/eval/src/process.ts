@@ -85,6 +85,7 @@ export async function buildHtml(
   docDir: string,
   results: PageResult[],
   fallbackTitle: string,
+  title?: string,
 ): Promise<string> {
   const pages: HtmlPage[] = []
   for (const r of results) {
@@ -103,9 +104,10 @@ export async function buildHtml(
       imageSrc: (p) => sources.get(p),
     })
   }
-  const title = results.flatMap((r) => r.structure.blocks).find((b) => b.kind === 'heading' && b.level === 1)
+  const heading = results.flatMap((r) => r.structure.blocks).find((b) => b.kind === 'heading' && b.level === 1)
   const titleText =
-    title?.kind === 'heading' && 'src' in title.text ? (title.text.text ?? fallbackTitle) : fallbackTitle
+    title ??
+    (heading?.kind === 'heading' && 'src' in heading.text ? (heading.text.text ?? fallbackTitle) : fallbackTitle)
   const htmlPath = join(docDir, 'index.html')
   await writeFile(htmlPath, renderDocument({ lang: results[0]?.structure.lang ?? 'en', title: titleText, pages }))
   return htmlPath

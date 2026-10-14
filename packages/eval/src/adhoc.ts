@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pageCount } from '@make-it-accessible/pipeline/pdf/poppler'
@@ -13,10 +13,11 @@ const { values, positionals } = parseArgs({
     pages: { type: 'string' },
     model: { type: 'string', default: 'claude-sonnet-5-5' },
     effort: { type: 'string', default: 'medium' },
+    title: { type: 'string' },
   },
 })
 const [pdfPath] = positionals
-if (!pdfPath) throw new Error('usage: pnpm adhoc <file.pdf> [--pages 1-5]')
+if (!pdfPath) throw new Error('usage: pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]')
 const options = { model: values.model, effort: values.effort }
 if (!PRICES[options.model]) throw new Error(`unknown model ${options.model}`)
 
@@ -32,7 +33,7 @@ for (let page = from; page <= Math.min(to, total); page++) {
   if (result) results.push(result)
 }
 if (results.length) {
-  const htmlPath = await buildHtml(pdfPath, docDir, results, name)
+  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title)
   const axe = await axeReport(htmlPath)
   const usd = results.reduce((sum, r) => sum + r.usd, 0)
   const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe }
@@ -41,4 +42,12 @@ if (results.length) {
     `pages ${String(results.length)}, failed ${String(summary.failed)}, $${usd.toFixed(4)}, axe critical ${String(axe.critical)} serious ${String(axe.serious)}`,
   )
   console.info(htmlPath)
+  // One file to attach to an email: the page crops travel inside it.
+  const html = await readFile(htmlPath, 'utf8')
+  const parts = html.split(/src="(p\d+\/img-\d+\.jpg)"/)
+  for (let i = 1; i < parts.length; i += 2)
+    parts[i] = `src="data:image/jpeg;base64,${(await readFile(join(docDir, parts[i] ?? ''))).toString('base64')}"`
+  const single = join(docDir, `${name}.html`)
+  await writeFile(single, parts.join(''))
+  console.info(single)
 }

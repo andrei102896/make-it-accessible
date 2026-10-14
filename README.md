@@ -24,7 +24,7 @@ pnpm stage0 --only 3 01_billa           # one page of one document
 pnpm stage0 --effort high --model claude-opus-5-5
 pnpm stage0 --rescore out/<run>         # rescore a copy of a saved run (out/<run>-rescore-<time>), no model calls
 pnpm aggregate <run> <run> <run> [--before <run> ...]   # 3-run pass rule, price bounds, decisions, regressions
-pnpm adhoc <file.pdf> [--pages 1-5]     # any PDF without an answer key: validator findings, axe, cost
+pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]   # any PDF without a key: findings, axe, cost, and one self-contained <name>.html to send
 pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
 pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
 pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
