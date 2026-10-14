@@ -230,3 +230,81 @@ test('a menu shows its legend codes as tags after the name, read out in full', (
     /<h1><span class="brand">Inn<span class="sr-only">,<\/span><\/span> <span class="doc">Menu<\/span><\/h1>/,
   )
 })
+
+test('a note naming no item describes the list; a picture in the same place on every page is decorative', () => {
+  const runs = ['Room', '£100', 'Prices', 'per', 'person']
+  const page = (pdfPage: number) =>
+    parsePage(
+      JSON.stringify({
+        lang: 'en',
+        blocks: [
+          { kind: 'products', items: [{ name: { src: [[0, 0]] }, prices: [{ src: [[1, 1]] }] }] },
+          { kind: 'paragraph', text: { src: [[2, 4]] } },
+          { kind: 'figure', image: { box: [10, 900, 100, 50], alt: `Drawing of the hotel ${String(pdfPage)}` } },
+        ],
+      }),
+    )
+  const ex = (pdfPage: number): Extraction => ({
+    ...extraction,
+    pdfPage,
+    runs: runs.map((str, i) => ({
+      id: `${String(pdfPage)}:${String(i)}`,
+      str,
+      box: { x: i * 50, y: 0, w: 40, h: 10 },
+      flow: 0,
+      line: 0,
+    })),
+  })
+  const html = renderDocument({
+    lang: 'en',
+    title: 'T',
+    pages: [1, 2].map((n) => ({
+      keyPage: n,
+      structure: page(n),
+      extraction: ex(n),
+      flagged: [],
+      imageSrc: () => 'x.jpg',
+    })),
+  })
+  assert.match(html, /<div class="priced"><ul aria-describedby="note-1-1" class="products menu"/)
+  assert.match(html, /<p class="note" id="note-1-1">Prices per person<\/p><\/div>/)
+  assert.equal(html.match(/<div class="ornament"><img src="x.jpg" alt="" class="fig-s"><\/div>/g)?.length, 2)
+})
+
+test('a note naming some items describes only them, without a group around the list', () => {
+  const runs = ['Lamb', 'Rump', '£29', 'Carew', 'Burger', '£18', 'All', 'burgers', 'served', 'with', 'chips']
+  const page = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [
+            { name: { src: [[0, 1]] }, prices: [{ src: [[2, 2]] }] },
+            { name: { src: [[3, 4]] }, prices: [{ src: [[5, 5]] }] },
+          ],
+        },
+        { kind: 'paragraph', text: { src: [[6, 10]] } },
+      ],
+    }),
+  )
+  const ex: Extraction = {
+    ...extraction,
+    runs: runs.map((str, i) => ({
+      id: `1:${String(i)}`,
+      str,
+      box: { x: i * 50, y: 0, w: 40, h: 10 },
+      flow: 0,
+      line: 0,
+    })),
+  }
+  const html = renderDocument({
+    lang: 'en',
+    title: 'T',
+    pages: [{ keyPage: 1, structure: page, extraction: ex, flagged: [], imageSrc: () => undefined }],
+  })
+  assert.doesNotMatch(html, /class="priced"/)
+  assert.match(html, /<li><p class="name">Lamb Rump/)
+  assert.match(html, /<li aria-describedby="note-1-1"><p class="name">Carew Burger/)
+  assert.match(html, /<p class="note" id="note-1-1">All burgers served with chips<\/p>/)
+})

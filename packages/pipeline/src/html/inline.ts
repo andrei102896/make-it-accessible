@@ -73,3 +73,30 @@ export const isBadge = (text: string): boolean =>
 
 // An add-on line under a dish ("Add vegan cheese £1").
 export const isAddOn = (text: string): boolean => /^(?:add|extra|plus)\b/i.test(text)
+
+// Amounts in an add-on line are set apart but are not price elements: a dish's price elements are its own prices.
+export const emphasizeMoney = (html: string): string =>
+  html.replace(/(?:[£$€]\s?\d+(?:[.,]\d{2})?|\d+(?:[.,]\d{2})?\s?€)(?![^<]*>)/g, '<span class="money">$&</span>')
+
+// The items a note printed under a list speaks of: those named by the note's first word that names any of them
+// ("All burgers served with…" → the burgers); null when it names none, so it describes the whole list.
+export function noteTargets(note: string, names: readonly string[]): number[] | null {
+  const words = (t: string): string[] => (t.match(/\p{L}{4,}/gu) ?? []).map((w) => w.toLowerCase().replace(/s$/, ''))
+  const named = names.map(words)
+  for (const w of words(note)) {
+    const hits = named.flatMap((n, i) => (n.includes(w) ? [i] : []))
+    if (hits.length) return hits
+  }
+  return null
+}
+
+// The band's h1 from "Brand · Name": the brand on its own line, a comma between them for screen readers.
+export const bandTitle = (parts: readonly string[]): string =>
+  parts.length > 1
+    ? `<span class="brand">${esc(parts[0] ?? '')}<span class="sr-only">,</span></span> <span class="doc">${esc(parts.slice(1).join(' · '))}</span>`
+    : esc(parts.join(' · '))
+
+export const legendLine = (legend: Legend): string =>
+  legend.size
+    ? `<p class="legend">${[...legend].map(([code, word]) => `<span><span class="diet">${esc(code)}</span> ${esc(word)}</span>`).join(' ')}</p>`
+    : ''

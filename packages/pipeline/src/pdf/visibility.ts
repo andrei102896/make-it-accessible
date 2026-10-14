@@ -6,7 +6,7 @@ import type { Run } from './types.ts'
 const MIN_FREE = 0.3
 const MIN_PIXELS = 20
 // Visible text puts ink in its box: pixels this far (per channel) from the box's dominant colour.
-const INK_DIFF = 24
+export const INK_DIFF = 24
 const MIN_INK = 0.005
 // More than this share of a page hidden means the render failed, not that the publisher hid the text.
 const MAX_HIDDEN = 0.5
@@ -64,7 +64,7 @@ function continues(a: Run | undefined, b: Run | undefined): boolean {
 }
 
 // The most frequent colour, quantised to 16 levels per channel, at its bucket's centre.
-function dominant(pixels: readonly Rgb[]): Rgb {
+export function dominant(pixels: readonly Rgb[]): Rgb {
   const counts = new Map<number, number>()
   for (const [r, g, b] of pixels) {
     const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)

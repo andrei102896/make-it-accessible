@@ -50,8 +50,10 @@ p { margin: .5rem 0; }
   font-size: .875rem; font-weight: 600; line-height: 1.4; color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0 0 1rem; font-size: .9375rem; color: var(--muted); }
 .legend .diet { margin: 0 .25rem 0 0; }
-.products:has(+ .note) { margin-bottom: .25rem; }
-.note { font-weight: 600; }
+.priced { border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; margin: 0 0 1.5rem; }
+.priced .products { margin-bottom: .5rem; }
+.note { font-weight: 600; margin-bottom: 0; }
+.addon .money { font-weight: 600; color: var(--fg); }
 .products.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
   container-type: inline-size; }
 .products.cards > li { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: .5rem; align-content: start;
@@ -71,17 +73,18 @@ p { margin: .5rem 0; }
   color: var(--accent); border-radius: .25rem; padding: 0 .4rem; font-size: .875rem; font-weight: 700; }
 @container (max-width: 28.95rem) {
   .products.cards > li { grid-row: auto; grid-template-rows: none; grid-template-columns: 6rem 1fr; column-gap: .75rem; }
-  .products.cards > li > img { grid-column: 1; grid-row: 1 / span 3; }
+  .products.cards > li > img { grid-column: 1; grid-row: 1 / span 2; }
   .products.cards > li > :not(img) { grid-column: 2; }
   .products.cards > li > .name { grid-row: 1; }
   .products.cards > li > .offer { grid-row: 2; }
-  .products.cards > li > .more { grid-row: 3; }
+  .products.cards > li > .more { grid-column: 1 / -1; grid-row: 3; }
 }
 .gallery { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; margin: 1rem 0 1.5rem; }
 .gallery img { flex: 1 1 12rem; max-width: 24rem; min-width: 0; border-radius: .25rem; }
 .gallery .fig-l { flex-basis: 100%; max-width: 40rem; }
 .gallery .fig-m { max-width: 30rem; }
-.gallery .fig-s { flex: none; width: 7.5rem; }
+.gallery .fig-s, .ornament img { flex: none; width: 7.5rem; }
+.ornament { margin: 1rem 0 1.5rem; }
 img { max-width: 100%; height: auto; }
 .table { overflow-x: auto; margin: 1rem 0 1.5rem; }
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -90,6 +93,7 @@ th, td { border-bottom: 1px solid var(--line); padding: .45rem .75rem; text-alig
 th { font-weight: 600; }
 th[scope="row"] { min-width: 9rem; }
 thead tr:last-child > * { border-bottom: 2px solid var(--fg); }
+.table tr > th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); box-shadow: inset -1px 0 var(--line); }
 td.num { text-align: right; white-space: nowrap; }
 .validity { margin: .5rem 0 0; font-weight: 600; }
 nav.chips { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
@@ -107,9 +111,11 @@ html:has(nav.chips) { scroll-padding-top: 4.5rem; }
 section p a, section li a, section td a { display: inline-block; padding-block: .55rem; margin-inline-end: .75rem; }
 a[href^="tel:"] { white-space: nowrap; }
 .doc-menu main { max-width: 60rem; }
-.doc-pricelist { font-size: 1rem; }
-.doc-pricelist h3, .doc-pricelist h4 { font-size: 1.25rem; }
-.doc-brochure p { max-width: 42rem; }
+section > p, .priced > p { max-width: 65ch; }
+.doc-pricelist table { font-size: 1rem; }
+.doc-pricelist h3, .doc-brochure h3 { font-size: 1.625rem; line-height: 1.2; margin: 1.5rem 0 .75rem; }
+.doc-pricelist h4, .doc-brochure h4 { font-size: 1.25rem; line-height: 1.25; margin: 1.5rem 0 .75rem; }
+.doc-pricelist p, .doc-brochure p { line-height: 1.6; }
 `
 
 const PRINT = `

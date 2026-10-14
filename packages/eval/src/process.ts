@@ -5,8 +5,9 @@ import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
 import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
-import { clearOfText } from '@make-it-accessible/pipeline/pdf/geometry'
-import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
+import { fromHex } from '@make-it-accessible/pipeline/html/color'
+import { cropPicture, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
+import { extractPage, renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
@@ -84,17 +85,35 @@ export async function buildHtml(
   for (const r of results) {
     const size = fitScale(r.extraction.width, r.extraction.height)
     const k = size.width / r.extraction.width
+    const boxes = imageBoxes(r.structure)
+    // Crops are judged on the page as the model saw it, words by their painted extent in their own colour.
+    const img = boxes.length ? await renderPixels(pdfPath, r.pdfPage, 72 * k) : null
     const hidden = new Set(r.extraction.hidden)
-    const words = r.extraction.runs
-      .filter((run) => !hidden.has(run.id))
-      .map(({ box: b }) => ({ x: b.x * k, y: b.y * k, w: b.w * k, h: b.h * k }))
+    const painted = img
+      ? r.extraction.runs.flatMap((run, i) => {
+          const b = { x: run.box.x * k, y: run.box.y * k, w: run.box.w * k, h: run.box.h * k }
+          const ink = hidden.has(run.id) ? null : inkBox(img, b, run.color ? fromHex(run.color) : null)
+          return ink ? [{ i, box: ink }] : []
+        })
+      : []
+    const pictures = boxes.map(({ box: [x = 0, y = 0, w = 0, h = 0] }) => ({ x, y, w, h }))
     const sources = new Map<string, string>()
-    for (const [i, { path, box }] of imageBoxes(r.structure).entries()) {
-      const [x = 0, y = 0, w = 0, h = 0] = box
-      // A crop that cannot be cleared of neighbouring text keeps the model's box.
-      const clear = clearOfText({ x, y, w, h }, words)
-      const crop = clear ? [clear.x, clear.y, clear.w, clear.h] : box
-      const file = await renderCrop(pdfPath, r.pdfPage, size, crop, join(r.dir, `img-${String(i)}`))
+    for (const [i, { path, own }] of boxes.entries()) {
+      const mine = new Set(own)
+      // Other products' pictures are foreign to this one, like their words.
+      const words = [
+        ...painted.map((p) => ({ box: p.box, own: mine.has(p.i) })),
+        ...pictures.filter((_, j) => j !== i).map((box) => ({ box, own: false })),
+      ]
+      const model = pictures[i] ?? { x: 0, y: 0, w: 0, h: 0 }
+      const crop = cropPicture(img ? growToPicture(model, words, img) : model, words)
+      const file = await renderCrop(
+        pdfPath,
+        r.pdfPage,
+        size,
+        [crop.x, crop.y, crop.w, crop.h],
+        join(r.dir, `img-${String(i)}`),
+      )
       sources.set(path, file.slice(docDir.length + 1))
     }
     const flagged = [...r.validation.errors, ...r.validation.review].map((f) => f.path)

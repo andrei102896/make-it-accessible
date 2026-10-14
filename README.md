@@ -43,7 +43,8 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/raster.ts               model image size budget, page and crop rendering
   pdf/runs.ts                 joining words, euro/cent pairing, amount of cited words, overprint duplicates
   pdf/paragraphs.ts           grouping printed lines into paragraphs
-  pdf/geometry.ts             box arithmetic; picture crops cut back from neighbouring text
+  pdf/geometry.ts             box arithmetic
+  pdf/crop.ts                 picture crops: word extents in their text colour, own words kept whole, other offers cut at the edge, boxes grown back over a cut-off badge
   pdf/pixels.ts               PPM page renders as pixels
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
@@ -140,7 +141,7 @@ out/                          run outputs (local only)
 - **A page price is checked with its currency and offer words in one block.** Checking the amount alone let "Everything £1" vanish while another £1 on the page counted for it (`rules.test.ts`).
 - **An unmapped glyph ("£�.99") reads as nothing, never as an amount.** It read as 99p; such occurrences carry their value from the render (`money.test.ts`, `ledger.test.ts`).
 - **Hidden text is never published.** A pub menu's "Served 5.00–8.30pm" sat under a shape, Lidl CH printed a price under a "Lieferverzug" sticker, Elddis a running head under its cover: all in the text layer, none visible. `hiddenRuns` judges each word by the ink in its box, after removing other words' boxes; a word too covered to judge is hidden only when it continues a hidden word side by side (an overlapping one is drawn on top, and showed on Lidl GB). Do not judge by text colour: the pub menu's hidden text is white like the rest of the page.
-- **Crops are trimmed only against words at their edge.** Words well inside a picture are the pack's own; a crop that cannot be cleared keeps the model's box and is not marked `data-review` (a flagged image counts its image-read prices as confirmed in the scorer).
+- **Crops keep the product whole.** No cut is chosen by pixel content (paper and marble textures read as product, cuts got refused and the fallback swallowed neighbouring prices). The product's own words are taken in whole; another offer's words and pictures are cut only within a 25 % edge band, never through the product's words. Growth is vertical only and stops at another offer and at full-width photos or bands (horizontal growth crept into a leaflet's sidebar). Word extents use the text colour pdftohtml reports: guessing the ink from the font box took the paper or a green footer band for a red price digit. No crop is marked `data-review` (a flagged image counts its image-read prices as confirmed in the scorer).
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
 ## Dead ends

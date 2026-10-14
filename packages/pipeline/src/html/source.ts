@@ -1,3 +1,5 @@
+import { iou } from '../pdf/geometry.ts'
+import { fitScale } from '../pdf/raster.ts'
 import { joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
@@ -16,13 +18,49 @@ export function visibleText(t: TextValue, e: Extraction): string {
     if (prev && prev.line !== r.line && /\p{L}-$/u.test(prev.str) && /^\p{Lu}/u.test(r.str)) chunks.push([])
     chunks.at(-1)?.push(r)
   })
-  return chunks.map((c) => joinRuns(c)).join('')
+  // A currency sign set tight against a word ("for£3.50") gets the space a reader expects.
+  return chunks
+    .map((c) => joinRuns(c))
+    .join('')
+    .replace(/(\p{L})([£$€])/gu, '$1 $2')
 }
 
-export function imageBoxes(page: PageStructure): { path: string; box: readonly number[] }[] {
-  const out: { path: string; box: readonly number[] }[] = []
+// Every run index a product cites: name, prices with their conditions, unit and details.
+function citations(item: Item): number[] {
+  const out: number[] = []
+  const add = (t: TextValue | undefined): void => {
+    if (t && 'src' in t) for (const [from, to] of t.src) for (let i = from; i <= to; i++) out.push(i)
+  }
+  const block = (b: Block): void => {
+    if (b.kind === 'heading' || b.kind === 'paragraph') add(b.text)
+    if (b.kind === 'list') b.items.forEach(add)
+    if (b.kind === 'table') {
+      add(b.caption)
+      b.rows.flat().forEach((cell) => {
+        add(cell.text)
+        cell.prices?.forEach((p) => {
+          add({ src: p.src })
+          add(p.qualifier)
+        })
+      })
+    }
+    if (b.kind === 'products') b.items.forEach((i) => out.push(...citations(i)))
+  }
+  add(item.name)
+  item.prices.forEach((p) => {
+    add({ src: p.src })
+    add(p.qualifier)
+  })
+  add(item.unit)
+  item.details.forEach(block)
+  return out
+}
+
+// Every picture of a page with the runs its own product cites (none for a figure).
+export function imageBoxes(page: PageStructure): { path: string; box: readonly number[]; own: number[] }[] {
+  const out: { path: string; box: readonly number[]; own: number[] }[] = []
   const block = (path: string, b: Block): void => {
-    if (b.kind === 'figure') out.push({ path: `${path}.image`, box: b.image.box })
+    if (b.kind === 'figure') out.push({ path: `${path}.image`, box: b.image.box, own: [] })
     if (b.kind === 'products')
       b.items.forEach((item, i) => {
         product(`${path}.items[${i}]`, item)
@@ -32,10 +70,44 @@ export function imageBoxes(page: PageStructure): { path: string; box: readonly n
     item.details.forEach((d, i) => {
       block(`${path}.details[${i}]`, d)
     })
-    if (item.image) out.push({ path: `${path}.image`, box: item.image.box })
+    if (item.image) out.push({ path: `${path}.image`, box: item.image.box, own: citations(item) })
   }
   page.blocks.forEach((b, i) => {
     block(`blocks[${i}]`, b)
   })
   return out
 }
+
+// Figures printed in the same place on another page too (a running drawing, a logo): page furniture, per page the
+// paths of those figures.
+const RUNNING_OVERLAP = 0.5
+export function runningFigures(pages: readonly { structure: PageStructure; extraction: Extraction }[]): Set<string>[] {
+  const figures = pages.map(({ structure, extraction }) => {
+    const { width, height } = fitScale(extraction.width, extraction.height)
+    return structure.blocks.flatMap((b, i) => {
+      if (b.kind !== 'figure') return []
+      const [x, y, w, h] = b.image.box
+      return [{ path: `blocks[${String(i)}].image`, box: { x: x / width, y: y / height, w: w / width, h: h / height } }]
+    })
+  })
+  return figures.map(
+    (own, p) =>
+      new Set(
+        own
+          .filter((f) => figures.some((other, q) => q !== p && other.some((o) => iou(o.box, f.box) >= RUNNING_OVERLAP)))
+          .map((f) => f.path),
+      ),
+  )
+}
+
+// Each list or paragraph of the pages as its visible lines (where a printed legend can be found).
+export const textBlocks = (pages: readonly { structure: PageStructure; extraction: Extraction }[]): string[][] =>
+  pages.flatMap((p) =>
+    p.structure.blocks.flatMap((b) =>
+      b.kind === 'list'
+        ? [b.items.map((t) => visibleText(t, p.extraction))]
+        : b.kind === 'paragraph'
+          ? [[visibleText(b.text, p.extraction)]]
+          : [],
+    ),
+  )

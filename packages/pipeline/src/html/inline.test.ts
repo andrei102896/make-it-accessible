@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isAddOn, isBadge, legendOf, linkify, trailingCodes } from './inline.ts'
+import { emphasizeMoney, isAddOn, isBadge, legendOf, linkify, noteTargets, trailingCodes } from './inline.ts'
 
 test('printed addresses, e-mails and phone numbers become links; prices, years and postcodes do not', () => {
   assert.equal(
@@ -45,4 +45,21 @@ test('short printed badges and add-on lines are recognised', () => {
     assert.ok(!isBadge(text), text)
   assert.ok(isAddOn('Add vegan cheese £1'))
   assert.ok(!isAddOn('Additional Day Guests'))
+})
+
+test('amounts in an add-on line are set apart, links left whole', () => {
+  assert.equal(
+    emphasizeMoney('Add 3 garlic King Prawns for £5 or sauce £3.50'),
+    'Add 3 garlic King Prawns for <span class="money">£5</span> or sauce <span class="money">£3.50</span>',
+  )
+  assert.equal(
+    emphasizeMoney('<a href="tel:0123">0123</a> Zusatz 1,50 €'),
+    '<a href="tel:0123">0123</a> Zusatz <span class="money">1,50 €</span>',
+  )
+})
+
+test('a note speaks of the items its first naming word names, else of the whole list', () => {
+  const names = ['Steak & Chips', 'The Carew Inn Burger', 'Mexican Wave Burger', 'Scampi & Homemade Chips']
+  assert.deepEqual(noteTargets('All burgers served with caramelised onions, homemade chips & coleslaw', names), [1, 2])
+  assert.equal(noteTargets('Prices per person (based on two people sharing)', ['Cosy Double:', 'Suite:']), null)
 })
