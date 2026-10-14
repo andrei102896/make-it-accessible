@@ -11,3 +11,6 @@ validation/private/
 # Sealed test-half answer keys stay out of git until phase C; their hashes are in validation/KEYS.md.
 validation/sealed/
 validation/words/
+
+# Outreach contacts (business emails) stay local.
+outreach/
