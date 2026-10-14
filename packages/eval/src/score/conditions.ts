@@ -2,7 +2,7 @@ import { norm } from '@make-it-accessible/pipeline/text/normalize'
 import { moneySpans, moneyText, type Money } from './money.ts'
 
 const NEGATION = /\b(?:ohne|without|not|excl|excluding|kein|keine|keinen|zonder|sans|hors|non)\s*$/
-const words = (s: string): string =>
+export const words = (s: string): string =>
   ` ${norm(s)
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()} `

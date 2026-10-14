@@ -30,6 +30,7 @@ pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.
 pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
 pnpm keys:stage --set dev [--out <dir>] [--only <doc>-p<NN>]   # evidence folders for the blind key writers (default ../mia-keys)
 pnpm keys:write --page <doc>-p<NN> --writer a|b [--model --effort --budget --minutes]   # one confined key writer, then its audit
+pnpm keys:compare <a/key.json> <b/key.json>   # two blind keys of one dev page, difference by difference (exit 1 on any)
 ```
 
 The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md) for URLs and hashes). Tests that need them are skipped when they are missing.
@@ -73,6 +74,9 @@ packages/eval/src/            evaluation harness, never shipped
   stage-geometry.ts           where the staged images cut the page (pure)
   write-key.ts                CLI: one blind writer as a headless Claude Code process confined to its folder (dontAsk, path rules, no user settings)
   key-audit.ts                a writer run's audit: transcript against the allowlist, unchanged evidence, key on the staged page
+  compare-keys.ts             two keys of one page compared in the scorer's own forms (loose anchors, whole-word conditions, offer tokens)
+  compare-keys-match.ts       pairs writer-chosen ids: manual entries by place, products by claimed amounts, tables by claimed cells
+  compare-keys-cli.ts         CLI: prints the differences and disputes of a dev pair; refuses test documents
   file-hashes.ts              SHA-256 of every file under a folder
   keys-check.ts               CLI: validate one key file; sealed keys print counts only
   manifest.ts                 split (tuning/dev/test) and layout-label manifests
