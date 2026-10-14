@@ -3,8 +3,10 @@ import { basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { pageCount } from '@make-it-accessible/pipeline/pdf/poppler'
 import { OUT_DIR } from './paths.ts'
-import { buildHtml, PRICES, processPage, type PageResult } from './process.ts'
+import { PRICES } from './cost.ts'
+import { buildHtml, processPage, type PageResult } from './process.ts'
 import { axeReport } from './score/axe.ts'
+import { keyboardReport } from './score/keyboard.ts'
 
 // Runs any PDF through the pipeline without an answer key: validator findings, axe and cost only, no C1–C5 score.
 const { values, positionals } = parseArgs({
@@ -14,6 +16,7 @@ const { values, positionals } = parseArgs({
     model: { type: 'string', default: 'claude-sonnet-5-5' },
     effort: { type: 'string', default: 'medium' },
     title: { type: 'string' },
+    'brief-model': { type: 'string', default: 'claude-haiku-4-5' },
   },
 })
 const [pdfPath] = positionals
@@ -33,13 +36,20 @@ for (let page = from; page <= Math.min(to, total); page++) {
   if (result) results.push(result)
 }
 if (results.length) {
-  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title)
+  const briefModel = { model: values['brief-model'], effort: 'low' }
+  if (!PRICES[briefModel.model]) throw new Error(`unknown model ${briefModel.model}`)
+  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title, briefModel)
   const axe = await axeReport(htmlPath)
+  const keyboard = await keyboardReport(htmlPath)
   const usd = results.reduce((sum, r) => sum + r.usd, 0)
-  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe }
+  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe, keyboard }
   await writeFile(join(docDir, 'summary.json'), JSON.stringify(summary, null, 2))
   console.info(
     `pages ${String(results.length)}, failed ${String(summary.failed)}, $${usd.toFixed(4)}, axe critical ${String(axe.critical)} serious ${String(axe.serious)}`,
+  )
+  const kb = [keyboard.unreachable.length, keyboard.noRing.length, keyboard.obscured.length].map(String)
+  console.info(
+    `keyboard ${String(keyboard.stops)} stops, unreachable ${kb[0] ?? ''}, no focus ring ${kb[1] ?? ''}, hidden ${kb[2] ?? ''}`,
   )
   console.info(htmlPath)
   // One file to attach to an email: the page crops travel inside it.

@@ -21,17 +21,21 @@ export type ModelCall = { raw: string; usage: Usage; ms: number }
 export type ModelOptions = { model: string; effort: string }
 
 // Stage 0 runs on Andrei's Claude subscription through Claude Code headless mode; the MVP swaps this for @anthropic-ai/sdk.
-export async function callModel(imagePath: string, userText: string, options: ModelOptions): Promise<ModelCall> {
-  const image = (await readFile(imagePath)).toString('base64')
+export async function callModel(
+  imagePaths: string | readonly string[],
+  userText: string,
+  options: ModelOptions,
+  systemPrompt = SYSTEM_PROMPT,
+): Promise<ModelCall> {
+  const images = await Promise.all(
+    [imagePaths].flat().map(async (path) => ({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: (await readFile(path)).toString('base64') },
+    })),
+  )
   const message = {
     type: 'user',
-    message: {
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
-        { type: 'text', text: userText },
-      ],
-    },
+    message: { role: 'user', content: [...images, { type: 'text', text: userText }] },
   }
   const args = [
     '-p',
@@ -40,7 +44,7 @@ export async function callModel(imagePath: string, userText: string, options: Mo
     '--effort',
     options.effort,
     '--system-prompt',
-    SYSTEM_PROMPT,
+    systemPrompt,
     '--tools',
     '',
     '--setting-sources',

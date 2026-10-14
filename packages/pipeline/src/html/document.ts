@@ -1,13 +1,29 @@
 import { amountOf, centPartner, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
+import type { DocumentType, HeadingClass } from '../model/brief.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency } from '../text/money.ts'
+import { navigation, type TocEntry } from './nav.ts'
 import { css } from './style.ts'
 import type { Theme } from './theme.ts'
 
 const UI = {
-  de: { skip: 'Zum Inhalt springen', page: 'Seite', previous: 'statt', table: 'Tabelle', contents: 'Inhalt' },
-  en: { skip: 'Skip to content', page: 'Page', previous: 'was', table: 'Table', contents: 'Contents' },
+  de: {
+    skip: 'Zum Inhalt springen',
+    page: 'Seite',
+    previous: 'statt',
+    table: 'Tabelle',
+    contents: 'Inhalt',
+    sections: 'Bereiche',
+  },
+  en: {
+    skip: 'Skip to content',
+    page: 'Page',
+    previous: 'was',
+    table: 'Table',
+    contents: 'Contents',
+    sections: 'Sections',
+  },
 }
 type Strings = (typeof UI)['de']
 
@@ -18,8 +34,17 @@ export type HtmlPage = {
   flagged: readonly string[]
   imageSrc: (path: string) => string | undefined
 }
-export type HtmlDocument = { lang: string; title: string; pages: HtmlPage[]; theme?: Theme | null }
-type Rendered = { html: string; toc: { id: string; label: string }[] }
+// `kind`, `headings` and `validity` come from the document brief; without one the page is laid out from its blocks.
+export type HtmlDocument = {
+  lang: string
+  title: string
+  pages: HtmlPage[]
+  theme?: Theme | null
+  kind?: DocumentType | null
+  headings?: HeadingClass | null
+  validity?: string | null
+}
+type Rendered = { html: string; toc: TocEntry[] }
 
 // Long documents get a contents list; a page marker on a one- or two-page document is for screen readers only.
 const TOC_PAGES = 3
@@ -35,9 +60,14 @@ export function renderDocument(doc: HtmlDocument): string {
   const toc = rendered
     .flatMap((r) => r.toc)
     .filter((t) => !seen.has(t.label.toLowerCase()) && seen.add(t.label.toLowerCase()))
-  const nav =
-    long && toc.length
-      ? `<nav class="toc" aria-label="${ui.contents}"><details><summary>${ui.contents}</summary><ol>${toc.map((t) => `<li><a href="#${t.id}">${t.label}</a></li>`).join('')}</ol></details></nav>`
+  const kind = doc.kind ?? null
+  const nav = navigation(kind, toc, long, ui)
+  const validity = doc.validity ? `<p class="validity">${esc(doc.validity)}</p>` : ''
+  // With a contents list, every printed page ends with a way back to it (outside the page, so never scored).
+  const backLabel = nav.startsWith('<nav class="chips"') ? ui.sections : ui.contents
+  const back =
+    nav && doc.pages.length > 1
+      ? `\n<p class="back"><a href="#contents">${backLabel} <span aria-hidden="true">↑</span></a></p>`
       : ''
   return `<!doctype html>
 <html lang="${esc(doc.lang)}">
@@ -45,14 +75,14 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null)}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null)}</style>
 </head>
-<body>
+<body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
 <main id="main">
-<div class="band"><h1>${esc(doc.title)}</h1></div>
+<div class="band"><h1>${esc(doc.title)}</h1>${validity}</div>
 ${nav}
-${rendered.map((r) => r.html).join('\n')}
+${rendered.map((r) => r.html + back).join('\n')}
 </main>
 </body>
 </html>
@@ -77,13 +107,18 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string, index: number, lo
   const currency = pageCurrency(joinRuns(runs))
   // Bare digits read as fused cents ("269" = 2,69) only on a page that prints euro/cent pairs; elsewhere they are shown as printed.
   const fusedCents = runs.some((r) => centPartner(r, runs) !== undefined)
+  const cited = (p: PriceValue): Run[] => p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
+  const decimals = (p: PriceValue): boolean => /\d[.,]\d/.test(joinRuns(cited(p)))
+  // Prices in one list or table show decimals the same way: whole only when none of them prints any.
+  let wholeHere = false
+  const allWhole = (prices: readonly PriceValue[]): boolean => !prices.some(decimals)
   const price = (path: string, p: PriceValue): string => {
     const label = p.qualifier ? text(p.qualifier) : p.role === 'previous' ? ui.previous : ''
-    const cited = p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
-    const amount = amountOf(cited, currency)
+    const words = cited(p)
+    const amount = amountOf(words, currency)
     const proven = amount?.currency && (!amount.fromBareDigits || fusedCents) ? amount.currency : null
-    const printed = joinRuns(cited)
-    const whole = amount !== null && amount.cents % 100 === 0 && !/\d[.,]\d/.test(printed)
+    const printed = joinRuns(words)
+    const whole = wholeHere && amount !== null && amount.cents % 100 === 0
     const shown = amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
     const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
@@ -111,6 +146,8 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string, index: number, lo
       case 'list':
         return `<ul${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${text(t)}</li>`).join('')}</ul>`
       case 'table': {
+        const outer = wholeHere
+        wholeHere = allWhole(b.rows.flatMap((row) => row.flatMap((cell) => cell.prices ?? [])))
         const id = `${path.replace(/[^a-z0-9]/gi, '-')}-p${page.keyPage}`
         const caption = b.caption ? `<caption id="${id}"${flagged(`${path}.caption`)}>${text(b.caption)}</caption>` : ''
         const rows = b.rows.map((row, r) => {
@@ -123,7 +160,9 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string, index: number, lo
               .filter(Boolean)
               .join(' ')
             const span = `${cell.colSpan ? ` colspan="${cell.colSpan}"` : ''}${cell.rowSpan ? ` rowspan="${cell.rowSpan}"` : ''}`
-            if (!cell.header) return `<td${span}>${content}</td>`
+            // A cell holding only prices is a money column: right-aligned, figures lined up.
+            const num = cell.prices?.length && !cell.text ? ' class="num"' : ''
+            if (!cell.header) return `<td${span}${num}>${content}</td>`
             const group =
               cell.header === 'col' ? (cell.colSpan ? 'colgroup' : 'col') : cell.rowSpan ? 'rowgroup' : 'row'
             return `<th scope="${group}"${span}>${content}</th>`
@@ -131,11 +170,17 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string, index: number, lo
           return `<tr${flagged(`${path}.rows[${r}]`)}>${cells.join('')}</tr>`
         })
         const name = b.caption ? `aria-labelledby="${id}"` : `aria-label="${ui.table}"`
+        wholeHere = outer
         return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}><table>${caption}${rows.join('')}</table></div>`
       }
-      case 'products':
+      case 'products': {
+        const outer = wholeHere
+        wholeHere = allWhole(b.items.flatMap((item) => item.prices))
+        const items = b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')
+        wholeHere = outer
         // A list without pictures reads as a menu (name and price on one line); with pictures, as cards.
-        return `<ul class="products ${b.items.some((i) => i.image) ? 'cards' : 'menu'}" role="list"${flagged(path, true)}>${b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')}</ul>`
+        return `<ul class="products ${b.items.some((i) => i.image) ? 'cards' : 'menu'}" role="list"${flagged(path, true)}>${items}</ul>`
+      }
       case 'figure':
         return image(`${path}.image`, b.image)
     }

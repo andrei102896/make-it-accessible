@@ -1,3 +1,4 @@
+import type { HeadingClass } from '../model/brief.ts'
 import type { Theme } from './theme.ts'
 
 // No non-empty `content:` anywhere: generated text is read by screen readers but not by the scorer (innerText).
@@ -24,7 +25,9 @@ nav.toc ol { margin: .5rem 0 0; padding-left: 1.25rem; columns: 2 16rem; }
 section { margin-top: 2.5rem; }
 section > h2 { font-size: .8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
   border-top: 1px solid var(--line); padding-top: .5rem; margin: 0 0 1rem; }
-h3, h4 { font-size: 1.5rem; line-height: 1.25; margin: 2rem 0 .75rem; color: var(--accent); letter-spacing: -.01em; }
+h1, h3, h4 { font-family: var(--heading-font, inherit); }
+h3, h4 { font-size: 1.5rem; line-height: 1.25; margin: 2rem 0 .75rem; color: var(--accent); letter-spacing: -.01em;
+  scroll-margin-top: 4.5rem; }
 h4 { font-size: 1.3rem; }
 h5, h6 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; }
 p { margin: .5rem 0; }
@@ -55,22 +58,64 @@ img { max-width: 100%; height: auto; }
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th, td { border-bottom: 1px solid var(--line); padding: .45rem .75rem; text-align: left; vertical-align: top; }
 th { font-weight: 600; }
-tr:nth-child(even) td { background: var(--panel); }
+tr:first-child > th { border-bottom: 2px solid var(--fg); }
+td.num { text-align: right; white-space: nowrap; }
+.validity { margin: .5rem 0 0; font-weight: 600; }
+nav.chips { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
+  margin: 0 0 1rem; overflow-x: auto; }
+nav.chips ul { display: flex; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
+nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--fg); text-decoration: none; }
+nav.chips a:hover { border-color: var(--accent); }
+.toc-title { font-weight: 600; margin: 0; }
+html:has(nav.chips) { scroll-padding-top: 4.5rem; }
+.back { margin: 1.5rem 0 0; font-size: .9375rem; }
+.back a { display: inline-block; min-height: 2.75rem; line-height: 2.75rem; }
+.products.cards > li > .prices { margin-top: auto; }
+.price[data-role="current"] .qualifier { display: inline-block; border: 1.5px solid var(--accent); color: var(--accent);
+  border-radius: .25rem; padding: 0 .35rem; font-size: .875rem; font-weight: 700; }
+@media (max-width: 22.4rem) {
+  .products.cards { grid-template-columns: 1fr; }
+  .products.cards > li { display: grid; grid-template-columns: 6rem 1fr; column-gap: .75rem; align-items: start; }
+  .products.cards > li > img { grid-row: span 6; }
+}
+.doc-menu main { max-width: 60rem; }
+.doc-pricelist { font-size: 1rem; }
+.doc-pricelist h3, .doc-pricelist h4 { font-size: 1.25rem; }
+.doc-brochure p { max-width: 42rem; }
 `
 
 const PRINT = `
 @media print {
   :root { --fg: #000000; --bg: #ffffff; --muted: #333333; --accent: #000000; --band-bg: #ffffff; --band-fg: #000000; }
-  .skip, nav.toc { display: none; }
+  .skip, nav.toc, nav.chips, .back { display: none; }
   li, tr, img { break-inside: avoid; }
   .products.menu { columns: 2; }
 }
 `
 
-// The document's colours only where they were checked: the band is its own pair (both schemes), the accent is
-// readable on white, so it applies to light pages only.
-export function css(theme: Theme | null): string {
+// The document's colours only where they were checked: the band is its own pair (both schemes), the accent has a
+// light and a dark version, each readable on its page.
+// Heading stacks per typeface class (modernfontstacks.com); body text stays system-ui.
+const STACKS: Record<HeadingClass, string> = {
+  oldstyle: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
+  transitional: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif",
+  didone: "Didot, 'Bodoni MT', 'Noto Serif Display', 'URW Palladio L', P052, Sylfaen, serif",
+  slab: "Rockwell, 'Rockwell Nova', 'Roboto Slab', 'DejaVu Serif', 'Sitka Small', serif",
+  geometric: "Avenir, Montserrat, Corbel, 'URW Gothic', source-sans-pro, sans-serif",
+  neogrotesque: "Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif",
+  humanist: "Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif",
+  condensed:
+    "Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'Nimbus Sans Narrow', sans-serif-condensed, sans-serif",
+  // A script face is not readable as running headings; a matching serif stands in.
+  script: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
+}
+
+export function css(theme: Theme | null, headings: HeadingClass | null = null): string {
+  const font = headings ? `:root { --heading-font: ${STACKS[headings]}; }` : ''
   const band = theme?.band ? `:root { --band-bg: ${theme.band.bg}; --band-fg: ${theme.band.fg}; }` : ''
-  const accent = theme?.accent ? `@media not (prefers-color-scheme: dark) { :root { --accent: ${theme.accent}; } }` : ''
-  return `${BASE}${band}${accent}${PRINT}`
+  const accent = theme?.accent
+    ? `:root { --accent: ${theme.accent.light}; } @media (prefers-color-scheme: dark) { :root { --accent: ${theme.accent.dark}; } }`
+    : ''
+  return `${BASE}${band}${accent}${font}${PRINT}`
 }

@@ -1,22 +1,16 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { imageBoxes, renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
-import { pageTheme, ThemeSchema, type Theme } from '@make-it-accessible/pipeline/html/theme'
-import { joinRuns } from '@make-it-accessible/pipeline/pdf/runs'
-import type { ModelOptions, Usage } from '@make-it-accessible/pipeline/model/client'
+import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
-import type { Extraction, Run } from '@make-it-accessible/pipeline/pdf/types'
+import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { costUsd } from './cost.ts'
+import { documentLook } from './look.ts'
 
-// USD per million tokens, API list prices; cache writes and reads count as plain input (see docs/STAGE0.md).
-export const PRICES: Record<string, { input: number; output: number }> = {
-  'claude-sonnet-5-5': { input: 2, output: 10 },
-  'claude-opus-5-5': { input: 4, output: 20 },
-  'claude-haiku-4-5': { input: 1, output: 5 },
-}
 const MAX_UNCOVERED = 0.1
 
 export type PageResult = {
@@ -30,12 +24,6 @@ export type PageResult = {
 }
 
 export const pageDir = (docDir: string, keyPage: number): string => join(docDir, `p${String(keyPage).padStart(2, '0')}`)
-
-function costUsd(model: string, usage: Usage): number {
-  const price = PRICES[model]
-  if (!price) throw new Error(`no price for ${model}`)
-  return ((usage.input + usage.cacheWrite + usage.cacheRead) * price.input + usage.output * price.output) / 1e6
-}
 
 const json = (value: unknown): string => JSON.stringify(value, null, 2)
 
@@ -88,6 +76,7 @@ export async function buildHtml(
   results: PageResult[],
   fallbackTitle: string,
   title?: string,
+  briefModel?: ModelOptions,
 ): Promise<string> {
   const pages: HtmlPage[] = []
   for (const r of results) {
@@ -106,34 +95,19 @@ export async function buildHtml(
       imageSrc: (p) => sources.get(p),
     })
   }
-  const titleText = title ?? largestLine(results) ?? fallbackTitle
+  const look = await documentLook(pdfPath, docDir, results, briefModel)
   const htmlPath = join(docDir, 'index.html')
-  const theme = await documentTheme(pdfPath, docDir, results)
   await writeFile(
     htmlPath,
-    renderDocument({ lang: results[0]?.structure.lang ?? 'en', title: titleText, pages, theme }),
+    renderDocument({
+      lang: results[0]?.structure.lang ?? 'en',
+      title: title ?? look.title ?? fallbackTitle,
+      pages,
+      theme: look.theme,
+      kind: look.brief?.type ?? null,
+      headings: look.headings,
+      validity: look.brief?.validity ?? null,
+    }),
   )
   return htmlPath
-}
-
-// The document's name is its largest printed line (a folded menu's cover may be its last page).
-function largestLine(results: readonly PageResult[]): string | undefined {
-  const tallest = results
-    .flatMap((r) => r.extraction.runs.map((run) => ({ run, runs: r.extraction.runs })))
-    // Rotated text (a photo credit up the margin) is taller than it is wide; it is no title.
-    .filter(({ run }) => run.box.w >= run.box.h)
-    .reduce<{ run: Run; runs: Run[] } | undefined>((a, b) => (a && a.run.box.h >= b.run.box.h ? a : b), undefined)
-  if (!tallest) return undefined
-  return joinRuns(tallest.runs.filter((r) => r.line === tallest.run.line)).trim() || undefined
-}
-
-// Sampled once from the page with the most text and kept with the run, so a rescore does not depend on Poppler.
-async function documentTheme(pdfPath: string, docDir: string, results: readonly PageResult[]): Promise<Theme | null> {
-  const file = join(docDir, 'theme.json')
-  const saved = await readFile(file, 'utf8').catch(() => null)
-  if (saved !== null) return ThemeSchema.nullable().parse(JSON.parse(saved))
-  const page = [...results].sort((a, b) => b.extraction.runs.length - a.extraction.runs.length)[0]
-  const theme = page ? await pageTheme(pdfPath, page.pdfPage, page.extraction.runs) : null
-  await writeFile(file, JSON.stringify(theme))
-  return theme
 }

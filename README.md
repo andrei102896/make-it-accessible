@@ -54,6 +54,10 @@ packages/pipeline/src/        product code, reused by the MVP
   html/document.ts            deterministic accessible HTML renderer: menus as rows, products with pictures as cards, galleries, contents on long documents
   html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
   html/theme.ts               the document's colours, sampled at its words (never its photos), WCAG-checked
+  html/color.ts               WCAG contrast and OKLab lightness moves (a brand colour made readable on light and dark)
+  html/nav.ts                 section links for menus and leaflets, a contents list for price lists and long documents
+  model/brief.ts              one AI look per document: type, title, brand swatch picks, heading class, validity dates
+  pdf/fonts.ts                the heading class from the PDF's font names (pdffonts), before the brief's guess
 packages/eval/src/            evaluation harness, never shipped
   key-schema.ts               key schema as the scorer reads it (stage-0 files parse into it directly)
   key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds
@@ -94,7 +98,10 @@ packages/eval/src/            evaluation harness, never shipped
   score/dom.ts                reads the rendered sections in the browser
   score/score.ts              browser scoring
   score/axe.ts                axe summary for any HTML
-  process.ts                  one page through the pipeline, HTML assembly, model prices
+  score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
+  process.ts                  one page through the pipeline, HTML assembly
+  look.ts                     a document's title, colours, template and heading class (brief kept in brief.json for rescores)
+  cost.ts                     model list prices and the cost of a call
   run.ts                      CLI: run and score against the answer keys
   rescore.ts, scoring.ts      rescoring a copy of a run; shared build-and-score
   aggregate.ts                CLI: summary over several runs
