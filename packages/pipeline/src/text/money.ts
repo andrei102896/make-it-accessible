@@ -31,8 +31,11 @@ export function pageCurrency(pageText: string): Currency | null {
   return only && others.length === 0 && marks.length >= 2 ? only : null
 }
 
-export const formatMoney = (cents: number, lang: string, currency: Currency): string =>
-  new Intl.NumberFormat(lang, { style: 'currency', currency }).format(cents / 100)
+// `whole`: the page printed no decimals ("£32"), so none are added.
+export const formatMoney = (cents: number, lang: string, currency: Currency, whole = false): string =>
+  new Intl.NumberFormat(lang, { style: 'currency', currency, ...(whole ? { maximumFractionDigits: 0 } : {}) }).format(
+    cents / 100,
+  )
 
 // Bare digits without a currency sign follow the leaflet convention of fused euros and cents ("269" = 2,69);
 // callers keep such amounts in review and never show them reformatted.

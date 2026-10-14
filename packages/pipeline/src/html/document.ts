@@ -2,10 +2,12 @@ import { amountOf, centPartner, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency } from '../text/money.ts'
+import { css } from './style.ts'
+import type { Theme } from './theme.ts'
 
 const UI = {
-  de: { skip: 'Zum Inhalt springen', page: 'Seite', previous: 'statt', table: 'Tabelle' },
-  en: { skip: 'Skip to content', page: 'Page', previous: 'was', table: 'Table' },
+  de: { skip: 'Zum Inhalt springen', page: 'Seite', previous: 'statt', table: 'Tabelle', contents: 'Inhalt' },
+  en: { skip: 'Skip to content', page: 'Page', previous: 'was', table: 'Table', contents: 'Contents' },
 }
 type Strings = (typeof UI)['de']
 
@@ -16,55 +18,51 @@ export type HtmlPage = {
   flagged: readonly string[]
   imageSrc: (path: string) => string | undefined
 }
-export type HtmlDocument = { lang: string; title: string; pages: HtmlPage[] }
+export type HtmlDocument = { lang: string; title: string; pages: HtmlPage[]; theme?: Theme | null }
+type Rendered = { html: string; toc: { id: string; label: string }[] }
 
-const STYLE = `
-:root { color-scheme: light dark; --fg: #1a1a1a; --bg: #ffffff; --muted: #555555; --line: #d0d0d0; --focus: #1d4ed8; }
-@media (prefers-color-scheme: dark) { :root { --fg: #f2f2f2; --bg: #121212; --muted: #b8b8b8; --line: #444444; --focus: #93b4ff; } }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.5 system-ui, sans-serif; overflow-wrap: anywhere; }
-main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
-.skip { position: absolute; left: -999rem; }
-.skip:focus { left: 1rem; top: 1rem; background: var(--bg); padding: .5rem; }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-section { border-top: 1px solid var(--line); margin-top: 2rem; }
-.products { list-style: none; padding: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
-.products > li { border: 1px solid var(--line); padding: .75rem; }
-.name { font-weight: 700; margin: 0 0 .25rem; }
-.price[data-role="current"] { font-weight: 700; }
-.qualifier, .unit { color: var(--muted); }
-img { max-width: 100%; height: auto; }
-.table { overflow-x: auto; }
-table { border-collapse: collapse; }
-th, td { border: 1px solid var(--line); padding: .25rem .5rem; text-align: left; vertical-align: top; }
-`
+// Long documents get a contents list; a page marker on a one- or two-page document is for screen readers only.
+const TOC_PAGES = 3
 
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 export function renderDocument(doc: HtmlDocument): string {
   const ui: Strings = doc.lang.startsWith('de') ? UI.de : UI.en
-  const sections = doc.pages.map((p) => renderPage(p, ui, doc.lang)).join('\n')
+  const long = doc.pages.length >= TOC_PAGES
+  const rendered = doc.pages.map((p, i) => renderPage(p, ui, doc.lang, i, long))
+  const seen = new Set<string>()
+  const toc = rendered
+    .flatMap((r) => r.toc)
+    .filter((t) => !seen.has(t.label.toLowerCase()) && seen.add(t.label.toLowerCase()))
+  const nav =
+    long && toc.length
+      ? `<nav class="toc" aria-label="${ui.contents}"><details><summary>${ui.contents}</summary><ol>${toc.map((t) => `<li><a href="#${t.id}">${t.label}</a></li>`).join('')}</ol></details></nav>`
+      : ''
   return `<!doctype html>
 <html lang="${esc(doc.lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${STYLE}</style>
+<style>${css(doc.theme ?? null)}</style>
 </head>
 <body>
 <a class="skip" href="#main">${ui.skip}</a>
 <main id="main">
-<h1>${esc(doc.title)}</h1>
-${sections}
+<div class="band"><h1>${esc(doc.title)}</h1></div>
+${nav}
+${rendered.map((r) => r.html).join('\n')}
 </main>
 </body>
 </html>
 `
 }
 
-function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
+function renderPage(page: HtmlPage, ui: Strings, lang: string, index: number, long: boolean): Rendered {
   const runs = page.extraction.runs
+  const toc: Rendered['toc'] = []
+  const topLevel = Math.min(...page.structure.blocks.flatMap((b) => (b.kind === 'heading' ? [b.level] : [])))
   const text = (t: TextValue): string => {
     if ('seen' in t) return `<span data-seen>${esc(t.seen)}</span>`
     const words: Run[] = t.src.flatMap(([from, to]) => runs.slice(from, to + 1))
@@ -84,10 +82,12 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
     const cited = p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
     const amount = amountOf(cited, currency)
     const proven = amount?.currency && (!amount.fromBareDigits || fusedCents) ? amount.currency : null
-    const shown = amount && proven ? formatMoney(amount.cents, lang, proven) : joinRuns(cited)
+    const printed = joinRuns(cited)
+    const whole = amount !== null && amount.cents % 100 === 0 && !/\d[.,]\d/.test(printed)
+    const shown = amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
     const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
-    return `<span class="price" data-role="${p.role}"${data}${flagged(path)}>${qualifier}${esc(shown)}</span>`
+    return `<span class="price" data-role="${p.role}"${data}${flagged(path)}>${qualifier}<span class="amount">${esc(shown)}</span></span>`
   }
 
   const image = (path: string, img: ImageValue): string => {
@@ -99,7 +99,12 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
     switch (b.kind) {
       case 'heading': {
         const level = Math.min(6, b.level + 2)
-        return `<h${level}${flagged(path)}>${text(b.text)}</h${level}>`
+        const label = text(b.text)
+        // Top-level headings of the page's highest level make the contents list.
+        const listed = /^blocks\[\d+\]$/.test(path) && b.level === topLevel
+        const id = listed ? ` id="s${String(index)}-${path.replace(/\D/g, '')}"` : ''
+        if (listed) toc.push({ id: `s${String(index)}-${path.replace(/\D/g, '')}`, label })
+        return `<h${level}${id}${flagged(path)}>${label}</h${level}>`
       }
       case 'paragraph':
         return `<p${flagged(path)}>${text(b.text)}</p>`
@@ -129,7 +134,8 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
         return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}><table>${caption}${rows.join('')}</table></div>`
       }
       case 'products':
-        return `<ul class="products" role="list"${flagged(path, true)}>${b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')}</ul>`
+        // A list without pictures reads as a menu (name and price on one line); with pictures, as cards.
+        return `<ul class="products ${b.items.some((i) => i.image) ? 'cards' : 'menu'}" role="list"${flagged(path, true)}>${b.items.map((item, i) => product(`${path}.items[${i}]`, item)).join('')}</ul>`
       case 'figure':
         return image(`${path}.image`, b.image)
     }
@@ -137,20 +143,29 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
 
   const product = (path: string, item: Item): string => {
     const parts = [
+      item.image ? image(`${path}.image`, item.image) : '',
       `<p class="name"${flagged(`${path}.name`)}>${text(item.name)}</p>`,
       item.prices.length
         ? `<p class="prices">${item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)).join(' ')}</p>`
         : '',
       item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : '',
       ...item.details.map((d, i) => block(`${path}.details[${i}]`, d)),
-      item.image ? image(`${path}.image`, item.image) : '',
     ]
     return `<li${flagged(path, true)}>${parts.filter(Boolean).join('')}</li>`
   }
 
   const id = `page-${page.keyPage}`
-  const body = page.structure.blocks.map((b, i) => block(`blocks[${i}]`, b)).join('\n')
-  return `<section aria-labelledby="${id}" data-page="${page.keyPage}">\n<h2 id="${id}">${ui.page} ${page.keyPage}</h2>\n${body}\n</section>`
+  // Consecutive pictures share one gallery grid.
+  const parts: string[] = []
+  page.structure.blocks.forEach((b, i) => {
+    const html = block(`blocks[${i}]`, b)
+    const gallery = b.kind === 'figure' && page.structure.blocks[i - 1]?.kind === 'figure'
+    if (gallery) parts[parts.length - 1] = (parts.at(-1) ?? '').replace(/<\/div>$/, `${html}</div>`)
+    else parts.push(b.kind === 'figure' ? `<div class="gallery">${html}</div>` : html)
+  })
+  const marker = long ? '' : ' class="sr-only"'
+  const html = `<section aria-labelledby="${id}" data-page="${page.keyPage}">\n<h2 id="${id}"${marker}>${ui.page} ${page.keyPage}</h2>\n${parts.join('\n')}\n</section>`
+  return { html, toc }
 }
 
 export function imageBoxes(page: PageStructure): { path: string; box: readonly number[] }[] {

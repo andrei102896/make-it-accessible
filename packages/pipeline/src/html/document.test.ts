@@ -85,17 +85,26 @@ test('a grouping doubt marks the whole product, and only then', () => {
 
 test('each price shows its own currency; dollars are never euros', () => {
   const html = render([], withPrices('$2.99', '$3.99', '$4.99'), 'en-US')
-  assert.match(html, /data-amount="299">\$2\.99</)
+  assert.match(html, /data-amount="299"><span class="amount">\$2\.99</)
   assert.doesNotMatch(html, /€/)
 })
 
 test('bare digits on a page without euro/cent pairs are shown as printed, never as cents', () => {
   const html = render(['blocks[2].items[0].prices[0]'], withPrices('17', '£12.00', '£9.50'), 'en-GB')
-  assert.match(html, /data-review>17<\/span>/)
+  assert.match(html, /data-review><span class="amount">17<\/span>/)
   assert.doesNotMatch(html, /0\.17/)
 })
 
 test('a price with no currency on the page is shown as printed', () => {
   const html = render([], withPrices('2,99', '3,99', '4,99'))
-  assert.match(html, /class="price" data-role="current">2,99</)
+  assert.match(html, /class="price" data-role="current"><span class="amount">2,99</)
+})
+
+test('a list without pictures reads as a menu; whole prices keep no decimals; no generated text', () => {
+  const html = render([], withPrices('£12', '£3.50', '£4'), 'en-GB')
+  assert.match(html, /<ul class="products menu"/)
+  assert.match(html, /<span class="amount">£12<\/span>/)
+  assert.match(html, /<span class="amount">£3\.50<\/span>/)
+  assert.doesNotMatch(html, /content:\s*"[^"]/)
+  assert.match(html, /<h2 id="page-1" class="sr-only">/)
 })

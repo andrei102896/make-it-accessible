@@ -35,6 +35,8 @@ Phase A, measurement first:
 Phase B, fixes on dev:
 - [x] B1 Currency per price (€, £, $, "99p"), glyph-set prices, bare digits shown as printed; CHF, "¢" and trailing signs left (2026-10-14)
 - [ ] B1b Text hidden under an opaque shape · 1 d
+- [x] Designed output (Andrei, 2026-10-14: the raw page "looks chaotic, nobody wants it"): menus as name–price rows, cards with pictures, galleries, the document's own colours in a title band, contents on 3+ pages, printed whole prices, print CSS; scores of saved runs identical, axe 0 critical/serious light/dark at 1280 and 320 px (2026-10-14)
+- [ ] Output follow-ups: dietary marks as tags with their legend, add-on lines under their dish, QR codes as links, crop boxes snapped to image objects, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d
 - [ ] B4 Image budget on spreads (two half images if rows or prices regress) · 1 d

@@ -51,7 +51,9 @@ packages/pipeline/src/        product code, reused by the MVP
   model/client.ts             model call (Claude Code headless in stage 0)
   model/structure.ts          one page: call, parse, single retry
   validate/validate.ts        provenance, price, coverage and alt-text checks
-  html/document.ts            deterministic accessible HTML renderer
+  html/document.ts            deterministic accessible HTML renderer: menus as rows, products with pictures as cards, galleries, contents on long documents
+  html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
+  html/theme.ts               the document's colours, sampled at its words (never its photos), WCAG-checked
 packages/eval/src/            evaluation harness, never shipped
   key-schema.ts               key schema as the scorer reads it (stage-0 files parse into it directly)
   key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds

@@ -1,12 +1,14 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { imageBoxes, renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
+import { pageTheme, ThemeSchema, type Theme } from '@make-it-accessible/pipeline/html/theme'
+import { joinRuns } from '@make-it-accessible/pipeline/pdf/runs'
 import type { ModelOptions, Usage } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
-import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
+import type { Extraction, Run } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 
 // USD per million tokens, API list prices; cache writes and reads count as plain input (see docs/STAGE0.md).
@@ -104,11 +106,34 @@ export async function buildHtml(
       imageSrc: (p) => sources.get(p),
     })
   }
-  const heading = results.flatMap((r) => r.structure.blocks).find((b) => b.kind === 'heading' && b.level === 1)
-  const titleText =
-    title ??
-    (heading?.kind === 'heading' && 'src' in heading.text ? (heading.text.text ?? fallbackTitle) : fallbackTitle)
+  const titleText = title ?? largestLine(results) ?? fallbackTitle
   const htmlPath = join(docDir, 'index.html')
-  await writeFile(htmlPath, renderDocument({ lang: results[0]?.structure.lang ?? 'en', title: titleText, pages }))
+  const theme = await documentTheme(pdfPath, docDir, results)
+  await writeFile(
+    htmlPath,
+    renderDocument({ lang: results[0]?.structure.lang ?? 'en', title: titleText, pages, theme }),
+  )
   return htmlPath
+}
+
+// The document's name is its largest printed line (a folded menu's cover may be its last page).
+function largestLine(results: readonly PageResult[]): string | undefined {
+  const tallest = results
+    .flatMap((r) => r.extraction.runs.map((run) => ({ run, runs: r.extraction.runs })))
+    // Rotated text (a photo credit up the margin) is taller than it is wide; it is no title.
+    .filter(({ run }) => run.box.w >= run.box.h)
+    .reduce<{ run: Run; runs: Run[] } | undefined>((a, b) => (a && a.run.box.h >= b.run.box.h ? a : b), undefined)
+  if (!tallest) return undefined
+  return joinRuns(tallest.runs.filter((r) => r.line === tallest.run.line)).trim() || undefined
+}
+
+// Sampled once from the page with the most text and kept with the run, so a rescore does not depend on Poppler.
+async function documentTheme(pdfPath: string, docDir: string, results: readonly PageResult[]): Promise<Theme | null> {
+  const file = join(docDir, 'theme.json')
+  const saved = await readFile(file, 'utf8').catch(() => null)
+  if (saved !== null) return ThemeSchema.nullable().parse(JSON.parse(saved))
+  const page = [...results].sort((a, b) => b.extraction.runs.length - a.extraction.runs.length)[0]
+  const theme = page ? await pageTheme(pdfPath, page.pdfPage, page.extraction.runs) : null
+  await writeFile(file, JSON.stringify(theme))
+  return theme
 }
