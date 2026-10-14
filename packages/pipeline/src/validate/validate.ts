@@ -26,7 +26,8 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const citations = new Map<number, number>()
   const seenTexts: string[] = []
   const figureAlts: { path: string; img: ImageValue }[] = []
-  const currency = pageCurrency(joinRuns(e.runs))
+  const hidden = new Set(e.hidden)
+  const currency = pageCurrency(joinRuns(e.runs.filter((r) => !hidden.has(r.id))))
 
   const runsOf = (path: string, ranges: readonly Range[], count = true): Run[] => {
     const out: Run[] = []
@@ -36,6 +37,8 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
         continue
       }
       e.runs.slice(from, to + 1).forEach((run, offset) => {
+        // A hidden word inside a cited range is not published (the renderer skips it too).
+        if (hidden.has(run.id)) return
         out.push(run)
         if (count) citations.set(from + offset, (citations.get(from + offset) ?? 0) + 1)
       })
@@ -122,13 +125,13 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
 
   page.blocks.forEach((b, i) => block(`blocks[${i}]`, b))
   runsOf('dropped', page.dropped)
-  const pageWords = [joinRuns(e.runs), ...seenTexts].join(' ')
+  const pageWords = [joinRuns(e.runs.filter((r) => !hidden.has(r.id))), ...seenTexts].join(' ')
   figureAlts.forEach((f) => {
     image(f.path, f.img, pageWords, false)
   })
 
-  const duplicates = new Set(e.duplicates)
-  const uncovered = e.runs.filter((r, i) => !citations.has(i) && !duplicates.has(r.id)).map((r) => r.id)
+  const skipped = new Set([...e.duplicates, ...e.hidden])
+  const uncovered = e.runs.filter((r, i) => !citations.has(i) && !skipped.has(r.id)).map((r) => r.id)
   const doubleCited = [...citations].filter(([, n]) => n > 1).flatMap(([i]) => e.runs[i]?.id ?? [])
   if (uncovered.length) review.push({ path: 'page', problem: `${uncovered.length} words neither used nor dropped` })
   return { errors, review, generated, uncovered, doubleCited }

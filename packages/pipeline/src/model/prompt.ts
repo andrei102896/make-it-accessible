@@ -37,7 +37,9 @@ export function inventory(e: Extraction, size: PixelSize): string {
   const sy = size.height / e.height
   const box = (b: { x: number; y: number; w: number; h: number }): string =>
     `(${Math.round(b.x * sx)},${Math.round(b.y * sy)} ${Math.round(b.w * sx)}x${Math.round(b.h * sy)})`
-  const paragraphs = groupParagraphs(e.runs).map(
+  // Hidden words are left out: the model must not publish what the page does not show.
+  const hidden = new Set(e.hidden)
+  const paragraphs = groupParagraphs(e.runs.filter((r) => !hidden.has(r.id))).map(
     (p, n) =>
       `P${n} ${box(p.box)}: ${p.lines.map((line) => line.map((r) => `${runIndex(r.id)}=${r.str}`).join(' ')).join(' / ')}`,
   )

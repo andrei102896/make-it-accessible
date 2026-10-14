@@ -43,10 +43,15 @@ export type Look = {
   headings: HeadingClass | null
 }
 
+const visible = (r: PageResult): Run[] => {
+  const hidden = new Set(r.extraction.hidden)
+  return r.extraction.runs.filter((run) => !hidden.has(run.id))
+}
+
 // The document's name is its largest printed line (a folded menu's cover may be its last page).
 function largestLine(results: readonly PageResult[]): string | undefined {
   const tallest = results
-    .flatMap((r) => r.extraction.runs.map((run) => ({ run, runs: r.extraction.runs })))
+    .flatMap((r) => visible(r).map((run) => ({ run, runs: visible(r) })))
     // Rotated text (a photo credit up the margin) is taller than it is wide; it is no title.
     .filter(({ run }) => run.box.w >= run.box.h)
     .reduce<{ run: Run; runs: Run[] } | undefined>((a, b) => (a && a.run.box.h >= b.run.box.h ? a : b), undefined)
@@ -54,18 +59,17 @@ function largestLine(results: readonly PageResult[]): string | undefined {
   return joinRuns(tallest.runs.filter((r) => r.line === tallest.run.line)).trim() || undefined
 }
 
-// The brief reads the title from the pages, logo included, and can misspell it ("Eldis" for "Elddis"): only the
-// words printed in the text layer are kept, and at least two of them, else the title is the largest printed line.
+// The brief reads the title from the pages, logo included, and can misquote it ("Eldis" for "Elddis", a word left
+// out): a part is kept only when it is printed as one phrase in the text layer, else the largest printed line.
 const MIN_TITLE_WORDS = 2
-function printedTitle(title: string, results: readonly PageResult[]): string | undefined {
+export function printedTitle(title: string, pageText: string): string | undefined {
   const letters = (t: string): string => canon(t).replace(/[^\p{L}\p{N}]/gu, '')
-  const printed = letters(results.map((r) => joinRuns(r.extraction.runs)).join(' '))
-  const parts = title
+  const printed = letters(pageText)
+  const kept = title
     .split(' · ')
-    .map((part) => part.split(/\s+/).filter((w) => !/\p{L}|\p{N}/u.test(w) || printed.includes(letters(w))))
-    .map((words) => words.join(' ').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
-    .filter(Boolean)
-  const kept = parts.join(' · ')
+    .map((part) => part.trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter((part) => part && printed.includes(letters(part)))
+    .join(' · ')
   return kept.split(/\s+/).filter((w) => /\p{L}|\p{N}/u.test(w)).length >= MIN_TITLE_WORDS ? kept : undefined
 }
 
@@ -90,13 +94,13 @@ async function runBrief(pdfPath: string, docDir: string, pages: readonly PageRes
     const k = THUMB_EDGE / Math.max(r.extraction.width, r.extraction.height)
     const size = { width: Math.round(r.extraction.width * k), height: Math.round(r.extraction.height * k) }
     images.push(await renderPage(pdfPath, r.pdfPage, size, join(docDir, `brief-p${String(r.pdfPage)}`)))
-    const { img, boxes } = await pagePixels(pdfPath, r.pdfPage, r.extraction.runs)
+    const { img, boxes } = await pagePixels(pdfPath, r.pdfPage, visible(r))
     const s = sample(img, boxes)
     ring = ring.concat(s.ring)
     inside = inside.concat(s.inside)
   }
   const swatches = swatchesOf({ ring, inside })
-  const text = pages.map((r) => joinRuns(r.extraction.runs)).join(' ')
+  const text = pages.map((r) => joinRuns(visible(r))).join(' ')
   return { swatches, ...(await briefDocument(images, swatches, text, options)) }
 }
 
@@ -121,7 +125,7 @@ export async function documentLook(
   const fonts = await fontClass(pdfPath, Math.max(...results.map((r) => r.pdfPage)))
   if (briefed) {
     const { brief, swatches } = briefed
-    const title = printedTitle(brief.title, results) ?? largestLine(results)
+    const title = printedTitle(brief.title, results.map((r) => joinRuns(visible(r))).join(' ')) ?? largestLine(results)
     return { title, theme: briefTheme(brief, swatches), brief, headings: fonts ?? brief.headings }
   }
   const theme = await fallbackTheme(pdfPath, docDir, results)
@@ -134,7 +138,7 @@ async function fallbackTheme(pdfPath: string, docDir: string, results: readonly 
   const saved = await readFile(file, 'utf8').catch(() => null)
   if (saved !== null) return ThemeSchema.nullable().parse(JSON.parse(saved))
   const page = [...results].sort((a, b) => b.extraction.runs.length - a.extraction.runs.length)[0]
-  const theme = page ? await pageTheme(pdfPath, page.pdfPage, page.extraction.runs) : null
+  const theme = page ? await pageTheme(pdfPath, page.pdfPage, visible(page)) : null
   await writeFile(file, JSON.stringify(theme))
   return theme
 }

@@ -18,6 +18,7 @@ const extraction: Extraction = {
   })),
   images: [],
   duplicates: [],
+  hidden: [],
 }
 const structure = parsePage(
   JSON.stringify({
@@ -140,4 +141,92 @@ test('a menu with sections gets section links; a price list a visible contents l
     /<nav class="toc" id="contents" aria-label="Contents"><p class="toc-title">Contents<\/p>/,
   )
   assert.match(doc('menu', ['Starters', 'Mains', 'Sides']), /<h3 id="s0-0">Starters<\/h3>/)
+})
+
+test('hidden words are not published; page markers and headings follow the PDF; a table is named by its heading', () => {
+  const page = parsePage(
+    JSON.stringify({
+      lang: 'de',
+      blocks: [
+        { kind: 'heading', level: 2, text: { src: [[0, 0]] } },
+        { kind: 'paragraph', text: { src: [[1, 1]] } },
+        {
+          kind: 'table',
+          rows: [
+            [
+              { text: { src: [[4, 4]] }, header: 'col' },
+              { text: { src: [[2, 2]] }, header: 'col' },
+            ],
+            [{ text: { src: [[5, 5]] }, header: 'row' }, { prices: [{ src: [[7, 7]] }] }],
+          ],
+        },
+      ],
+    }),
+  )
+  const html = renderDocument({
+    lang: 'de',
+    title: 'T',
+    pages: [
+      {
+        keyPage: 1,
+        structure: page,
+        extraction: { ...extraction, pdfPage: 7, hidden: ['1:1'] },
+        flagged: [],
+        imageSrc: () => undefined,
+      },
+    ],
+  })
+  assert.doesNotMatch(html, /Intro/)
+  assert.match(html, /data-page="1">\n<h2 id="page-7" class="sr-only">Seite 7<\/h2>/)
+  assert.match(html, /<h3 id="s0-0">Title<\/h3>/)
+  assert.match(html, /aria-labelledby="s0-0"><table aria-labelledby="s0-0"><thead><tr><th scope="col">Size/)
+  assert.match(html, /<\/thead><tbody><tr><th scope="row">S<\/th>/)
+})
+
+test('a menu shows its legend codes as tags after the name, read out in full', () => {
+  const runs = ['Fries', '£4', 'with', 'dip', 'V', 'GF', 'V', 'Vegetarian', 'GF', 'Gluten', 'Free']
+  const page = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [
+            {
+              name: { src: [[0, 0]] },
+              prices: [{ src: [[1, 1]] }],
+              details: [{ kind: 'paragraph', text: { src: [[2, 5]] } }],
+            },
+          ],
+        },
+        { kind: 'list', items: [{ src: [[6, 7]] }, { src: [[8, 10]] }] },
+      ],
+    }),
+  )
+  const ex: Extraction = {
+    ...extraction,
+    runs: runs.map((str, i) => ({
+      id: `1:${String(i)}`,
+      str,
+      box: { x: i * 50, y: 0, w: 40, h: 10 },
+      flow: 0,
+      line: 0,
+    })),
+  }
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Inn · Menu',
+    kind: 'menu',
+    pages: [{ keyPage: 1, structure: page, extraction: ex, flagged: [], imageSrc: () => undefined }],
+  })
+  assert.match(
+    html,
+    /<p class="name">Fries <span class="diet"><span aria-hidden="true">V<\/span><span class="sr-only">, Vegetarian<\/span><\/span>/,
+  )
+  assert.match(html, /<p class="desc">with dip<\/p>/)
+  assert.match(html, /<p class="legend">/)
+  assert.match(
+    html,
+    /<h1><span class="brand">Inn<span class="sr-only">,<\/span><\/span> <span class="doc">Menu<\/span><\/h1>/,
+  )
 })

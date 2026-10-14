@@ -4,13 +4,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { mergeOverlapping } from './geometry.ts'
+import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import type { Extraction, PageImage, Run } from './types.ts'
+import { hiddenRuns } from './visibility.ts'
 
 export const poppler = promisify(execFile)
 export const MAX_BUFFER = 64 * 1024 * 1024
 const MIN_IMAGE_AREA = 0.01
 const MAX_IMAGE_AREA = 0.9
+// Enough to see the ink of a light 6 pt word, cheap enough to render every page once more; a poster-sized page
+// is rendered smaller so its pixels stay well under MAX_BUFFER (A0 at 150 dpi is ~104 MB).
+const VISIBILITY_DPI = 150
+const MAX_VISIBILITY_EDGE = 5000
 
 export async function extractPage(pdf: string, pdfPage: number): Promise<Extraction> {
   const page = String(pdfPage)
@@ -43,7 +49,9 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   if (!width || !height) throw new Error(`pdftotext returned no page size for ${pdf} p${pdfPage}`)
   const duplicates = findDuplicates(runs)
   const images = await extractImages(pdf, pdfPage, width * height)
-  return { pdfPage, width, height, runs, images, duplicates }
+  const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
+  const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
+  return { pdfPage, width, height, runs, images, duplicates, hidden }
 }
 
 async function extractImages(pdf: string, pdfPage: number, pageArea: number): Promise<PageImage[]> {
@@ -64,6 +72,15 @@ async function extractImages(pdf: string, pdfPage: number, pageArea: number): Pr
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+}
+
+export async function renderPixels(pdf: string, pdfPage: number, dpi: number): Promise<Pixels> {
+  const page = String(pdfPage)
+  const { stdout } = await poppler('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(dpi), pdf], {
+    encoding: 'buffer',
+    maxBuffer: MAX_BUFFER,
+  })
+  return parsePpm(stdout)
 }
 
 export async function popplerVersion(): Promise<string> {

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { contrast, fromHex, type Rgb } from './color.ts'
-import { themeFromPixels, type Pixels } from './theme.ts'
+import type { Pixels } from '../pdf/pixels.ts'
+import { themeFromPixels } from './theme.ts'
 
 const NAVY: Rgb = [40, 40, 72]
 const CREAM: Rgb = [248, 244, 230]

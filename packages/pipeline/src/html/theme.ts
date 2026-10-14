@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { MAX_BUFFER, poppler } from '../pdf/poppler.ts'
+import type { Pixels } from '../pdf/pixels.ts'
+import { renderPixels } from '../pdf/poppler.ts'
 import type { Run } from '../pdf/types.ts'
 import { contrast, hex, readableOn, type Rgb } from './color.ts'
 
@@ -13,7 +14,6 @@ export const ThemeSchema = z
   })
   .strict()
 export type Theme = z.infer<typeof ThemeSchema>
-export type Pixels = { width: number; height: number; at: (x: number, y: number) => Rgb }
 // Colours measured on the pages, offered to the brief by index so it never invents one.
 export type Swatch = { hex: string; role: 'background' | 'text'; share: number }
 type Box = { x: number; y: number; w: number; h: number }
@@ -28,22 +28,6 @@ const WHITE: Rgb = [255, 255, 255]
 // Must match --bg of the dark scheme in style.ts.
 const DARK_BG: Rgb = [18, 18, 18]
 const BLACK: Rgb = [0, 0, 0]
-
-export function parsePpm(buf: Buffer): Pixels {
-  const header = buf.subarray(0, 64).toString('latin1')
-  const m = /^P6\s+(?:#.*\s+)*(\d+)\s+(\d+)\s+(\d+)\s/.exec(header)
-  if (!m || m[3] !== '255') throw new Error('not an 8-bit binary PPM')
-  const [width, height] = [Number(m[1]), Number(m[2])]
-  const offset = m[0].length
-  return {
-    width,
-    height,
-    at: (x, y) => {
-      const i = offset + 3 * (y * width + x)
-      return [buf[i] ?? 0, buf[i + 1] ?? 0, buf[i + 2] ?? 0]
-    },
-  }
-}
 
 // Colours quantised to 16 levels per channel, most frequent first, at each bucket's centre.
 function ranked(samples: readonly Rgb[]): { c: Rgb; share: number }[] {
@@ -119,14 +103,9 @@ export async function pagePixels(
   pdfPage: number,
   runs: readonly Run[],
 ): Promise<{ img: Pixels; boxes: Box[] }> {
-  const page = String(pdfPage)
-  const { stdout } = await poppler('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(SAMPLE_DPI), pdf], {
-    encoding: 'buffer',
-    maxBuffer: MAX_BUFFER,
-  })
   const k = SAMPLE_DPI / 72
   return {
-    img: parsePpm(stdout),
+    img: await renderPixels(pdf, pdfPage, SAMPLE_DPI),
     boxes: runs.map((r) => ({ x: r.box.x * k, y: r.box.y * k, w: r.box.w * k, h: r.box.h * k })),
   }
 }

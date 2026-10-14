@@ -69,12 +69,17 @@ test(
     const th = text(honda9)
     assert.equal((th.match(/■/g) ?? []).length, 30, 'Honda p9 ■ count')
     for (const word of ['efficiency', 'benefit', 'fitted']) assert.ok(th.includes(word), `Honda p9 lacks ${word}`)
+    // An old label under the green panel is hidden; the visible one printed just above it is not.
+    const hiddenWords = honda9.runs.filter((r) => honda9.hidden.includes(r.id)).map((r) => r.str)
+    assert.deepEqual(hiddenWords, ['HRX', '537', 'VYEA'])
 
     const stonehouse1 = await extractPage(STONEHOUSE, 1)
     assert.ok(stonehouse1.runs.length > 0, 'Stone House p1 has no text')
     const bannatyne1 = await extractPage(BANNATYNE, 1)
     assert.ok(bannatyne1.runs.length > 50, 'Bannatyne p1 text layer is nearly empty')
 
+    for (const e of [billa3, billa8, billa6, pollin1, pollin5, stonehouse1, bannatyne1])
+      assert.deepEqual(e.hidden, [], `p${e.pdfPage} reports visible text as hidden`)
     for (const e of [billa3, billa8, billa6, pollin1, pollin5, honda9, stonehouse1, bannatyne1]) {
       const size = fitScale(e.width, e.height)
       assert.ok(

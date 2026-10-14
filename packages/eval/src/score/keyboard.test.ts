@@ -22,6 +22,7 @@ const extraction: Extraction = {
   })),
   images: [],
   duplicates: [],
+  hidden: [],
 }
 const section = (h: number, item: number, price: number) => [
   { kind: 'heading', level: 1, text: { src: [[h, h]] } },

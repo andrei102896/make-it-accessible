@@ -222,7 +222,7 @@ B1. **Currency and price formats** (first: it is a silent-price risk).
   - "$0.125" and "$1.299" are no amounts; one decimal ("£12.5") only next to a currency; "12P" is not pence.
   - Measured: rescoring both saved stage-0 runs changed no validation finding and none of the 140 rendered prices; a UK menu from the outreach list (Carew Inn) went from 7 price errors to 0.
   - Left for later: CHF and "Fr." (on Austrian leaflets "Fr." is Friday, so it never names a currency without a Swiss document), "¢", a trailing sign glued to the digits ("12,50€"), a stated line such as "Alle Preise in €", cited words outside the amount ("2/" before "$5") putting a price in review.
-- **B1b (open): text hidden under an opaque shape** is still in the text layer; it needs the vector shapes' boxes from Poppler, a separate change.
+- **B1b (done 2026-10-14): hidden text.** Not from vector shapes: each word is judged on the rendered page (150 dpi) by the ink in its own box, other words' boxes removed; under 0.5 % of pixels off the box's dominant colour (24 per channel) means it draws nothing. A word too covered by neighbours to judge is hidden when it continues a hidden word side by side. More than half a page hidden is treated as a render failure. Hidden words are left out of the model's inventory, the validator's coverage and alt context, and the page; the adhoc report lists them.
 
 B2. **Layout: spreads and panels.**
 - **Detection, once per document:**

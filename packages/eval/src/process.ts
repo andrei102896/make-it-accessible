@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { imageBoxes, renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
+import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
+import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
 import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
+import { clearOfText } from '@make-it-accessible/pipeline/pdf/geometry'
 import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
@@ -81,9 +83,18 @@ export async function buildHtml(
   const pages: HtmlPage[] = []
   for (const r of results) {
     const size = fitScale(r.extraction.width, r.extraction.height)
+    const k = size.width / r.extraction.width
+    const hidden = new Set(r.extraction.hidden)
+    const words = r.extraction.runs
+      .filter((run) => !hidden.has(run.id))
+      .map(({ box: b }) => ({ x: b.x * k, y: b.y * k, w: b.w * k, h: b.h * k }))
     const sources = new Map<string, string>()
     for (const [i, { path, box }] of imageBoxes(r.structure).entries()) {
-      const file = await renderCrop(pdfPath, r.pdfPage, size, box, join(r.dir, `img-${String(i)}`))
+      const [x = 0, y = 0, w = 0, h = 0] = box
+      // A crop that cannot be cleared of neighbouring text keeps the model's box.
+      const clear = clearOfText({ x, y, w, h }, words)
+      const crop = clear ? [clear.x, clear.y, clear.w, clear.h] : box
+      const file = await renderCrop(pdfPath, r.pdfPage, size, crop, join(r.dir, `img-${String(i)}`))
       sources.set(path, file.slice(docDir.length + 1))
     }
     const flagged = [...r.validation.errors, ...r.validation.review].map((f) => f.path)

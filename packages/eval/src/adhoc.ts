@@ -42,7 +42,13 @@ if (results.length) {
   const axe = await axeReport(htmlPath)
   const keyboard = await keyboardReport(htmlPath)
   const usd = results.reduce((sum, r) => sum + r.usd, 0)
-  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe, keyboard }
+  // Words in the PDF's text layer that the page does not show (covered or drawn invisibly): never published.
+  const hidden = results.flatMap((r) => {
+    const ids = new Set(r.extraction.hidden)
+    const words = r.extraction.runs.filter((run) => ids.has(run.id) && run.str.trim())
+    return words.length ? [{ page: r.pdfPage, text: words.map((w) => w.str).join(' ') }] : []
+  })
+  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe, keyboard, hidden }
   await writeFile(join(docDir, 'summary.json'), JSON.stringify(summary, null, 2))
   console.info(
     `pages ${String(results.length)}, failed ${String(summary.failed)}, $${usd.toFixed(4)}, axe critical ${String(axe.critical)} serious ${String(axe.serious)}`,
@@ -51,6 +57,7 @@ if (results.length) {
   console.info(
     `keyboard ${String(keyboard.stops)} stops, unreachable ${kb[0] ?? ''}, no focus ring ${kb[1] ?? ''}, hidden ${kb[2] ?? ''}`,
   )
+  for (const h of hidden) console.info(`p${String(h.page)} not visible in the PDF, not published: ${h.text}`)
   console.info(htmlPath)
   // One file to attach to an email: the page crops travel inside it.
   const html = await readFile(htmlPath, 'utf8')

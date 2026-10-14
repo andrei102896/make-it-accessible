@@ -10,6 +10,8 @@ const Extraction = z.object({
   runs: z.array(Run),
   images: z.array(PageImage),
   duplicates: z.array(z.string()),
+  // Words in the text layer that draw nothing visible; runs extracted before this check have none.
+  hidden: z.array(z.string()).default([]),
 })
 
 export type Box = z.infer<typeof Box>

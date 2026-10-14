@@ -34,10 +34,11 @@ Phase A, measurement first:
 - [ ] A6 Baseline on dev, stage-0 commit, 3 runs · 0.5 d
 Phase B, fixes on dev:
 - [x] B1 Currency per price (€, £, $, "99p"), glyph-set prices, bare digits shown as printed; CHF, "¢" and trailing signs left (2026-10-14)
-- [ ] B1b Text hidden under an opaque shape · 1 d
+- [x] B1b Text hidden under an opaque shape or drawn invisibly: judged by the ink in each word's box, left out of the model's inventory and the page, listed in the adhoc report; no false hits on the tuning and dev PDFs, true hits on a pub menu, Lidl GB/CH, Honda, Elddis (2026-10-14)
 - [x] Designed output (Andrei, 2026-10-14: the raw page "looks chaotic, nobody wants it"): menus as name–price rows, cards with pictures, galleries, the document's own colours in a title band, contents on 3+ pages, printed whole prices, print CSS; scores of saved runs identical, axe 0 critical/serious light/dark at 1280 and 320 px (2026-10-14)
 - [x] AI brief and templates by document type (`docs/DESIGN.md`): type right on 14/15 dev and tuning documents, titles kept only for printed words, heading class from font names, light and dark accents (2026-10-14)
-- [ ] Output follow-ups: dietary marks as tags with their legend, add-on lines under their dish, QR codes as links, crop boxes snapped to image objects, smaller inlined images on long documents
+- [x] External design review fixes (2026-10-14): crops cleared of neighbouring text, whole amounts without ".00" per list or table, tables readable at 320 px with thead and named regions, cards on shared rows (prices aligned) with a row layout under two columns, printed URLs/e-mails/phones as links, a menu's dietary codes as tags after the name with the legend's words for screen readers, add-on lines, notes kept with their list, pictures sized as printed, brand and document name in one h1, PDF page numbers, headings from h3; rescores identical, axe 0 critical/serious in 5 modes on 4 documents, keyboard clean
+- [ ] Output follow-ups: QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d
 - [ ] B4 Image budget on spreads (two half images if rows or prices regress) · 1 d
