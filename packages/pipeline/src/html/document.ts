@@ -1,7 +1,7 @@
-import { amountOf, joinRuns } from '../pdf/runs.ts'
+import { amountOf, centPartner, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
-import { currencyOf, formatMoney } from '../text/money.ts'
+import { formatMoney, pageCurrency } from '../text/money.ts'
 
 const UI = {
   de: { skip: 'Zum Inhalt springen', page: 'Seite', previous: 'statt', table: 'Tabelle' },
@@ -76,13 +76,16 @@ function renderPage(page: HtmlPage, ui: Strings, lang: string): string {
       ? ' data-review'
       : ''
 
-  const currency = currencyOf(joinRuns(runs))
+  const currency = pageCurrency(joinRuns(runs))
+  // Bare digits read as fused cents ("269" = 2,69) only on a page that prints euro/cent pairs; elsewhere they are shown as printed.
+  const fusedCents = runs.some((r) => centPartner(r, runs) !== undefined)
   const price = (path: string, p: PriceValue): string => {
     const label = p.qualifier ? text(p.qualifier) : p.role === 'previous' ? ui.previous : ''
     const cited = p.src.flatMap(([from, to]) => runs.slice(from, to + 1))
-    const amount = amountOf(cited)
-    const shown = amount ? formatMoney(amount.cents, lang, currency) : joinRuns(cited)
-    const data = amount ? ` data-amount="${String(amount.cents)}"` : ''
+    const amount = amountOf(cited, currency)
+    const proven = amount?.currency && (!amount.fromBareDigits || fusedCents) ? amount.currency : null
+    const shown = amount && proven ? formatMoney(amount.cents, lang, proven) : joinRuns(cited)
+    const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
     const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
     return `<span class="price" data-role="${p.role}"${data}${flagged(path)}>${qualifier}${esc(shown)}</span>`
   }

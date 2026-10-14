@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { moneyFromParts, parseMoney } from './money.ts'
+import { currenciesIn, moneyFromParts, pageCurrency, parseMoney } from './money.ts'
 import { canon, norm } from './normalize.ts'
 
 test('norm and canon', () => {
@@ -25,6 +25,23 @@ test('parseMoney', () => {
   assert.equal(parseMoney('26,9'), null)
   assert.equal(parseMoney('UVP* € 19,99'), null)
   assert.equal(parseMoney(''), null)
+  assert.equal(parseMoney('99p'), 99)
+  assert.equal(parseMoney('12P'), null)
+  assert.equal(parseMoney('£12.5'), 1250)
+  assert.equal(parseMoney('12.5'), null)
+  assert.equal(parseMoney('$0.125'), null)
+  assert.equal(parseMoney('$1.299'), null)
+  assert.equal(parseMoney('$1,299'), 129_900)
+  assert.equal(parseMoney('1.299 €'), 129_900)
+})
+
+test('currencies named by words and by a page', () => {
+  assert.deepEqual(currenciesIn('£5 or €6'), ['GBP', 'EUR'])
+  assert.deepEqual(currenciesIn('only 99p'), ['GBP'])
+  assert.equal(pageCurrency('Chips £4.50 Salad £5.95 Burger 17'), 'GBP')
+  assert.equal(pageCurrency('Burger £17'), null)
+  assert.equal(pageCurrency('Chips £4.50 Salad £5.95 Deposit €10'), null)
+  assert.equal(pageCurrency('www.example.com 12 pcs'), null)
 })
 
 test('moneyFromParts pairs large euros with small cents', () => {

@@ -27,12 +27,14 @@ Phase A, measurement first:
   - [x] Staging tool for the 24 dev pages (`pnpm keys:stage`, run from a clean commit): read-only evidence, one folder and `run.sh` per writer, record in `validation/private/stage/` (2026-10-13)
   - [x] Confined writer runs and their audit (`pnpm keys:write`), writer brief, Andrei's policy decisions (recommended prices, spec values, price-list rows) (2026-10-13)
   - [x] Pilot 1 on 5 dev pages: all 10 keys discarded by the audit (listing outside the folder), 143/147 claims agreed; policy and brief fixed (2026-10-13)
-  - [ ] Double-entry blind writers, arbiter, transcript audit (dev, then test)
+  - [x] Pilot 2 on the restaged pages: 10 of 10 audits clean ($10.3), every price, cell and page-price claim agreed; key comparator `pnpm keys:compare` (2026-10-13)
+  - [ ] Arbiter, then all dev pages, then the test half under its rules
   - [ ] Andrei: every test price on the crop sheet, 6 structural pages, uncertain layout labels → freeze in KEYS.md
 - [x] A5 Dev / sealed test split by publisher group (2026-10-13, `validation/split.json`)
 - [ ] A6 Baseline on dev, stage-0 commit, 3 runs · 0.5 d
 Phase B, fixes on dev:
-- [ ] B1 Currency per price, formats "99p", "12,50€", "12.5", "-.99", CHF · 2 d
+- [x] B1 Currency per price (€, £, $, "99p"), glyph-set prices, bare digits shown as printed; CHF, "¢" and trailing signs left (2026-10-14)
+- [ ] B1b Text hidden under an opaque shape · 1 d
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d
 - [ ] B4 Image budget on spreads (two half images if rows or prices regress) · 1 d

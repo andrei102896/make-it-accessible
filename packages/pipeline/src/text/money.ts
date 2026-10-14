@@ -1,26 +1,45 @@
-const CURRENCY = /[€£$]|\bEUR\b|\bGBP\b/g
-const HAS_CURRENCY = /[€£$]|\bEUR\b|\bGBP\b/
-const AMOUNT = /^(\d{1,3}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|-))?$/
+const CURRENCY = /[€£$]|\b(?:EUR|GBP|USD)\b/g
+const HAS_CURRENCY = /[€£$]|\b(?:EUR|GBP|USD)\b/
+// A first group starting with 0 is never thousands ("$0.125/kWh" is not $125).
+const AMOUNT = /^([1-9]\d{0,2}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|\d|-))?$/
+// Pence written on the digits ("99p"); lower case only, so "12P" (pieces) is not money.
+export const PENCE = /^\d{1,3}p$/
 export const CENTS_HEIGHT_RATIO = 0.8
 
 export type PricePart = { str: string; height: number }
-export type Currency = 'EUR' | 'GBP'
+export type Currency = 'EUR' | 'GBP' | 'USD'
+const SIGNS: Record<string, Currency> = { '€': 'EUR', EUR: 'EUR', '£': 'GBP', GBP: 'GBP', $: 'USD', USD: 'USD' }
 
-// ponytail: pound sign anywhere on the page means GBP, otherwise EUR; add currencies when a test document needs them.
-export const currencyOf = (pageText: string): Currency => (pageText.includes('£') ? 'GBP' : 'EUR')
+// Every currency a text names, pence included; more than one means the words do not state one price.
+export function currenciesIn(s: string): Currency[] {
+  const found = (s.match(CURRENCY) ?? []).flatMap((m) => SIGNS[m] ?? [])
+  if (s.split(/\s+/).some((w) => PENCE.test(w))) found.push('GBP')
+  return [...new Set(found)]
+}
+
+// The page states a currency when its words name exactly one, at least twice; a stray mark ("Deposit €10" on a £ menu)
+// leaves two currencies, so no fallback. ponytail: "Alle Preise in €" alone does not count; add a stated-currency line if it costs review.
+export function pageCurrency(pageText: string): Currency | null {
+  const marks = [
+    ...(pageText.match(CURRENCY) ?? []).flatMap((m) => SIGNS[m] ?? []),
+    ...pageText
+      .split(/\s+/)
+      .filter((w) => PENCE.test(w))
+      .map((): Currency => 'GBP'),
+  ]
+  const [only, ...others] = new Set(marks)
+  return only && others.length === 0 && marks.length >= 2 ? only : null
+}
 
 export const formatMoney = (cents: number, lang: string, currency: Currency): string =>
   new Intl.NumberFormat(lang, { style: 'currency', currency }).format(cents / 100)
 
 // Bare digits without a currency sign follow the leaflet convention of fused euros and cents ("269" = 2,69);
-// ponytail: corpus-specific heuristic, revisit when a test document prints whole amounts without a sign.
+// callers keep such amounts in review and never show them reformatted.
 export function parseMoney(s: string): number | null {
   const hasCurrency = HAS_CURRENCY.test(s)
-  let t = s
-    .normalize('NFKC')
-    .replace(/\u2212/g, '-')
-    .replace(CURRENCY, '')
-    .replace(/\s/g, '')
+  let t = s.normalize('NFKC').replace(/−/g, '-').replace(CURRENCY, '').replace(/\s/g, '')
+  if (PENCE.test(t)) return Number(t.slice(0, -1))
   let sign = 1
   if (t.startsWith('-')) {
     if (t[1] !== ',' && t[1] !== '.') sign = -1
@@ -28,10 +47,15 @@ export function parseMoney(s: string): number | null {
   }
   const m = AMOUNT.exec(t)
   if (!m || (m[1] === '' && m[2] === undefined)) return null
-  const whole = Number((m[1] ?? '').replace(/[.,]/g, '') || '0')
   const grouped = /[.,]/.test(m[1] ?? '')
+  // Pounds and dollars group thousands with a comma; "$1.299" is not one amount.
+  if (grouped && /[£$]|GBP|USD/.test(s) && (m[1] ?? '').includes('.')) return null
+  // One decimal ("£12.5") only next to a currency: bare "26,9" is a misread 2,69.
+  if (m[2]?.length === 1 && m[2] !== '-' && !hasCurrency) return null
+  const whole = Number((m[1] ?? '').replace(/[.,]/g, '') || '0')
   if (m[2] === undefined) return sign * (hasCurrency || grouped ? whole * 100 : whole)
-  return sign * (whole * 100 + (m[2] === '-' ? 0 : Number(m[2])))
+  const cents = m[2] === '-' ? 0 : m[2].length === 1 ? Number(m[2]) * 10 : Number(m[2])
+  return sign * (whole * 100 + cents)
 }
 
 export function moneyFromParts(parts: readonly PricePart[]): number | null {

@@ -1,6 +1,7 @@
 import { amountOf, joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
+import { pageCurrency } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 
 const MAX_ALT_LENGTH = 250
@@ -25,6 +26,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const citations = new Map<number, number>()
   const seenTexts: string[] = []
   const figureAlts: { path: string; img: ImageValue }[] = []
+  const currency = pageCurrency(joinRuns(e.runs))
 
   const runsOf = (path: string, ranges: readonly Range[], count = true): Run[] => {
     const out: Run[] = []
@@ -57,9 +59,11 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
 
   const price = (path: string, p: PriceValue): string => {
     const cited = runsOf(path, p.src)
-    const amount = amountOf(cited)
+    const amount = amountOf(cited, currency)
     const words = cited.map((r) => r.str).join(' ')
     if (amount === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
+    else if (amount.currency === null)
+      errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
     else if (amount.fromBareDigits) review.push({ path, problem: `price read from bare digits "${words}"` })
     return [words, p.qualifier ? text(`${path}.qualifier`, p.qualifier) : ''].join(' ')
   }

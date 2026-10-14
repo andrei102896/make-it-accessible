@@ -4,7 +4,7 @@ import { parsePage } from '../model/schema.ts'
 import type { Extraction } from '../pdf/types.ts'
 import { renderDocument } from './document.ts'
 
-const words = ['Title', 'Intro', 'Name', '2,99', 'Size', 'S', 'M', '3,99', '4,99']
+const words = ['Title', 'Intro', 'Name', '€2,99', 'Size', 'S', 'M', '€3,99', '€4,99']
 const extraction: Extraction = {
   pdfPage: 1,
   width: 600,
@@ -48,12 +48,24 @@ const structure = parsePage(
   }),
 )
 
-const render = (flagged: string[]): string =>
+const render = (flagged: string[], ex: Extraction = extraction, lang = 'de'): string =>
   renderDocument({
-    lang: 'de',
+    lang,
     title: 'T',
-    pages: [{ keyPage: 1, structure, extraction, flagged, imageSrc: () => undefined }],
+    pages: [{ keyPage: 1, structure, extraction: ex, flagged, imageSrc: () => undefined }],
   })
+const withPrices = (a: string, b: string, c: string): Extraction => {
+  const runs = [...extraction.runs]
+  for (const [i, str] of [
+    [3, a],
+    [7, b],
+    [8, c],
+  ] as const) {
+    const r = runs[i]
+    if (r) runs[i] = { ...r, str }
+  }
+  return { ...extraction, runs }
+}
 
 test('a finding marks the narrowest element that carries it', () => {
   const html = render(['blocks[1]', 'blocks[2].items[0].details[0].rows[1][1].prices[0]'])
@@ -69,4 +81,21 @@ test('a grouping doubt marks the whole product, and only then', () => {
   assert.match(render(['blocks[2].items[0]']), /<li data-review>/)
   assert.doesNotMatch(render(['blocks[2].items[0].name']), /<li data-review>/)
   assert.match(render(['blocks[2].items[0].name']), /<p class="name" data-review>/)
+})
+
+test('each price shows its own currency; dollars are never euros', () => {
+  const html = render([], withPrices('$2.99', '$3.99', '$4.99'), 'en-US')
+  assert.match(html, /data-amount="299">\$2\.99</)
+  assert.doesNotMatch(html, /€/)
+})
+
+test('bare digits on a page without euro/cent pairs are shown as printed, never as cents', () => {
+  const html = render(['blocks[2].items[0].prices[0]'], withPrices('17', '£12.00', '£9.50'), 'en-GB')
+  assert.match(html, /data-review>17<\/span>/)
+  assert.doesNotMatch(html, /0\.17/)
+})
+
+test('a price with no currency on the page is shown as printed', () => {
+  const html = render([], withPrices('2,99', '3,99', '4,99'))
+  assert.match(html, /class="price" data-role="current">2,99</)
 })
