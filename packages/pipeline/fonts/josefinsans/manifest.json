@@ -4,6 +4,7 @@
   "license": "OFL",
   "copyright": "Copyright 2010 The Josefin Sans Project Authors (https://github.com/ThomasJockin/JosefinSansFont-master), with Reserved Font Name \"Josefin Sans\".",
   "category": "text",
+  "xHeight": 0.414,
   "files": [
     {
       "file": "josefinsans-italic-100-700.woff2",

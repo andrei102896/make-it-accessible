@@ -122,6 +122,7 @@ packages/eval/src/            evaluation harness, never shipped
   listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
   brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
+  font-metrics.ts             a vendored face's x-height, measured in a browser when the family is added
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log
 out/                          run outputs (local only)

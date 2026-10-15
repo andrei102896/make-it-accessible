@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { FontManifestSchema, type FontManifest } from '@make-it-accessible/pipeline/html/webfonts'
+import { xHeightOf } from './font-metrics.ts'
 import { FONTS_DIR } from './paths.ts'
 
 // Vendors one Google Fonts family for embedding: only OFL or Apache, the latin woff2 files unmodified, the licence
@@ -65,6 +66,8 @@ const licenceText =
   (await text(`${REPO}/${licenseDir}/${key}/OFL.txt`)) ?? (await text(`${REPO}/${licenseDir}/${key}/LICENSE.txt`))
 if (!licenceText) throw new Error(`${family}: licence text not found`)
 await writeFile(join(dir, licenseDir === 'ofl' ? 'OFL.txt' : 'LICENSE.txt'), licenceText)
-const manifest = FontManifestSchema.parse({ family: name, key, license, copyright, category, files })
+const upright = files.find((f) => f.style === 'normal') ?? files[0]
+const xHeight = upright ? Math.round((await xHeightOf(join(dir, upright.file))) * 1000) / 1000 : undefined
+const manifest = FontManifestSchema.parse({ family: name, key, license, copyright, category, xHeight, files })
 await writeFile(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
-console.info(`${name}: ${license}, ${category}, ${String(files.length)} file(s) in ${dir}`)
+console.info(`${name}: ${license}, ${category}, x-height ${String(xHeight)}, ${String(files.length)} file(s) in ${dir}`)

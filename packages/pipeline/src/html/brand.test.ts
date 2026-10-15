@@ -118,7 +118,8 @@ test('a display face only for short, large headings; condensed capitals tracked,
   assert.match(brandCss(brand(profile([style('oswald', 17, '#000000')]))), /letter-spacing: \.08em/)
   const long = brandCss(brand(profile([style('stardosstencil', 23, '#dd2931', 9)])))
   assert.doesNotMatch(long, /\.hs-1 \{ font-family: "Stardos Stencil"/)
-  assert.doesNotMatch(short + long, /text-transform|content:\s*"[^"]/)
+  assert.doesNotMatch(short + long, /text-transform|content:\s*"[^"]|hyphens: auto/)
+  assert.match(short, /overflow-wrap: break-word; hyphens: manual/)
 })
 
 test('measured sizes are kept within limits: a 48 pt leaflet price over 8 pt text is not 6rem', () => {
@@ -153,4 +154,56 @@ test("a brand colour that reads only after a large move gives way to the documen
   assert.match(css, /\.hs-1 \{[^}]*color: #085858/)
   assert.match(css, /--accent: #085858/)
   assert.doesNotMatch(brandCss(yellow), /color: #f8e808/)
+})
+
+test('sizes keep the hierarchy: headings above names even on a phone, levels compressed not merged, details under names', () => {
+  const names = { name: style('oswald', 15, '#000000'), desc: style('ebgaramond', 20, '#000000') }
+  const css = brandCss(
+    brand({
+      ...profile(
+        [style('oswald', 40, '#000000'), style('oswald', 30, '#000000'), style('oswald', 13, '#000000')],
+        names,
+      ),
+      body: 10,
+    }),
+  )
+  const minimums = [...css.matchAll(/\.hs-\d \{[^}]*font-size: clamp\(([\d.]+)rem, [^,]+, ([\d.]+)rem\)/g)]
+  assert.equal(minimums.length, 3)
+  const nameSize = Number(
+    /\.products\.menu \.name, \.products\.cards \.name \{[^}]*font-size: ([\d.]+)rem/.exec(css)?.[1],
+  )
+  for (const [, min] of minimums) assert.ok(Number(min) >= nameSize * 1.1 - 0.001)
+  const tops = minimums.map(([, , max]) => Number(max))
+  assert.ok((tops[0] ?? 0) > (tops[1] ?? 0) && (tops[1] ?? 0) > (tops[2] ?? 0))
+  const descSize = Number(
+    /:not\(\.name, \.prices\), \.products\.cards \.more > p \{[^}]*font-size: ([\d.]+)rem/.exec(css)?.[1],
+  )
+  assert.ok(descSize <= nameSize)
+})
+
+test('only a small-eyed face is scaled up in running text; names and card prices reset the scaling', () => {
+  const small = { ...manifest('Josefin Sans', 'text', ['100 700']), xHeight: 0.414 }
+  const tall = { ...manifest('Roboto', 'text', ['100 900']), xHeight: 0.528 }
+  const withLibrary = (p: Profile): Brand => ({
+    ...brand(p),
+    library: [small, tall],
+    faces: [small, tall].map((m) => ({
+      manifest: m,
+      file: m.files[0] ?? { file: '', style: 'normal', weight: '400', unicodeRange: '' },
+      data: new Uint8Array(),
+    })),
+  })
+  const roles = (key: string): Profile['roles'] => ({
+    desc: style(key, 14, '#000000'),
+    name: style(key, 14, '#000000'),
+    price: style(key, 14, '#000000'),
+  })
+  const josefin = brandCss(withLibrary(profile([], roles('josefinsans'))))
+  assert.match(
+    josefin,
+    /:not\(\.name, \.prices\), \.products\.cards \.more > p \{[^}]*font-size-adjust: ex-height 0\.46/,
+  )
+  assert.match(josefin, /\.products\.cards \.name \{[^}]*font-size-adjust: none/)
+  assert.match(josefin, /\.products\.cards \.price\[data-role="current"\] \{[^}]*font-size-adjust: none/)
+  assert.doesNotMatch(brandCss(withLibrary(profile([], roles('roboto')))), /ex-height/)
 })

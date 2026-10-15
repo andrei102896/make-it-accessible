@@ -16,3 +16,6 @@
 - A brand face's x-height decides its real size: running text in Josefin or Cormorant needs font-size-adjust; names and prices in a tall-eyed face must not get it. (Kendells, Stone House, 2026-10-15)
 - A note that names its own heading ("TEA TIME SET MENU: …") prices every list under that heading, without a box. (Kendells, 2026-10-15)
 - A brand colour that passes only after a large lightness move stops being the brand: use the document's other brand colour when it reads (BILLA yellow → its green, not mustard). (2026-10-15)
+- "No break inside a word" includes hyphens: hyphens:auto on a German page turned a heading fix into "KAU-FEN / FÜH-REND". Headings use hyphens:manual with overflow-wrap:break-word as the only fallback. (BILLA, round 2, 2026-10-15)
+- Check a CSS fix in the computed style, not the source: lining-nums was overridden by a more specific menu-price rule. (Kendells, round 2, 2026-10-15)
+- Look for the design's subtleties, not only its lines: ornaments and flourishes under titles, arrow ends, boxed lines, icons, textured or coloured panels behind headings; name each one the page lacks. (Andrei, Kendells title ornament, 2026-10-15)

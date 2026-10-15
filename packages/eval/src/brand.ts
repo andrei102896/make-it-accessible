@@ -30,9 +30,11 @@ const LinesSchema = z
       z.object({ width: z.number(), full: z.boolean(), centered: z.boolean(), color: z.string() }).strict().nullable(),
     ),
     dividers: z.boolean().nullable(),
+    // How many heading signatures the rules were measured for: a different grouping measures again.
+    signatures: z.number().int().nonnegative(),
   })
   .strict()
-type Lines = { rules: (HeadingRule | null)[]; dividers: boolean | null }
+type Lines = { rules: (HeadingRule | null)[]; dividers: boolean | null; signatures: number }
 
 export async function fontLibrary(): Promise<FontManifest[]> {
   const dirs = await readdir(FONTS_DIR).catch(() => [])
@@ -55,7 +57,8 @@ async function documentLines(
 ): Promise<Lines> {
   const file = join(docDir, 'lines.json')
   const saved = await readFile(file, 'utf8').catch(() => null)
-  if (saved !== null) return LinesSchema.parse(JSON.parse(saved))
+  const kept = saved === null ? null : LinesSchema.safeParse(JSON.parse(saved))
+  if (kept?.success && kept.data.signatures === profile.signatures.length) return kept.data
   const bg = fromHex(background)
   const k = LINES_DPI / 72
   const found: Found[] = []
@@ -82,7 +85,8 @@ async function documentLines(
         if (lineBetween(img, k, upper, lower, bg)) lines++
       })
   }
-  const out = { rules: signatureRules(found, profile.signatures.length), dividers: divided(gaps, lines) }
+  const signatures = profile.signatures.length
+  const out = { rules: signatureRules(found, signatures), dividers: divided(gaps, lines), signatures }
   await writeFile(file, JSON.stringify(out, null, 2))
   return out
 }
@@ -118,5 +122,5 @@ export async function documentBrand(
       data: new Uint8Array(await readFile(join(FONTS_DIR, w.manifest.key, w.file.file))),
     })
   const lines = await documentLines(pdfPath, docDir, pages, profile, background)
-  return { profile, library, faces, background, alternate, ...lines }
+  return { profile, library, faces, background, alternate, rules: lines.rules, dividers: lines.dividers }
 }

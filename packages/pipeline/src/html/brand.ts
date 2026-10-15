@@ -39,8 +39,8 @@ const OVER_NAME = 1.1
 // A display face (stencil, script, ornamental) only where it is large and short: never for running text.
 const DISPLAY_MIN_REM = 1.5
 const DISPLAY_MAX_WORDS = 6
-// Running text in an embedded face is scaled to this x-height, so a small-eyed face (Josefin, Cormorant) reads near
-// 16px; names and prices keep their printed proportion (a tall-eyed Oswald would shrink).
+// Running text in a small-eyed embedded face (Josefin, Cormorant: x-height below this) is scaled up to it, so it
+// reads near 16px; a tall-eyed face, names and prices keep their size.
 const EX_HEIGHT = 0.46
 const RUNNING: ReadonlySet<Role> = new Set(['desc', 'text', 'th'])
 const MIN_RULE = '2.5rem'
@@ -67,6 +67,8 @@ export type Part = {
   size: number
   heading: boolean
   running?: boolean
+  // A heading's smallest size on a phone: still above the dish names.
+  floor?: number
   manifest: FontManifest | undefined
 }
 export function brandPlan(p: Profile, library: readonly FontManifest[]): { roles: Map<Role, Part>; headings: Part[] } {
@@ -87,10 +89,14 @@ export function brandPlan(p: Profile, library: readonly FontManifest[]): { roles
   }
   const floor = Math.max(MIN_HEADING, (roles.get('name')?.size ?? 0) * OVER_NAME)
   const headings: Part[] = []
-  for (const s of p.signatures) {
+  // Printed sizes are compressed into [floor, MAX_HEADING], not clipped, so distinct levels stay distinct.
+  const printed = p.signatures.map((s) => Math.max(floor, BASE_REM * (s.size / p.body)))
+  const top = Math.max(floor, ...printed)
+  const squeeze = top > MAX_HEADING ? (MAX_HEADING - floor) / (top - floor) : 1
+  for (const [i, s] of p.signatures.entries()) {
     const previous = headings.at(-1)?.size ?? MAX_HEADING
-    const size = Math.min(previous, Math.max(floor, Math.min(MAX_HEADING, BASE_REM * (s.size / p.body))))
-    headings.push({ style: s, size, heading: true, manifest: usable(s, true, size) })
+    const size = Math.min(previous, floor + ((printed[i] ?? floor) - floor) * squeeze)
+    headings.push({ style: s, size, heading: true, floor, manifest: usable(s, true, size) })
   }
   return { roles, headings }
 }
@@ -122,18 +128,19 @@ function declarations(b: Brand, part: Part, bg: Rgb, withColour = true): string 
     `font-style: ${s.face.italic ? 'italic' : 'normal'}`,
     // Headings shrink on a phone: a measured 40px headline would break words at 320px.
     heading
-      ? `font-size: clamp(${rem(Math.max(MIN_HEADING, size * 0.75))}, ${rem(size * 0.55)} + 2vw, ${rem(size)})`
+      ? `font-size: clamp(${rem(Math.min(size, Math.max(part.floor ?? MIN_HEADING, size * 0.75)))}, ${rem(size * 0.55)} + 2vw, ${rem(size)})`
       : `font-size: ${rem(size)}`,
     c ? `color: ${c}` : '',
     // Names and prices are paragraphs too: they reset what the running-text rule would otherwise give them.
-    part.running && face.startsWith('"')
+    part.running && face.startsWith('"') && (part.manifest?.xHeight ?? EX_HEIGHT) < EX_HEIGHT
       ? `font-size-adjust: ex-height ${String(EX_HEIGHT)}`
       : heading
         ? ''
         : 'font-size-adjust: none',
     // Capitals set in a condensed face are printed tracked; other capitals keep the face's own spacing.
     heading && s.caps && classOf(s.face.key) === 'condensed' ? 'letter-spacing: .08em' : '',
-    heading ? 'overflow-wrap: normal; hyphens: auto' : '',
+    // Lines break between words; a word wider than the screen is the only one split, and never hyphenated.
+    heading ? 'overflow-wrap: break-word; hyphens: manual' : '',
   ]
     .filter(Boolean)
     .join('; ')
@@ -155,7 +162,7 @@ export function brandCss(b: Brand): string {
   const price = plan.roles.get('price')
   const priceColour = price ? colour(price.style.color, bg, b.alternate) : null
   const cardPrice = price
-    ? `.products.cards .price[data-role="current"] { font-family: ${family(b, price)};${priceColour ? ` color: ${priceColour};` : ''} }`
+    ? `.products.cards .price[data-role="current"] { font-family: ${family(b, price)}; font-size-adjust: none;${priceColour ? ` color: ${priceColour};` : ''} }`
     : ''
   const body = plan.roles.get('desc') ?? plan.roles.get('text')
   const headings = plan.headings.flatMap((part, i) => {

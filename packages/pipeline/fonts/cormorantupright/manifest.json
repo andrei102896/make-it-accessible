@@ -4,6 +4,7 @@
   "license": "OFL",
   "copyright": "Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)",
   "category": "text",
+  "xHeight": 0.395,
   "files": [
     {
       "file": "cormorantupright-normal-300.woff2",

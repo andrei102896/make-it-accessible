@@ -4,6 +4,7 @@
   "license": "OFL",
   "copyright": "Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)",
   "category": "text",
+  "xHeight": 0.578,
   "files": [
     {
       "file": "oswald-normal-200-700.woff2",

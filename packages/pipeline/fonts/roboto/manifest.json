@@ -4,6 +4,7 @@
   "license": "OFL",
   "copyright": "Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)",
   "category": "text",
+  "xHeight": 0.528,
   "files": [
     {
       "file": "roboto-italic-100-900.woff2",

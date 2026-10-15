@@ -43,7 +43,7 @@ p { margin: .5rem 0; }
   padding: .65rem 0; border-bottom: 1px solid var(--line); }
 .products.menu > li > * { margin: 0; }
 .products.menu .name, .products.menu .prices { font-weight: 600; }
-.products.menu .prices { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.products.menu .prices { text-align: right; white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
 .products.menu > li > :not(.name, .prices) { grid-column: 1 / -1; color: var(--muted); font-size: 1rem; margin-top: .15rem; }
 .products.menu .addon { padding-left: .75rem; font-size: .875rem; }
 .diet { display: inline-block; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .3rem; margin-left: .25rem;
@@ -129,9 +129,7 @@ const PRINT = `
 }
 `
 
-// The document's colours only where checked: the band is its own pair, the accent readable on the page; the page
-// follows the document's own background, with no automatic dark scheme.
-// Heading stacks per typeface class (modernfontstacks.com); body text stays system-ui.
+// Heading stacks per typeface class (modernfontstacks.com), used when the document's own face is not vendored.
 export const STACKS: Record<HeadingClass, string> = {
   oldstyle: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
   transitional: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif",

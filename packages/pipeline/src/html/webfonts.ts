@@ -8,6 +8,8 @@ export const FontManifestSchema = z
     license: z.enum(['OFL', 'APACHE2']),
     copyright: z.string(),
     category: z.enum(['text', 'display']),
+    // The face's x-height as a share of its size, measured when the family is vendored (fonts-add).
+    xHeight: z.number().positive().max(1).optional(),
     files: z
       .array(
         z

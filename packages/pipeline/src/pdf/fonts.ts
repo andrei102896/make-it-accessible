@@ -2,8 +2,6 @@ import type { HeadingClass } from '../model/brief.ts'
 import { classOf } from './face.ts'
 import { MAX_BUFFER, poppler } from './poppler.ts'
 
-export { classOf }
-
 // The class most of the document's fonts belong to (pdffonts lists each font once per encoding and style).
 export async function fontClass(pdf: string, pages: number): Promise<HeadingClass | null> {
   const { stdout } = await poppler('pdffonts', ['-l', String(pages), pdf], { maxBuffer: MAX_BUFFER })

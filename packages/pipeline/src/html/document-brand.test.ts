@@ -59,6 +59,16 @@ test('with the document brand: headings carry their signature; a printed title s
   assert.match(html, /<h3 id="[^"]+" class="hs-1">KENDELLS BISTRO<\/h3>/)
   assert.match(html, /<div class="band sr-only"><h1>/)
   assert.match(html, /\.products\.menu > li \{ border-bottom: 0/)
+  // The validity line stays visible outside the hidden band; print is black on white.
+  const dated = renderDocument({
+    lang: 'en',
+    title: 'Kendells Bistro',
+    pages: [page],
+    brand,
+    validity: 'Valid until 31 October',
+  })
+  assert.match(dated, /<div class="band sr-only"><h1>.*<\/h1><\/div><p class="validity">Valid until 31 October<\/p>/s)
+  assert.match(html, /@media print \{[^@]*body \* \{ color: #000000 !important; \}/)
   // A title the heading prints only in part keeps the band visible.
   assert.match(
     renderDocument({ lang: 'en', title: 'Kendells Bistro · Menu', pages: [page], brand }),

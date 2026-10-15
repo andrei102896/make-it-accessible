@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Swatch } from '../html/theme.ts'
-import { classOf } from '../pdf/fonts.ts'
+import { classOf } from '../pdf/face.ts'
 import { parseBrief } from './brief.ts'
 
 const SWATCHES: Swatch[] = [

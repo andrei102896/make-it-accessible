@@ -40,6 +40,7 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 - Launch is the demand test; define kill criteria before launch (proposal: at 30 days ≥ 300 free checks, ≥ 10 % sign-up conversion, ≥ 1 paying customer; otherwise stop/pivot).
 - No real-estate direction. The repository records every choice as its own decision and never says where a design came from (Andrei, 2026-10-13).
 - Brand fidelity (Andrei, 2026-10-15, after the first prospect said our page looked nothing like their menu): the page takes the PDF's measured fonts, colours, sizes and rules; open-licensed fonts are embedded (was: system fonts only); the page follows the PDF's background with no automatic dark mode; a theme and font switch belongs in a later Customize page step.
+- Currency on bare prices (Andrei, 2026-10-15): when a page prints its currency anywhere, its bare prices show it ("12.90" → "£12.90"), so a screen reader says the amount as money; no currency is ever invented for a page that prints none.
 
 ## Decisions still open (ask Andrei)
 1. Tagged PDF in v1: recommendation = HTML primary ("publish this instead of the PDF") + a rebuilt tagged PDF generated from our HTML (Chromium tagged PDF), clearly labelled as redesigned; layout-preserving tagging deferred.

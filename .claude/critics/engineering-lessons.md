@@ -16,3 +16,7 @@
 - When the page background becomes measured, recheck every colour checked against a fixed white: accent consumers, print resets of literal colours (Carew: navy accent on a navy page). (2026-10-15)
 - Font names match a vendored family by prefix only when the rest is a weight or style word (roboto must not take robotoslab, robotomono). (2026-10-15)
 - A property set on a broad selector (`section p`) reaches every paragraph, names and prices included: roles that must not inherit it reset it explicitly (font-size-adjust shrank Oswald names). (Kendells, 2026-10-15)
+- A size invariant between roles (heading ≥ 1.1× name) must hold at the clamp minimum too: check it at 320 px, not only at desktop width. (Carew hs-2 under the names, round 2, 2026-10-15)
+- Clipping measured sizes to one cap merges distinct levels: compress the range instead. (Stone House, Bannatyne hs-1…hs-3 at 2.4rem, round 2)
+- A cache keyed only on file existence records what its indices refer to (lines.json rules per signature). (round 2, 2026-10-15)
+- A typographic correction tied to a font property (font-size-adjust) needs that property measured per face: it shrinks tall-eyed faces. (Roboto, round 2)
