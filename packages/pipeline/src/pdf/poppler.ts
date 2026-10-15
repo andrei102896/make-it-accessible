@@ -6,7 +6,8 @@ import { promisify } from 'node:util'
 import { mergeOverlapping } from './geometry.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
-import type { Box, Extraction, PageImage, Run } from './types.ts'
+import { lineAt, textLines, type Line } from './face.ts'
+import type { Extraction, PageImage, Run } from './types.ts'
 import { hiddenRuns } from './visibility.ts'
 
 export const poppler = promisify(execFile)
@@ -48,15 +49,12 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   if (!width || !height) throw new Error(`pdftotext returned no page size for ${pdf} p${pdfPage}`)
   const duplicates = findDuplicates(runs)
-  const { images, colors } = await extractLayout(pdf, pdfPage, width * height)
-  // Each word takes the colour of the pdftohtml text line its centre falls in.
+  const { images, lines } = await extractLayout(pdf, pdfPage, width * height)
+  // Each word takes the colour and face of the smallest pdftohtml text line its centre falls in (lines overlap).
   for (const r of runs) {
-    const cx = r.box.x + r.box.w / 2
-    const cy = r.box.y + r.box.h / 2
-    const line = colors.find(
-      (c) => cx >= c.box.x && cx <= c.box.x + c.box.w && cy >= c.box.y && cy <= c.box.y + c.box.h,
-    )
-    if (line) r.color = line.color
+    const line = lineAt(lines, r.box)
+    if (line?.color) r.color = line.color
+    if (line?.font) r.font = line.font
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
@@ -67,7 +65,7 @@ async function extractLayout(
   pdf: string,
   pdfPage: number,
   pageArea: number,
-): Promise<{ images: PageImage[]; colors: { box: Box; color: string }[] }> {
+): Promise<{ images: PageImage[]; lines: Line[] }> {
   const dir = await mkdtemp(join(tmpdir(), 'mia-images-'))
   try {
     const page = String(pdfPage)
@@ -81,19 +79,8 @@ async function extractLayout(
         const share = (b.w * b.h) / pageArea
         return share >= MIN_IMAGE_AREA && share <= MAX_IMAGE_AREA
       })
-    const fonts = new Map(
-      [...xml.matchAll(/<fontspec id="(\d+)"[^>]*color="(#[0-9a-fA-F]{6})"/g)].map(([, id, c]) => [
-        id,
-        c?.toLowerCase(),
-      ]),
-    )
-    const colors = [
-      ...xml.matchAll(/<text top="(-?\d+)" left="(-?\d+)" width="(\d+)" height="(\d+)" font="(\d+)"/g),
-    ].flatMap(([, top, left, w, h, font]) => {
-      const color = fonts.get(font ?? '')
-      return color ? [{ box: { x: Number(left), y: Number(top), w: Number(w), h: Number(h) }, color }] : []
-    })
-    return { images: mergeOverlapping(boxes).map((box, i) => ({ id: `img${pdfPage}:${i}`, box })), colors }
+    const lines = textLines(xml)
+    return { images: mergeOverlapping(boxes).map((box, i) => ({ id: `img${pdfPage}:${i}`, box })), lines }
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

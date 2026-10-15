@@ -1,10 +1,9 @@
 import { amountOf, centPartner, joinRuns } from '../pdf/runs.ts'
 import { fitScale } from '../pdf/raster.ts'
-import type { Extraction, Run } from '../pdf/types.ts'
-import type { DocumentType, HeadingClass } from '../model/brief.ts'
-import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
+import type { Run } from '../pdf/types.ts'
+import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency } from '../text/money.ts'
-import { runningFigures, textBlocks, visibleText } from './source.ts'
+import { headedLists, runningFigures, textBlocks, visibleText } from './source.ts'
 import {
   dietTag,
   emphasizeMoney,
@@ -17,32 +16,14 @@ import {
   linkify,
   noteTargets,
   trailingCodes,
-  type Legend,
 } from './inline.ts'
-import { navigation, type TocEntry } from './nav.ts'
+import { navigation } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
+import { brandCss } from './brand.ts'
 import { css } from './style.ts'
-import type { Theme } from './theme.ts'
 
-export type HtmlPage = {
-  keyPage: number
-  structure: PageStructure
-  extraction: Extraction
-  flagged: readonly string[]
-  imageSrc: (path: string) => string | undefined
-}
-// `kind`, `headings` and `validity` come from the document brief; without one the page is laid out from its blocks.
-export type HtmlDocument = {
-  lang: string
-  title: string
-  pages: HtmlPage[]
-  theme?: Theme | null
-  kind?: DocumentType | null
-  headings?: HeadingClass | null
-  validity?: string | null
-}
-type Rendered = { html: string; toc: TocEntry[] }
-type Context = { ui: Strings; lang: string; index: number; long: boolean; legend: Legend; running: Set<string> }
+export type { HtmlDocument, HtmlPage } from './types.ts'
+import type { Context, HtmlDocument, HtmlPage, Rendered } from './types.ts'
 
 // Long documents get a contents list; a page marker on a one- or two-page document is for screen readers only.
 const TOC_PAGES = 3
@@ -56,8 +37,9 @@ export function renderDocument(doc: HtmlDocument): string {
   // Only a menu's legend: elsewhere "V Micro" or "AAA Batterien" are product words, not codes.
   const legend = doc.kind === 'menu' ? legendOf(textBlocks(doc.pages)) : new Map<string, string>()
   const running = runningFigures(doc.pages)
+  const signatures = doc.brand?.profile.headings ?? new Map<string, number>()
   const rendered = doc.pages.map((p, index) =>
-    renderPage(p, { ui, lang: doc.lang, index, long, legend, running: running[index] ?? new Set() }),
+    renderPage(p, { ui, lang: doc.lang, index, long, legend, running: running[index] ?? new Set(), signatures }),
   )
   const parts = doc.title.split(' · ')
   // The band already names the document; a contents entry saying the same again is left out.
@@ -68,6 +50,15 @@ export function renderDocument(doc: HtmlDocument): string {
   const nav = navigation(kind, toc, long, ui)
   const validity = doc.validity ? `<p class="validity">${esc(doc.validity)}</p>` : ''
   const title = bandTitle(parts)
+  // A branded document that prints its whole name as its first heading shows it once: the band is for screen
+  // readers only, its validity line stays visible.
+  const first = doc.pages[0]
+  const opening = first?.structure.blocks[0]
+  const printed =
+    doc.brand &&
+    first !== undefined &&
+    opening?.kind === 'heading' &&
+    same(doc.title) === same(visibleText(opening.text, first.extraction))
   // The legend once more before the first dish; the printed one stays where the PDF has it.
   const key = legendLine(legend)
   // With a contents list, every printed page ends with a way back to it (outside the page, so never scored).
@@ -82,12 +73,12 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null)}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, doc.brand ? brandCss(doc.brand) : '')}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
 <main id="main">
-<div class="band"><h1>${title}</h1>${validity}</div>
+<div class="band${printed ? ' sr-only' : ''}"><h1>${title}</h1>${printed ? '' : validity}</div>${printed ? validity : ''}
 ${nav}${key}
 ${rendered.map((r) => r.html + back).join('\n')}
 </main>
@@ -96,7 +87,7 @@ ${rendered.map((r) => r.html + back).join('\n')}
 `
 }
 
-function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: Context): Rendered {
+function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, signatures }: Context): Rendered {
   const e = page.extraction
   const runs = e.runs
   const toc: Rendered['toc'] = []
@@ -161,15 +152,22 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: 
   }
 
   // A note printed right under a menu-style list describes the items it names, or the whole list when it names none.
-  const notes = new Map<string, { id: string; items: number[] | null }>()
+  // A note naming the heading it sits under describes every list since that heading, outside any box.
+  const notes = new Map<string, { id: string; items: number[] | null; headed: boolean }>()
+  const describedBy = new Map<string, string>()
   page.structure.blocks.forEach((b, i) => {
     const next = page.structure.blocks[i + 1]
     if (b.kind !== 'products' || b.items.some((it) => it.image) || next?.kind !== 'paragraph') return
-    const items = noteTargets(
-      raw(next.text),
-      b.items.map((it) => raw(it.name)),
-    )
-    notes.set(`blocks[${String(i)}]`, { id: `note-${String(e.pdfPage)}-${String(i + 1)}`, items })
+    const id = `note-${String(e.pdfPage)}-${String(i + 1)}`
+    const lists = headedLists(page.structure.blocks, i + 1, raw)
+    lists?.forEach((l) => describedBy.set(`blocks[${String(l)}]`, id))
+    const items = lists
+      ? null
+      : noteTargets(
+          raw(next.text),
+          b.items.map((it) => raw(it.name)),
+        )
+    notes.set(`blocks[${String(i)}]`, { id, items, headed: lists !== null })
   })
 
   let lastHeading: string | null = null
@@ -187,7 +185,9 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: 
           : `h${String(index)}${path.replace(/\D+/g, '-')}`
         if (listed) toc.push({ id, label })
         lastHeading = id
-        return `<h${level} id="${id}"${flagged(path)}>${label}</h${level}>`
+        const sig = signatures.get(`${String(index)}:${path}`)
+        const cls = sig === undefined ? '' : ` class="hs-${String(sig + 1)}"`
+        return `<h${level} id="${id}"${cls}${flagged(path)}>${label}</h${level}>`
       }
       case 'paragraph': {
         const words = raw(b.text)
@@ -212,7 +212,9 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: 
           .join('')
         wholeHere = outer
         // A list without pictures reads as a menu (name and price on one line); with pictures, as cards.
-        return `<ul class="products ${cards ? 'cards' : 'menu'}" role="list"${flagged(path, true)}>${items}</ul>`
+        const by = describedBy.get(path)
+        const described = by ? ` aria-describedby="${by}"` : ''
+        return `<ul class="products ${cards ? 'cards' : 'menu'}" role="list"${described}${flagged(path, true)}>${items}</ul>`
       }
       case 'figure': {
         const top = /^blocks\[(\d+)\]$/.exec(path)?.[1]
@@ -318,7 +320,7 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: 
     else if (previous && notes.has(`blocks[${String(i - 1)}]`) && html) {
       const note = notes.get(`blocks[${String(i - 1)}]`)
       const p = html.replace(/^<p/, `<p class="note" id="${note?.id ?? ''}"`)
-      if (note?.items) parts.push(p)
+      if (note?.items || note?.headed) parts.push(p)
       else {
         const list = (parts.pop() ?? '').replace(/^<ul /, `<ul aria-describedby="${note?.id ?? ''}" `)
         parts.push(`<div class="priced">${list}${p}</div>`)

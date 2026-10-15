@@ -25,6 +25,7 @@ pnpm stage0 --effort high --model claude-opus-5-5
 pnpm stage0 --rescore out/<run>         # rescore a copy of a saved run (out/<run>-rescore-<time>), no model calls
 pnpm aggregate <run> <run> <run> [--before <run> ...]   # 3-run pass rule, price bounds, decisions, regressions
 pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]   # any PDF without a key: findings, axe, cost, and one self-contained <name>.html to send
+pnpm fonts:add "<Family>"                                     # vendor an OFL/Apache Google Fonts family (latin woff2, unmodified, licence beside it) for embedding
 pnpm listen <page.html>                                       # VoiceOver reads the page in Safari, item by item; transcript in <page>.voiceover.txt (needs "Allow VoiceOver to be controlled with AppleScript" and Automation for the terminal)
 pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
 pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
@@ -57,6 +58,11 @@ packages/pipeline/src/        product code, reused by the MVP
   validate/validate.ts        provenance, price, coverage and alt-text checks
   html/document.ts            deterministic accessible HTML renderer: menus as rows, products with pictures as cards, galleries, contents on long documents
   html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
+  html/profile.ts             the document's printed style per role and heading signature, from the words each element cites
+  html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
+  html/rules.ts               rules under headings and hairlines between dishes, read from the page render
+  html/webfonts.ts            vendored font manifests, family and file choice, @font-face with copyright and licence
+  html/types.ts               the document and page types the renderer takes
   html/theme.ts               the document's colours, sampled at its words (never its photos), WCAG-checked
   html/color.ts               WCAG contrast and OKLab lightness moves (a brand colour made readable on light and dark)
   html/source.ts              the visible words a text cites (hidden ones left out); picture boxes of a page
@@ -64,6 +70,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/nav.ts                 section links for menus and leaflets, a contents list for price lists and long documents
   model/brief.ts              one AI look per document: type, title, brand swatch picks, heading class, validity dates
   pdf/fonts.ts                the heading class from the PDF's font names (pdffonts), before the brief's guess
+  pdf/face.ts                 a pdftohtml font name as family key, weight and italic; a word's text line (smallest containing it)
 packages/eval/src/            evaluation harness, never shipped
   key-schema.ts               key schema as the scorer reads it (stage-0 files parse into it directly)
   key-schema-v3.ts            version-3 key files: products, one claim per money occurrence, tables with cell kinds
@@ -113,6 +120,8 @@ packages/eval/src/            evaluation harness, never shipped
   aggregate.ts                CLI: summary over several runs
   adhoc.ts                    CLI: any PDF without a key
   listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
+  brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines (one render per page)
+  fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log
 out/                          run outputs (local only)

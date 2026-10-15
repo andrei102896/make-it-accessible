@@ -8,3 +8,5 @@ export const SEALED_DIR = join(ROOT, 'validation', 'sealed')
 export const WORDS_DIR = join(ROOT, 'validation', 'words')
 export const DOCS_DIR = join(ROOT, 'validation', 'testdocs')
 export const OUT_DIR = join(ROOT, 'out')
+// Open-licensed fonts vendored for embedding, each with its manifest and licence text.
+export const FONTS_DIR = join(ROOT, 'packages', 'pipeline', 'fonts')

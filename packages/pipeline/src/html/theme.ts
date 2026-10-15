@@ -6,11 +6,12 @@ import { contrast, hex, readableOn, type Rgb } from './color.ts'
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 // `band`: the document's own background and text colour for the title band (none for a plain white page);
-// `accent`: one brand colour, made readable on the light and on the dark page. Hex only: it lands in CSS.
+// `accent`: one brand colour, made readable on the page. Hex only: it lands in CSS.
 export const ThemeSchema = z
   .object({
     band: z.object({ bg: Hex, fg: Hex }).strict().nullable(),
-    accent: z.object({ light: Hex, dark: Hex }).strict().nullable(),
+    // `dark`: kept so saved themes from before the page followed the document's background still parse.
+    accent: z.object({ light: Hex, dark: Hex.optional() }).strict().nullable(),
   })
   .strict()
 export type Theme = z.infer<typeof ThemeSchema>
@@ -25,8 +26,6 @@ const SAMPLE_DPI = 72
 const MIN_SHARE = 0.03
 const MAX_SWATCHES = 5
 const WHITE: Rgb = [255, 255, 255]
-// Must match --bg of the dark scheme in style.ts.
-const DARK_BG: Rgb = [18, 18, 18]
 const BLACK: Rgb = [0, 0, 0]
 
 // Colours quantised to 16 levels per channel, most frequent first, at each bucket's centre.
@@ -81,10 +80,9 @@ export function themeFrom(band: Rgb | null, ink: Rgb | null, accent: Rgb | null)
   const fg =
     band && (ink && contrast(ink, band) >= AA ? ink : contrast(BLACK, band) >= contrast(WHITE, band) ? BLACK : WHITE)
   const light = accent && readableOn(accent, WHITE, AA)
-  const dark = accent && readableOn(accent, DARK_BG, AA)
   return {
     band: band && fg && contrast(band, WHITE) >= PLAIN ? { bg: hex(band), fg: hex(fg) } : null,
-    accent: light && dark ? { light: hex(light), dark: hex(dark) } : null,
+    accent: light ? { light: hex(light) } : null,
   }
 }
 

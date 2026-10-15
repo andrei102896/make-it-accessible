@@ -1,7 +1,11 @@
 import { z } from 'zod'
 
 const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
-// `color`: the fill colour pdftohtml reports for the word's text; runs extracted before it was read have none.
+// The printed face: `key` is the family name in lower-case letters and digits, `size` in points as drawn.
+const Font = z
+  .object({ key: z.string(), size: z.number().positive(), weight: z.number().int(), italic: z.boolean() })
+  .strict()
+// `color`, `font`: what pdftohtml reports for the word's text line; runs extracted before they were read have none.
 const Run = z.object({
   id: z.string(),
   str: z.string(),
@@ -12,6 +16,7 @@ const Run = z.object({
     .string()
     .regex(/^#[0-9a-f]{6}$/)
     .optional(),
+  font: Font.optional(),
 })
 const PageImage = z.object({ id: z.string(), box: Box })
 const Extraction = z.object({
@@ -27,6 +32,7 @@ const Extraction = z.object({
 
 export type Box = z.infer<typeof Box>
 export type Run = z.infer<typeof Run>
+export type RunFont = z.infer<typeof Font>
 export type PageImage = z.infer<typeof PageImage>
 export type Extraction = z.infer<typeof Extraction>
 export type PixelSize = { width: number; height: number }

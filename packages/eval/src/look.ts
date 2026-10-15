@@ -27,6 +27,8 @@ const BRIEF_PAGES = 4
 const THUMB_EDGE = 768
 const AA = 4.5
 const NEUTRAL = 1.6
+// Swatches sit at colour-bucket centres: a near-white page is white (#f8f8f8 cost a brand red its 4.5:1).
+const NEAR_WHITE = 1.1
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
 
@@ -41,6 +43,7 @@ export type Look = {
   theme: Theme | null
   brief: Brief | null
   headings: HeadingClass | null
+  background: string
 }
 
 const visible = (r: PageResult): Run[] => {
@@ -71,6 +74,14 @@ export function printedTitle(title: string, pageText: string): string | undefine
     .filter((part) => part && printed.includes(letters(part)))
     .join(' · ')
   return kept.split(/\s+/).filter((w) => /\p{L}|\p{N}/u.test(w)).length >= MIN_TITLE_WORDS ? kept : undefined
+}
+
+// The page's own background: the colour around most of its words (a leaflet's panels and photos are not its page),
+// white when it is nearly white or when no colour holds most of the page.
+const PAGE_SHARE = 0.5
+function pageBackground(swatches: readonly Swatch[]): string {
+  const bg = swatches.find((s) => s.role === 'background')
+  return !bg || bg.share < PAGE_SHARE || contrast(fromHex(bg.hex), WHITE) < NEAR_WHITE ? '#ffffff' : bg.hex
 }
 
 // Colours from the brief's choice of measured swatches; the band's text is the document's own ink when it reads.
@@ -126,10 +137,11 @@ export async function documentLook(
   if (briefed) {
     const { brief, swatches } = briefed
     const title = printedTitle(brief.title, results.map((r) => joinRuns(visible(r))).join(' ')) ?? largestLine(results)
-    return { title, theme: briefTheme(brief, swatches), brief, headings: fonts ?? brief.headings }
+    const theme = briefTheme(brief, swatches)
+    return { title, theme, brief, headings: fonts ?? brief.headings, background: pageBackground(swatches) }
   }
   const theme = await fallbackTheme(pdfPath, docDir, results)
-  return { title: largestLine(results), theme, brief: null, headings: fonts }
+  return { title: largestLine(results), theme, brief: null, headings: fonts, background: '#ffffff' }
 }
 
 // Sampled once from the page with the most text and kept with the run, so a rescore does not depend on Poppler.

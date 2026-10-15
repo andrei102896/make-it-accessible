@@ -3,10 +3,8 @@ import type { Theme } from './theme.ts'
 
 // No non-empty `content:` anywhere: generated text is read by screen readers but not by the scorer (innerText).
 const BASE = `
-:root { color-scheme: light dark; --fg: #1a1a1a; --bg: #ffffff; --muted: #555555; --line: #d9d9d9; --panel: #f4f4f4;
+:root { color-scheme: light; --fg: #1a1a1a; --bg: #ffffff; --muted: #555555; --line: #d9d9d9; --panel: #f4f4f4;
   --focus: #1d4ed8; --accent: var(--fg); --band-bg: var(--bg); --band-fg: var(--fg); }
-@media (prefers-color-scheme: dark) { :root { --fg: #f2f2f2; --bg: #121212; --muted: #b8b8b8; --line: #3a3a3a;
-  --panel: #1e1e1e; --focus: #93b4ff; --accent: var(--fg); } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 1.0625rem/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
   overflow-wrap: anywhere; }
@@ -18,6 +16,7 @@ main { max-width: 64rem; margin: 0 auto; padding: 0 1rem 3rem; }
   white-space: nowrap; border: 0; }
 .band { background: var(--band-bg); color: var(--band-fg); margin: 0 0 1.5rem; padding: 1.5rem 0;
   border-image: conic-gradient(var(--band-bg) 0 0) fill 0 / / 0 100vmax; }
+@media (forced-colors: active) { .band { border-image: none; } }
 .band h1 { margin: 0; max-width: 64rem; font-size: clamp(1.5rem, 1rem + 2.5vw, 2rem); line-height: 1.15; letter-spacing: -.01em; }
 .band .brand { display: block; font-size: 1.125rem; font-weight: 600; letter-spacing: .02em; margin-bottom: .25rem; }
 nav.toc { margin: 0 0 2rem; border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; }
@@ -35,8 +34,9 @@ p { margin: .5rem 0; }
 .price[data-role="current"] { font-weight: 700; }
 .price[data-role="previous"] .amount { text-decoration: line-through; }
 .price[data-role="previous"], .unit { color: var(--muted); }
+.prices, td.num { font-variant-numeric: lining-nums tabular-nums; }
 .qualifier { font-weight: 600; }
-.unit { font-size: .9375rem; }
+.unit { font-size: 1rem; }
 .products { list-style: none; padding: 0; margin: 0 0 1.5rem; }
 .products.menu { columns: 2 24rem; column-gap: 3rem; }
 .products.menu > li { break-inside: avoid; display: grid; grid-template-columns: 1fr auto; column-gap: 1rem;
@@ -44,11 +44,11 @@ p { margin: .5rem 0; }
 .products.menu > li > * { margin: 0; }
 .products.menu .name, .products.menu .prices { font-weight: 600; }
 .products.menu .prices { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.products.menu > li > :not(.name, .prices) { grid-column: 1 / -1; color: var(--muted); font-size: .9375rem; margin-top: .15rem; }
+.products.menu > li > :not(.name, .prices) { grid-column: 1 / -1; color: var(--muted); font-size: 1rem; margin-top: .15rem; }
 .products.menu .addon { padding-left: .75rem; font-size: .875rem; }
 .diet { display: inline-block; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .3rem; margin-left: .25rem;
   font-size: .875rem; font-weight: 600; line-height: 1.4; color: var(--muted); }
-.legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0 0 1rem; font-size: .9375rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0 0 1rem; font-size: 1rem; color: var(--muted); }
 .legend .diet { margin: 0 .25rem 0 0; }
 .priced { border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; margin: 0 0 1.5rem; }
 .priced .products { margin-bottom: .5rem; }
@@ -68,7 +68,7 @@ p { margin: .5rem 0; }
 .products.cards .name { font-weight: 600; line-height: 1.3; align-self: start; }
 .products.cards .price { display: block; }
 .products.cards .price[data-role="current"] { font-size: 1.75rem; font-weight: 800; line-height: 1.2; }
-.products.cards .price[data-role="previous"], .products.cards .unit { font-size: .9375rem; }
+.products.cards .price[data-role="previous"], .products.cards .unit { font-size: 1rem; }
 .price[data-role="discount"], .products.cards .tag { display: block; width: fit-content; border: 1.5px solid var(--accent);
   color: var(--accent); border-radius: .25rem; padding: 0 .4rem; font-size: .875rem; font-weight: 700; }
 @container (max-width: 28.95rem) {
@@ -121,6 +121,7 @@ section > p, .priced > p { max-width: 65ch; }
 const PRINT = `
 @media print {
   :root { --fg: #000000; --bg: #ffffff; --muted: #333333; --accent: #000000; --band-bg: #ffffff; --band-fg: #000000; }
+  body * { color: #000000 !important; }
   .skip, nav.toc, nav.chips, .back { display: none; }
   li, tr, img { break-inside: avoid; }
   .products.menu { columns: 1; }
@@ -128,10 +129,10 @@ const PRINT = `
 }
 `
 
-// The document's colours only where they were checked: the band is its own pair (both schemes), the accent has a
-// light and a dark version, each readable on its page.
+// The document's colours only where checked: the band is its own pair, the accent readable on the page; the page
+// follows the document's own background, with no automatic dark scheme.
 // Heading stacks per typeface class (modernfontstacks.com); body text stays system-ui.
-const STACKS: Record<HeadingClass, string> = {
+export const STACKS: Record<HeadingClass, string> = {
   oldstyle: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
   transitional: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif",
   didone: "Didot, 'Bodoni MT', 'Noto Serif Display', 'URW Palladio L', P052, Sylfaen, serif",
@@ -145,11 +146,10 @@ const STACKS: Record<HeadingClass, string> = {
   script: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
 }
 
-export function css(theme: Theme | null, headings: HeadingClass | null = null): string {
+// `brand`: the document's own faces, colours and sizes (brand.ts), after the base so it wins by order.
+export function css(theme: Theme | null, headings: HeadingClass | null = null, brand = ''): string {
   const font = headings ? `:root { --heading-font: ${STACKS[headings]}; }` : ''
   const band = theme?.band ? `:root { --band-bg: ${theme.band.bg}; --band-fg: ${theme.band.fg}; }` : ''
-  const accent = theme?.accent
-    ? `:root { --accent: ${theme.accent.light}; } @media (prefers-color-scheme: dark) { :root { --accent: ${theme.accent.dark}; } }`
-    : ''
-  return `${BASE}${band}${accent}${font}${PRINT}`
+  const accent = theme?.accent ? `:root { --accent: ${theme.accent.light}; }` : ''
+  return `${BASE}${band}${accent}${font}${brand}\n${PRINT}`
 }

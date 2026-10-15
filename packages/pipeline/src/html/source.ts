@@ -111,3 +111,19 @@ export const textBlocks = (pages: readonly { structure: PageStructure; extractio
           : [],
     ),
   )
+
+// The lists a note describes when it names the heading it sits under ("TEA TIME SET MENU: two courses £31.90…"):
+// every list since that heading, as the note prices the whole section; null when it names no heading above it.
+export function headedLists(blocks: readonly Block[], note: number, raw: (t: TextValue) => string): number[] | null {
+  const letters = (t: string): string => t.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+  const said = letters(raw(blocks[note]?.kind === 'paragraph' ? blocks[note].text : { seen: '-' }))
+  for (let h = note - 1; h >= 0; h--) {
+    const b = blocks[h]
+    if (b?.kind !== 'heading') continue
+    const name = letters(raw(b.text))
+    if (!name || !said.startsWith(name)) continue
+    const lists = blocks.flatMap((x, i) => (i > h && i < note && x.kind === 'products' ? [i] : []))
+    return lists.length ? lists : null
+  }
+  return null
+}

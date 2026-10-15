@@ -1,0 +1,156 @@
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { brandCss, type Brand } from './brand.ts'
+import { contrast, fromHex } from './color.ts'
+import type { Profile, RoleStyle } from './profile.ts'
+import { familyFor, fileFor, fontFaces, withinBudget, type FontManifest } from './webfonts.ts'
+
+const manifest = (family: string, category: 'text' | 'display', weights: string[]): FontManifest => ({
+  family,
+  key: family.toLowerCase().replace(/[^a-z0-9]/g, ''),
+  license: 'OFL',
+  copyright: `Copyright The ${family} Authors`,
+  category,
+  files: weights.map((w) => ({
+    file: `f-${w.replace(' ', '-')}.woff2`,
+    style: 'normal',
+    weight: w,
+    unicodeRange: 'U+0000-00FF',
+  })),
+})
+const library = [
+  manifest('Oswald', 'text', ['200 700']),
+  manifest('Stardos Stencil', 'display', ['400', '700']),
+  manifest('EB Garamond', 'text', ['400 800']),
+]
+
+test('a printed family finds its vendored face, a longer name by prefix, a commercial one only its stand-in', () => {
+  assert.equal(familyFor('oswald', library)?.family, 'Oswald')
+  assert.equal(familyFor('oswaldlight', library)?.family, 'Oswald')
+  assert.equal(familyFor('adobegaramondpro', library)?.family, 'EB Garamond')
+  assert.equal(familyFor('helveticaneue', library), undefined)
+  // A longer name is the same family only when the rest is a weight or style word.
+  assert.equal(familyFor('oswaldsemibolditalic', library)?.family, 'Oswald')
+  assert.equal(familyFor('oswaldstencil', library), undefined)
+})
+
+test('fonts to embed: most-used first, within the file count and the byte budget', () => {
+  const wanted = [
+    { id: 'a', words: 5, bytes: 90 },
+    { id: 'b', words: 50, bytes: 60 },
+    { id: 'c', words: 20, bytes: 50 },
+    { id: 'd', words: 10, bytes: 30 },
+  ]
+  assert.deepEqual(
+    withinBudget(wanted, 3, 150).map((w) => w.id),
+    ['b', 'c', 'd'],
+  )
+  assert.deepEqual(
+    withinBudget(wanted, 1, 150).map((w) => w.id),
+    ['b'],
+  )
+})
+
+test('a weight is drawn by the variable file containing it, else the nearest static weight', () => {
+  const [oswald, stencil] = library
+  assert.ok(oswald && stencil)
+  assert.equal(fileFor(oswald, 600, false)?.weight, '200 700')
+  assert.equal(fileFor(stencil, 800, false)?.weight, '700')
+  assert.equal(fileFor(stencil, 300, false)?.weight, '400')
+})
+
+test('each embedded face carries its copyright and licence, and nothing is fetched', () => {
+  const [oswald] = library
+  assert.ok(oswald)
+  const css = fontFaces([
+    {
+      manifest: oswald,
+      file: oswald.files[0] ?? { file: '', style: 'normal', weight: '400', unicodeRange: '' },
+      data: new Uint8Array([1, 2, 3]),
+    },
+  ])
+  assert.match(css, /Copyright The Oswald Authors SIL Open Font License 1\.1/)
+  assert.match(css, /src: url\(data:font\/woff2;base64,AQID\)/)
+  assert.doesNotMatch(css, /https?:/)
+})
+
+const style = (key: string, size: number, color: string, words = 2): RoleStyle => ({
+  face: { key, weight: 400, italic: false },
+  size,
+  color,
+  caps: true,
+  words,
+})
+const profile = (signatures: RoleStyle[], roles: Profile['roles'] = {}): Profile => ({
+  body: 14,
+  roles,
+  signatures,
+  headings: new Map([['0:blocks[0]', 0]]),
+  accent: '#dd2931',
+  headingBoxes: [],
+  itemBoxes: [],
+})
+const brand = (p: Profile, background = '#ffffff'): Brand => ({
+  profile: p,
+  library,
+  faces: library.map((m) => ({
+    manifest: m,
+    file: m.files[0] ?? { file: '', style: 'normal', weight: '400', unicodeRange: '' },
+    data: new Uint8Array(),
+  })),
+  background,
+  rules: [],
+  dividers: null,
+  alternate: null,
+})
+
+test('every text role reaches 4.5:1 on the page: a pale printed colour is darkened, not replaced', () => {
+  const css = brandCss(brand(profile([], { desc: style('oswald', 14, '#9a9a9a') })))
+  const colour = /:not\(\.name, \.prices\), \.products\.cards \.more > p \{[^}]*color: (#[0-9a-f]{6})/.exec(css)?.[1]
+  assert.ok(colour)
+  assert.ok(contrast(fromHex(colour), [255, 255, 255]) >= 4.5)
+})
+
+test('a display face only for short, large headings; condensed capitals tracked, never transformed', () => {
+  const short = brandCss(brand(profile([style('stardosstencil', 23, '#dd2931', 2)])))
+  assert.match(short, /\.hs-1 \{ font-family: "Stardos Stencil"/)
+  assert.doesNotMatch(short, /letter-spacing/)
+  assert.match(brandCss(brand(profile([style('oswald', 17, '#000000')]))), /letter-spacing: \.08em/)
+  const long = brandCss(brand(profile([style('stardosstencil', 23, '#dd2931', 9)])))
+  assert.doesNotMatch(long, /\.hs-1 \{ font-family: "Stardos Stencil"/)
+  assert.doesNotMatch(short + long, /text-transform|content:\s*"[^"]/)
+})
+
+test('measured sizes are kept within limits: a 48 pt leaflet price over 8 pt text is not 6rem', () => {
+  const css = brandCss(
+    brand({
+      ...profile([style('oswald', 60, '#000000')], {
+        price: style('oswald', 48, '#000000'),
+        name: style('oswald', 12, '#000000'),
+      }),
+      body: 8,
+    }),
+  )
+  assert.match(css, /\.products\.menu \.prices, td\.num \{[^}]*font-size: 1\.594rem/)
+  assert.match(css, /\.hs-1 \{[^}]*font-size: clamp\(1\.8rem, 1\.32rem \+ 2vw, 2\.4rem\)/)
+})
+
+test('on a dark page the accent is checked against that page, not against white', () => {
+  const css = brandCss(brand({ ...profile([]), accent: '#282848' }, '#282848'))
+  const accent = /--accent: (#[0-9a-f]{6})/.exec(css)?.[1]
+  assert.ok(accent)
+  assert.ok(contrast(fromHex(accent), fromHex('#282848')) >= 4.5)
+})
+
+test('the page follows the document: white stays light, a dark document gets the dark palette', () => {
+  assert.doesNotMatch(brandCss(brand(profile([]))), /color-scheme: dark/)
+  assert.match(brandCss(brand(profile([]), '#1a1a1a')), /--fg: #f2f2f2;.*color-scheme: dark/)
+})
+
+test("a brand colour that reads only after a large move gives way to the document's other brand colour", () => {
+  const yellow = brand({ ...profile([style('oswald', 23, '#f8e808')]), accent: '#f8e808' })
+  const css = brandCss({ ...yellow, alternate: '#085858' })
+  assert.match(css, /\.hs-1 \{[^}]*color: #085858/)
+  assert.match(css, /--accent: #085858/)
+  assert.doesNotMatch(brandCss(yellow), /color: #f8e808/)
+})

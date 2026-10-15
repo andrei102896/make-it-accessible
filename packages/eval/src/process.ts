@@ -12,6 +12,7 @@ import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/p
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { costUsd } from './cost.ts'
+import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
 
 const MAX_UNCOVERED = 0.1
@@ -126,6 +127,7 @@ export async function buildHtml(
     })
   }
   const look = await documentLook(pdfPath, docDir, results, briefModel)
+  const brand = await documentBrand(pdfPath, docDir, pages, look.background, look.theme?.band?.bg ?? null)
   const htmlPath = join(docDir, 'index.html')
   await writeFile(
     htmlPath,
@@ -137,6 +139,7 @@ export async function buildHtml(
       kind: look.brief?.type ?? null,
       headings: look.headings,
       validity: look.brief?.validity ?? null,
+      brand,
     }),
   )
   return htmlPath

@@ -22,7 +22,8 @@
     "keys:stage": "node packages/eval/src/stage.ts",
     "keys:write": "node packages/eval/src/write-key.ts",
     "keys:compare": "node packages/eval/src/compare-keys-cli.ts",
-    "listen": "node packages/eval/src/listen.ts"
+    "listen": "node packages/eval/src/listen.ts",
+    "fonts:add": "node packages/eval/src/fonts-add.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

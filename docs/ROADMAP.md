@@ -44,6 +44,8 @@ Phase B, fixes on dev:
 - [x] VoiceOver pass with `pnpm listen` on the menu and the leaflet page (2026-10-15): legend heard as one phrase
 - [x] VoiceOver follow-ups (2026-10-15): a price with its previous price as one stop, no "3 items" after the h1 (`role="text"`); rescores identical, pages pixel-identical, axe clean
 - [ ] Letter-spaced words split in the text layer ("BILL A")
+- [x] Brand from the PDF (2026-10-15): fonts read per word from pdftohtml, open-licensed families embedded (`pnpm fonts:add`), role colours and sizes measured, heading signatures, rules under headings and dish dividers from the render, no automatic dark mode; rescores identical, axe clean at 1280/390/320 and forced colours, WCAG 1.4.12 at 320 px on 5 documents
+- [ ] Brand v2: headings on their printed panels (BILLA yellow on green), sections side by side as printed, boxed lines, ornaments, icons, measured letter-spacing
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d
@@ -73,6 +75,7 @@ Remaining hardening (after C):
 - [ ] Free checker (no account, no AI)
 - [ ] Auth, upload, layout confirmation, processing queue, spend cap
 - [ ] Review editor (three labels, edit text/alt/order/headings/grouping)
+- [ ] Preview, then Customize page (Andrei, 2026-10-15): only controls that cannot break the page, each contrast-checked: theme (as the PDF by default, light, dark, follow the system), accent among the PDF's measured colours, heading and text fonts from the open-licensed list, density, title band on/off, rules under headings; content stays as extracted and reviewed
 - [ ] Report page, publish (hosted link, embed, ZIP), versions at a stable URL
 - [ ] Paddle subscriptions, page credits, portal; legal pages (privacy, DPA, terms, imprint)
 
