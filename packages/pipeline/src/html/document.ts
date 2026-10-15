@@ -263,9 +263,10 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running }: 
 
   const name = (path: string, item: Item, codes: readonly string[] = [], shown = text(item.name)): string =>
     `<p class="name"${flagged(`${path}.name`)}>${shown}${codes.map((c) => ` ${dietTag(c, legend)}`).join('')}</p>`
+  // role="text" makes VoiceOver read a price with its previous price as one phrase, not one stop per line.
   const prices = (path: string, item: Item): string =>
     item.prices.length
-      ? `<p class="prices">${item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)).join(' ')}</p>`
+      ? `<p class="prices"><span role="text">${item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)).join(' ')}</span></p>`
       : ''
   const unit = (path: string, item: Item): string =>
     item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : ''

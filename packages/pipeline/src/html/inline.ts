@@ -90,10 +90,11 @@ export function noteTargets(note: string, names: readonly string[]): number[] | 
   return null
 }
 
-// The band's h1 from "Brand · Name": the brand on its own line, a comma between them for screen readers.
+// The band's h1 from "Brand · Name": the brand on its own line, a comma between them for screen readers, and
+// role="text" so VoiceOver reads it as one heading, not "3 items".
 export const bandTitle = (parts: readonly string[]): string =>
   parts.length > 1
-    ? `<span class="brand">${esc(parts[0] ?? '')}<span class="sr-only">,</span></span> <span class="doc">${esc(parts.slice(1).join(' · '))}</span>`
+    ? `<span role="text"><span class="brand">${esc(parts[0] ?? '')}<span class="sr-only">,</span></span> <span class="doc">${esc(parts.slice(1).join(' · '))}</span></span>`
     : esc(parts.join(' · '))
 
 // Screen readers hear the legend as one phrase; the tag layout splits it into separate stops.
