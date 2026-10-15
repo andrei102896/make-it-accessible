@@ -41,6 +41,8 @@ Phase B, fixes on dev:
 - [x] Design review round 2 (2026-10-14; pub menu publishable, the other three with fixes): crops keep the product whole without other offers' words, notes describe their list, sticky row headers, repeated pictures as ornaments, editorial type on price lists, phone card details full width, add-on amounts set apart, short contents visible; rescores identical, axe and keyboard clean
 - [x] Design review round 3 (2026-10-14; three of four publishable, leaflet with fixes): crops free of other products' pictures, cut-off badges grown back, text colour for word extents, notes describe the items they name, running pictures decorative, spacing before a tight currency sign; rescores identical
 - [x] Design review rounds 4 and 5 (2026-10-14; all four publishable): a product's own words taken in whole along their line; next is a VoiceOver pass
+- [x] VoiceOver pass with `pnpm listen` on the menu and the leaflet page (2026-10-15): legend heard as one phrase
+- [ ] VoiceOver follow-ups: a price with its previous price as one stop (rescore first), no "3 items" after the h1, letter-spaced words split in the text layer ("BILL A")
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d

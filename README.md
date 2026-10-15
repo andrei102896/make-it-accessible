@@ -25,6 +25,7 @@ pnpm stage0 --effort high --model claude-opus-5-5
 pnpm stage0 --rescore out/<run>         # rescore a copy of a saved run (out/<run>-rescore-<time>), no model calls
 pnpm aggregate <run> <run> <run> [--before <run> ...]   # 3-run pass rule, price bounds, decisions, regressions
 pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]   # any PDF without a key: findings, axe, cost, and one self-contained <name>.html to send
+pnpm listen <page.html>                                       # VoiceOver reads the page in Safari, item by item; transcript in <page>.voiceover.txt (needs "Allow VoiceOver to be controlled with AppleScript" and Automation for the terminal)
 pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
 pnpm select-pages --seed <commit SHA>   # A4 page draw → validation/selection.json (once, after the rules commit)
 pnpm ledger <doc> <pdfPage> [--details]  # a page's money occurrences and word-snapshot SHA, for key writers
@@ -111,6 +112,7 @@ packages/eval/src/            evaluation harness, never shipped
   rescore.ts, scoring.ts      rescoring a copy of a run; shared build-and-score
   aggregate.ts                CLI: summary over several runs
   adhoc.ts                    CLI: any PDF without a key
+  listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log
 out/                          run outputs (local only)

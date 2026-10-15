@@ -21,7 +21,8 @@
     "ledger": "node packages/eval/src/ledger-cli.ts",
     "keys:stage": "node packages/eval/src/stage.ts",
     "keys:write": "node packages/eval/src/write-key.ts",
-    "keys:compare": "node packages/eval/src/compare-keys-cli.ts"
+    "keys:compare": "node packages/eval/src/compare-keys-cli.ts",
+    "listen": "node packages/eval/src/listen.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

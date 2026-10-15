@@ -224,7 +224,10 @@ test('a menu shows its legend codes as tags after the name, read out in full', (
     /<p class="name">Fries <span class="diet"><span aria-hidden="true">V<\/span><span class="sr-only">, Vegetarian<\/span><\/span>/,
   )
   assert.match(html, /<p class="desc">with dip<\/p>/)
-  assert.match(html, /<p class="legend">/)
+  assert.match(
+    html,
+    /<p class="legend"><span class="sr-only">V Vegetarian, GF Gluten Free<\/span><span aria-hidden="true">/,
+  )
   assert.match(
     html,
     /<h1><span class="brand">Inn<span class="sr-only">,<\/span><\/span> <span class="doc">Menu<\/span><\/h1>/,

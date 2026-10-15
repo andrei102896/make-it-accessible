@@ -96,7 +96,8 @@ export const bandTitle = (parts: readonly string[]): string =>
     ? `<span class="brand">${esc(parts[0] ?? '')}<span class="sr-only">,</span></span> <span class="doc">${esc(parts.slice(1).join(' · '))}</span>`
     : esc(parts.join(' · '))
 
+// Screen readers hear the legend as one phrase; the tag layout splits it into separate stops.
 export const legendLine = (legend: Legend): string =>
   legend.size
-    ? `<p class="legend">${[...legend].map(([code, word]) => `<span><span class="diet">${esc(code)}</span> ${esc(word)}</span>`).join(' ')}</p>`
+    ? `<p class="legend"><span class="sr-only">${[...legend].map(([code, word]) => `${esc(code)} ${esc(word)}`).join(', ')}</span>${[...legend].map(([code, word]) => `<span aria-hidden="true"><span class="diet">${esc(code)}</span> ${esc(word)}</span>`).join(' ')}</p>`
     : ''
