@@ -44,7 +44,7 @@ p { margin: .5rem 0; }
 .products.menu > li > * { margin: 0; }
 .products.menu .name, .products.menu .prices { font-weight: 600; }
 .products.menu .prices { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.products.menu > li > :nth-child(n+3) { grid-column: 1 / -1; color: var(--muted); font-size: .9375rem; margin-top: .15rem; }
+.products.menu > li > :not(.name, .prices) { grid-column: 1 / -1; color: var(--muted); font-size: .9375rem; margin-top: .15rem; }
 .products.menu .addon { padding-left: .75rem; font-size: .875rem; }
 .diet { display: inline-block; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .3rem; margin-left: .25rem;
   font-size: .875rem; font-weight: 600; line-height: 1.4; color: var(--muted); }
