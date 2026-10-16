@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { moneyFromParts } from '../text/money.ts'
-import { extractPage } from './poppler.ts'
+import { copyForbidden, extractPage } from './poppler.ts'
 import { fitScale } from './raster.ts'
 import { centPartner, joinRuns } from './runs.ts'
 import type { Extraction } from './types.ts'
@@ -90,3 +90,14 @@ test(
     }
   },
 )
+
+test("a PDF whose owner forbids copying its text is recognised from pdfinfo's report (Hogfish)", () => {
+  assert.equal(
+    copyForbidden(
+      'Pages:           2\nEncrypted:       yes (print:yes copy:no change:no addNotes:yes algorithm:AES)\n',
+    ),
+    true,
+  )
+  assert.equal(copyForbidden('Encrypted:       yes (print:yes copy:yes change:no addNotes:no algorithm:AES)\n'), false)
+  assert.equal(copyForbidden('Encrypted:       no\n'), false)
+})

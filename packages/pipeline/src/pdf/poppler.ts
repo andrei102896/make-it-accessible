@@ -21,6 +21,9 @@ const VISIBILITY_DPI = 150
 const MAX_VISIBILITY_EDGE = 5000
 
 export async function extractPage(pdf: string, pdfPage: number): Promise<Extraction> {
+  // Every run path reads a page here: a PDF we may not read is refused by name.
+  if (copyForbidden((await poppler('pdfinfo', [pdf])).stdout))
+    throw new Error(`${pdf}: the PDF does not allow copying its text; an unprotected export is needed`)
   const page = String(pdfPage)
   const { stdout } = await poppler('pdftotext', ['-q', '-f', page, '-l', page, '-tsv', pdf, '-'], {
     maxBuffer: MAX_BUFFER,
@@ -117,6 +120,9 @@ export async function popplerVersion(): Promise<string> {
   const { stderr } = await poppler('pdftotext', ['-v'])
   return stderr.split('\n')[0] ?? 'unknown'
 }
+
+// pdfinfo's report of a PDF whose owner forbids copying its text (Hogfish): pdftohtml then stops without a word.
+export const copyForbidden = (info: string): boolean => /^Encrypted:\s+yes\b.*\bcopy:no\b/m.test(info)
 
 export async function pageCount(pdf: string): Promise<number> {
   const { stdout } = await poppler('pdfinfo', [pdf])
