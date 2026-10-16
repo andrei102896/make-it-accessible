@@ -17,8 +17,19 @@ export type Brand = {
   dividers: boolean | null
   // The document's other brand colour (its band), used when the heading colour must move far to be readable.
   alternate: string | null
+  ornaments: readonly BrandOrnament[]
 }
 export type HeadingRule = { width: number; full: boolean; centered: boolean; color: string }
+// A drawing printed under headings (ornament.ts): an alpha mask (base64 PNG) painted in its printed colour, sized in
+// ems of its heading so it keeps the printed proportion on a phone; `headings` are profile keys.
+export type BrandOrnament = {
+  mask: string
+  em: number
+  aspect: number
+  centered: boolean
+  color: string
+  headings: readonly string[]
+}
 
 const AA = 4.5
 // A colour that only reaches 4.5:1 after a move from below this contrast has stopped being the brand's colour.
@@ -178,6 +189,18 @@ export function brandCss(b: Brand): string {
       : []
     return [`${sel} { ${declarations(b, part, bg)}${align}; }`, ...line]
   })
+  const ornaments = b.ornaments.flatMap((o, i) => {
+    const sel = `:is(h1, h2, h3, h4, h5, h6).orn-${String(i + 1)}`
+    const paint = `var(--ornament) center / 100% 100% no-repeat`
+    return [
+      `${sel} { --ornament: url(data:image/png;base64,${o.mask})${o.centered ? '; text-align: center' : ''}; }`,
+      `${sel}::after { content: ""; display: block; width: ${String(Math.round(o.em * 100) / 100)}em; max-width: 100%; aspect-ratio: ${String(Math.round(o.aspect * 100) / 100)}; border: 0; margin: .35em ${o.centered ? 'auto' : '0'} 0; background: ${o.color}; -webkit-mask: ${paint}; mask: ${paint}; }`,
+    ]
+  })
+  // Backgrounds are not printed and forced colours repaint them: the ornament falls back to a plain rule.
+  const plain = b.ornaments.length
+    ? '@media print, (forced-colors: active) { :is(h1, h2, h3, h4, h5, h6)[class*="orn-"]::after { background: none; -webkit-mask: none; mask: none; aspect-ratio: auto; border-top: 1px solid; } }'
+    : ''
   // The title takes the style of the document's first heading; its colour stays the band's own.
   const first = [...p.headings]
     .filter(([id]) => id.startsWith('0:'))
@@ -196,9 +219,21 @@ export function brandCss(b: Brand): string {
     ...roles,
     cardPrice,
     ...headings,
+    ...ornaments,
+    plain,
     title,
     b.dividers === false ? '.products.menu > li { border-bottom: 0; padding: .45rem 0; }' : '',
   ]
     .filter(Boolean)
     .join('\n')
+}
+
+// Per heading (profile key), its classes: the printed signature and the ornament under it.
+export function headingClasses(b: Brand): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const [key, sig] of b.profile.headings) out.set(key, `hs-${String(sig + 1)}`)
+  b.ornaments.forEach((o, i) => {
+    for (const key of o.headings) out.set(key, `${out.get(key) ?? ''} orn-${String(i + 1)}`.trim())
+  })
+  return out
 }

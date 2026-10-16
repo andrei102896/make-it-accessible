@@ -61,6 +61,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/profile.ts             the document's printed style per role and heading signature, from the words each element cites
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render
+  html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
   html/webfonts.ts            vendored font manifests, family and file choice, @font-face with copyright and licence
   html/types.ts               the document and page types the renderer takes
   html/theme.ts               the document's colours, sampled at its words (never its photos), WCAG-checked
@@ -68,7 +69,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/source.ts              the visible words a text cites (hidden ones left out); picture boxes of a page
   html/inline.ts              links from printed addresses and phone numbers, a menu's dietary legend and tags, badges
   html/nav.ts                 section links for menus and leaflets, a contents list for price lists and long documents
-  model/brief.ts              one AI look per document: type, title, brand swatch picks, heading class, validity dates
+  model/brief.ts              one AI look per document: type, title, brand swatch picks, heading class, validity dates, design details
   pdf/fonts.ts                the heading class from the PDF's font names (pdffonts), before the brief's guess
   pdf/face.ts                 a pdftohtml font name as family key, weight and italic; a word's text line (smallest containing it)
 packages/eval/src/            evaluation harness, never shipped
@@ -118,9 +119,10 @@ packages/eval/src/            evaluation harness, never shipped
   run.ts                      CLI: run and score against the answer keys
   rescore.ts, scoring.ts      rescoring a copy of a run; shared build-and-score
   aggregate.ts                CLI: summary over several runs
-  adhoc.ts                    CLI: any PDF without a key
+  adhoc.ts                    CLI: any PDF without a key (prints the brief's design details the page lacks)
+  details.ts                  which of the brief's design details the page does not draw
   listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
-  brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines (one render per page)
+  brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines and ornaments (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
   font-metrics.ts             a vendored face's x-height, measured in a browser when the family is added
 validation/                   answer keys, sources, results (PDFs and renders local only)

@@ -52,6 +52,7 @@ const brand: Brand = {
   rules: [],
   dividers: false,
   alternate: null,
+  ornaments: [],
 }
 
 test('with the document brand: headings carry their signature; a printed title shows once, the band is sr-only', () => {
@@ -74,6 +75,36 @@ test('with the document brand: headings carry their signature; a printed title s
     renderDocument({ lang: 'en', title: 'Kendells Bistro · Menu', pages: [page], brand }),
     /<div class="band"><h1>/,
   )
+})
+
+test('an ornament under the title is drawn by CSS on that heading only, and falls back to a rule in print', () => {
+  const ornament = {
+    mask: 'iVBORw0KGgo=',
+    em: 12.9,
+    aspect: 23.4,
+    centered: true,
+    color: '#222222',
+    headings: ['0:blocks[0]'],
+  }
+  const rule = { width: 0.4, full: false, centered: true, color: '#222222' }
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Kendells Bistro',
+    pages: [page],
+    brand: { ...brand, rules: [rule], ornaments: [ornament] },
+  })
+  assert.match(html, /<h3 id="[^"]+" class="hs-1 orn-1">KENDELLS BISTRO<\/h3>/)
+  const css = html.slice(html.indexOf('<style>'), html.indexOf('</style>'))
+  const own = css.indexOf(':is(h1, h2, h3, h4, h5, h6).orn-1::after { content: ""; display: block; width: 12.9em;')
+  // Same specificity as the signature's rule: the ornament wins by coming after it.
+  assert.ok(own > css.indexOf('.hs-1::after'))
+  assert.match(css, /--ornament: url\(data:image\/png;base64,iVBORw0KGgo=\); text-align: center;/)
+  assert.match(css, /mask: var\(--ornament\) center \/ 100% 100% no-repeat; \}/)
+  assert.match(
+    css,
+    /@media print, \(forced-colors: active\) \{ :is\(h1, h2, h3, h4, h5, h6\)\[class\*="orn-"\]::after \{ background: none;/,
+  )
+  assert.doesNotMatch(css, /content: "[^"]/)
 })
 
 test('without a brand (runs saved before fonts were read) the page keeps the base template', () => {

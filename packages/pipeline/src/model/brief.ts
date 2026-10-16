@@ -17,6 +17,10 @@ export const HEADING_CLASSES = [
 ] as const
 const MAX_TITLE = 120
 const MAX_VALIDITY = 80
+const DETAIL_KINDS = ['ornament', 'box', 'icon', 'panel', 'other'] as const
+// Trimmed after parsing, never by the schema: one long or extra detail must not throw the paid brief away.
+const MAX_DETAILS = 8
+const MAX_NEAR = 80
 
 // What a template needs to know about a document; it never changes content, only how it is presented.
 export const BriefSchema = z
@@ -27,6 +31,11 @@ export const BriefSchema = z
     accent: z.number().int().nonnegative().nullable(),
     headings: z.enum(HEADING_CLASSES),
     validity: z.string().min(1).max(MAX_VALIDITY).nullable(),
+    // Design details a plain page would miss; absent in briefs saved before it was asked.
+    details: z
+      .array(z.object({ kind: z.enum(DETAIL_KINDS).catch('other'), near: z.string() }))
+      .optional()
+      .catch([]),
   })
   .strict()
 export type Brief = z.infer<typeof BriefSchema>
@@ -41,7 +50,8 @@ Return one JSON object and nothing else:
  "band": index of the swatch that is the brand's background colour for a title band, or null when the brand has none (plain white pages),
  "accent": index of the swatch that is the brand's main colour (headings, logo), or null,
  "headings": the class of the heading typeface you see: "oldstyle" | "transitional" | "didone" | "slab" | "geometric" | "neogrotesque" | "humanist" | "condensed" | "script",
- "validity": the dates the offers or prices are valid, copied exactly as printed (e.g. "Valid 8–14 Oct"), or null}
+ "validity": the dates the offers or prices are valid, copied exactly as printed (e.g. "Valid 8–14 Oct"), or null,
+ "details": the design details a plain web page would miss, at most 8: ornaments or flourishes (a rule with arrow ends or a curl), boxes drawn around text, icons or symbols, coloured or textured panels behind headings; each {"kind": "ornament" | "box" | "icon" | "panel" | "other", "near": the printed words it belongs to, copied exactly}; [] when there are none}
 
 Types: menu = food and drink with prices; retail = products with pictures and prices (weekly ads, leaflets, catalogues); pricelist = fees, tariffs, rates or services, mostly tables or lists without pictures; brochure = mostly text and photos; mixed = none dominates.
 Swatches are colours measured around and inside the printed text; choose only from them, never invent a colour. Photos are not the brand.`
@@ -51,13 +61,15 @@ export function briefText(swatches: readonly Swatch[], pages: number): string {
   return `The images are the first ${String(pages)} pages.\nSwatches:\n${list.join('\n')}`
 }
 
-// Schema-checked, and swatch indices must exist; validity must be printed on the pages.
+// Schema-checked, and swatch indices must exist; validity and every detail's words must be printed on the pages.
 export function parseBrief(raw: string, swatches: readonly Swatch[], pageText: string): Brief {
   const json: unknown = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1))
   const brief = BriefSchema.parse(json)
   const exists = (i: number | null): number | null => (i !== null && i < swatches.length ? i : null)
-  const printed = brief.validity && norm(pageText).includes(norm(brief.validity)) ? brief.validity : null
-  return { ...brief, band: exists(brief.band), accent: exists(brief.accent), validity: printed }
+  const onPage = (t: string): boolean => norm(t).length > 0 && norm(pageText).includes(norm(t))
+  const printed = brief.validity && onPage(brief.validity) ? brief.validity : null
+  const details = (brief.details ?? []).filter((d) => d.near.length <= MAX_NEAR && onPage(d.near)).slice(0, MAX_DETAILS)
+  return { ...brief, band: exists(brief.band), accent: exists(brief.accent), validity: printed, details }
 }
 
 export async function briefDocument(

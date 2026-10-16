@@ -14,7 +14,7 @@ export type Profile = {
   headings: Map<string, number>
   accent: string | null
   // Where headings and the items of menu-style lists are printed, for the lines the document draws (rules.ts).
-  headingBoxes: { page: number; sig: number; box: Box }[]
+  headingBoxes: { page: number; sig: number; box: Box; key: string }[]
   itemBoxes: { page: number; boxes: Box[] }[]
 }
 type Page = { structure: PageStructure; extraction: Extraction }
@@ -174,7 +174,7 @@ export function profileOf(pages: readonly Page[]): Profile | null {
   const headingBoxes = headings.flatMap((h) => {
     const box = unionOf(h.runs)
     const sig = ids.get(h.id)
-    return box && sig !== undefined ? [{ page: h.page, sig, box }] : []
+    return box && sig !== undefined ? [{ page: h.page, sig, box, key: h.id }] : []
   })
   return { body, roles, signatures, headings: ids, accent, headingBoxes, itemBoxes }
 }

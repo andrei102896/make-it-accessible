@@ -7,7 +7,7 @@ import { mergeOverlapping } from './geometry.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
-import type { Extraction, PageImage, Run } from './types.ts'
+import type { Box, Extraction, PageImage, Run } from './types.ts'
 import { hiddenRuns } from './visibility.ts'
 
 export const poppler = promisify(execFile)
@@ -86,9 +86,12 @@ async function extractLayout(
   }
 }
 
-export async function renderPixels(pdf: string, pdfPage: number, dpi: number): Promise<Pixels> {
+// The page, or only `area` of it (PDF points), at `dpi`.
+export async function renderPixels(pdf: string, pdfPage: number, dpi: number, area?: Box): Promise<Pixels> {
   const page = String(pdfPage)
-  const { stdout } = await poppler('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(dpi), pdf], {
+  const px = (v: number): string => String(Math.max(0, Math.round((v * dpi) / 72)))
+  const crop = area ? ['-x', px(area.x), '-y', px(area.y), '-W', px(area.w), '-H', px(area.h)] : []
+  const { stdout } = await poppler('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(dpi), ...crop, pdf], {
     encoding: 'buffer',
     maxBuffer: MAX_BUFFER,
   })

@@ -4,6 +4,8 @@ import { parseArgs } from 'node:util'
 import { pageCount } from '@make-it-accessible/pipeline/pdf/poppler'
 import { OUT_DIR } from './paths.ts'
 import { PRICES } from './cost.ts'
+import { missingDetails } from './details.ts'
+import { BriefFile } from './look.ts'
 import { buildHtml, processPage, type PageResult } from './process.ts'
 import { axeReport } from './score/axe.ts'
 import { keyboardReport } from './score/keyboard.ts'
@@ -48,7 +50,11 @@ if (results.length) {
     const words = r.extraction.runs.filter((run) => ids.has(run.id) && run.str.trim())
     return words.length ? [{ page: r.pdfPage, text: words.map((w) => w.str).join(' ') }] : []
   })
-  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe, keyboard, hidden }
+  // Andrei's checklist before sending: what the brief saw on the PDF that the page does not draw.
+  const html = await readFile(htmlPath, 'utf8')
+  const { brief } = BriefFile.parse(JSON.parse(await readFile(join(docDir, 'brief.json'), 'utf8')))
+  const missing = brief.details ? missingDetails(html, brief.details) : null
+  const summary = { pages: results.length, failed: to - from + 1 - results.length, usd, axe, keyboard, hidden, missing }
   await writeFile(join(docDir, 'summary.json'), JSON.stringify(summary, null, 2))
   console.info(
     `pages ${String(results.length)}, failed ${String(summary.failed)}, $${usd.toFixed(4)}, axe critical ${String(axe.critical)} serious ${String(axe.serious)}`,
@@ -58,9 +64,10 @@ if (results.length) {
     `keyboard ${String(keyboard.stops)} stops, unreachable ${kb[0] ?? ''}, no focus ring ${kb[1] ?? ''}, hidden ${kb[2] ?? ''}`,
   )
   for (const h of hidden) console.info(`p${String(h.page)} not visible in the PDF, not published: ${h.text}`)
+  if (!missing) console.info('design details: not asked (brief saved before they were)')
+  for (const d of missing ?? []) console.info(`not reproduced: ${d.kind} near "${d.near}"`)
   console.info(htmlPath)
   // One file to attach to an email: the page crops travel inside it.
-  const html = await readFile(htmlPath, 'utf8')
   const parts = html.split(/src="(p\d+\/img-\d+\.jpg)"/)
   for (let i = 1; i < parts.length; i += 2)
     parts[i] = `src="data:image/jpeg;base64,${(await readFile(join(docDir, parts[i] ?? ''))).toString('base64')}"`

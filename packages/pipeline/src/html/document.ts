@@ -19,7 +19,7 @@ import {
 } from './inline.ts'
 import { navigation } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
-import { brandCss } from './brand.ts'
+import { brandCss, headingClasses } from './brand.ts'
 import { css } from './style.ts'
 
 export type { HtmlDocument, HtmlPage } from './types.ts'
@@ -37,9 +37,9 @@ export function renderDocument(doc: HtmlDocument): string {
   // Only a menu's legend: elsewhere "V Micro" or "AAA Batterien" are product words, not codes.
   const legend = doc.kind === 'menu' ? legendOf(textBlocks(doc.pages)) : new Map<string, string>()
   const running = runningFigures(doc.pages)
-  const signatures = doc.brand?.profile.headings ?? new Map<string, number>()
+  const classes = doc.brand ? headingClasses(doc.brand) : new Map<string, string>()
   const rendered = doc.pages.map((p, index) =>
-    renderPage(p, { ui, lang: doc.lang, index, long, legend, running: running[index] ?? new Set(), signatures }),
+    renderPage(p, { ui, lang: doc.lang, index, long, legend, running: running[index] ?? new Set(), classes }),
   )
   const parts = doc.title.split(' · ')
   // The band already names the document; a contents entry saying the same again is left out.
@@ -87,7 +87,7 @@ ${rendered.map((r) => r.html + back).join('\n')}
 `
 }
 
-function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, signatures }: Context): Rendered {
+function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, classes }: Context): Rendered {
   const e = page.extraction
   const runs = e.runs
   const toc: Rendered['toc'] = []
@@ -185,8 +185,8 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, si
           : `h${String(index)}${path.replace(/\D+/g, '-')}`
         if (listed) toc.push({ id, label })
         lastHeading = id
-        const sig = signatures.get(`${String(index)}:${path}`)
-        const cls = sig === undefined ? '' : ` class="hs-${String(sig + 1)}"`
+        const own = classes.get(`${String(index)}:${path}`)
+        const cls = own ? ` class="${own}"` : ''
         return `<h${level} id="${id}"${cls}${flagged(path)}>${label}</h${level}>`
       }
       case 'paragraph': {

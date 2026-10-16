@@ -37,7 +37,7 @@ const SwatchSchema = z.object({
   role: z.enum(['background', 'text']),
   share: z.number(),
 })
-const BriefFile = z.object({ brief: BriefSchema, swatches: z.array(SwatchSchema), usd: z.number() }).strict()
+export const BriefFile = z.object({ brief: BriefSchema, swatches: z.array(SwatchSchema), usd: z.number() }).strict()
 export type Look = {
   title: string | undefined
   theme: Theme | null

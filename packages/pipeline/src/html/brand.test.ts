@@ -102,6 +102,7 @@ const brand = (p: Profile, background = '#ffffff'): Brand => ({
   rules: [],
   dividers: null,
   alternate: null,
+  ornaments: [],
 })
 
 test('every text role reaches 4.5:1 on the page: a pale printed colour is darkened, not replaced', () => {

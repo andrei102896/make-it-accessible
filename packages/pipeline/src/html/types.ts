@@ -33,5 +33,6 @@ export type Context = {
   long: boolean
   legend: Legend
   running: Set<string>
-  signatures: ReadonlyMap<string, number>
+  // Per heading (profile key), the classes of its printed style (brand.ts headingClasses).
+  classes: ReadonlyMap<string, string>
 }

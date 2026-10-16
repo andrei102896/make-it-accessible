@@ -20,3 +20,6 @@
 - Clipping measured sizes to one cap merges distinct levels: compress the range instead. (Stone House, Bannatyne hs-1…hs-3 at 2.4rem, round 2)
 - A cache keyed only on file existence records what its indices refer to (lines.json rules per signature). (round 2, 2026-10-15)
 - A typographic correction tied to a font property (font-size-adjust) needs that property measured per face: it shrinks tall-eyed faces. (Roboto, round 2)
+- A decoration cut from the render carries alpha and takes its colour from CSS (an alpha mask): an opaque crop shows its paper as a rectangle on any other page colour, and background images are not printed. (ornaments plan, Carew #282848, 2026-10-16)
+- A bounded flood fill rejects when it reaches its limit; returning the partial shape lets a photo pass as an ornament. A frame round words never touches them: test the shape's box, not its pixels. (ornamentBelow, 2026-10-16)
+- Size limits on model output go after parsing, never in the schema: one extra or long item must not throw the whole paid response away. (brief details, 2026-10-16)

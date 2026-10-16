@@ -9,11 +9,11 @@ export type Rule = { width: number; center: number; color: string }
 
 // A channel this far from the page colour is ink; a line is at most this many pixels thick.
 const INK = 64
-const MAX_THICK = 3
+export const MAX_THICK = 3
 // Searched below a heading for up to this many of its heights.
-const REACH = 1.5
+export const REACH = 1.5
 
-const isInk = (c: Rgb, bg: Rgb): boolean => Math.max(...c.map((v, i) => Math.abs(v - (bg[i] ?? 0)))) > INK
+export const isInk = (c: Rgb, bg: Rgb): boolean => Math.max(...c.map((v, i) => Math.abs(v - (bg[i] ?? 0)))) > INK
 
 // The longest unbroken run of ink on a pixel row between x0 and x1.
 function longestRun(img: Pixels, y: number, x0: number, x1: number, bg: Rgb): { from: number; to: number } | null {
@@ -100,7 +100,7 @@ export function lineBetween(img: Pixels, k: number, upper: Box, lower: Box, bg: 
 // A rule at least this many times its heading's width spans its column: full width on the one-column page.
 const FULL = 3
 // A heading is centred over its rule when their centres differ by less than this share of the page width.
-const CENTRED = 0.03
+export const CENTRED = 0.03
 // Dishes are divided when at least this share of the gaps between stacked dishes holds a line.
 const DIVIDED = 0.3
 
