@@ -10,6 +10,9 @@ export const INK_DIFF = 24
 const MIN_INK = 0.005
 // More than this share of a page hidden means the render failed, not that the publisher hid the text.
 const MAX_HIDDEN = 0.5
+// Only words at the same scale cover a word: a display glyph's box (Moosewood's 32 pt script "entrees") reaches far
+// beyond its ink, and judging "any" on the strip it left blank dropped a printed word.
+const SAME_SCALE = 2
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
 
@@ -25,8 +28,15 @@ export function hiddenRuns(runs: readonly Run[], img: Pixels, scale: number): st
   const hidden = new Set<number>()
   const undecided = new Set<number>()
   rects.forEach((rect, i) => {
+    const h = runs[i]?.box.h ?? 0
     const others = rects.filter(
-      (o, j) => j !== i && o.x0 < rect.x1 && rect.x0 < o.x1 && o.y0 < rect.y1 && rect.y0 < o.y1,
+      (o, j) =>
+        j !== i &&
+        (runs[j]?.box.h ?? 0) <= h * SAME_SCALE &&
+        o.x0 < rect.x1 &&
+        rect.x0 < o.x1 &&
+        o.y0 < rect.y1 &&
+        rect.y0 < o.y1,
     )
     const free: Rgb[] = []
     for (let y = rect.y0; y < rect.y1; y++)

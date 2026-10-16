@@ -44,6 +44,20 @@ test('a word too covered by neighbours to judge is hidden only when it continues
   assert.deepEqual(hiddenRuns(runs, page(ink), 1), ['1:0', '1:1'])
 })
 
+test("a display glyph's box reaching over a small word does not cover it: the word is judged on its own ink", () => {
+  // A lowercase word inks only the lower half of its box; a 60 px script heading's box overlaps that half.
+  const word = run(0, { x: 10, y: 10, w: 30, h: 20 })
+  const heading = run(1, { x: 0, y: 20, w: 120, h: 60 })
+  const runs = [word, heading, run(2, { x: 200, y: 10, w: 40, h: 20 }), run(3, { x: 300, y: 10, w: 40, h: 20 })]
+  const ink = [
+    { x: 10, y: 20, w: 30, h: 10 },
+    { x: 0, y: 40, w: 120, h: 30 },
+    { x: 200, y: 10, w: 40, h: 20 },
+    { x: 300, y: 10, w: 40, h: 20 },
+  ]
+  assert.deepEqual(hiddenRuns(runs, page(ink), 1), [])
+})
+
 test('a page where most words show no ink is a render failure: nothing is hidden', () => {
   const runs = [run(0, { x: 10, y: 10, w: 40, h: 20 }), run(1, { x: 10, y: 50, w: 40, h: 20 })]
   assert.deepEqual(hiddenRuns(runs, page([]), 1), [])
