@@ -1,7 +1,7 @@
 import { amountOf, asPrinted, joinRuns, printsFusedCents } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
-import { pageCurrency } from '../text/money.ts'
+import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 
 const MAX_ALT_LENGTH = 250
@@ -18,6 +18,33 @@ export type Validation = {
 type Range = [number, number]
 
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
+
+// Ligatures a font maps to no text: pdftotext splits the word where the glyph drew ("Pla" + "er", "Truf" + "e").
+// Seen on Gigi (ti, tt) and Noah's (fi, fl); a dropped glyph leaves LOST_GAP em or more, a word space ~0.25 em.
+const LOST = ['ffi', 'ffl', 'ff', 'fi', 'fl', 'ft', 'ti', 'tt']
+const LOST_GAP: [number, number] = [0.35, 1]
+const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// The model's text is the cited words with lost ligatures filled in where a word splits on one line (after a comma
+// too: "apricots, " + "gs").
+function ligaturesLost(model: string, runs: readonly Run[]): boolean {
+  const pattern = runs
+    .map((r, i) => {
+      const prev = runs[i - 1]
+      // Runs read before fonts were measured have no size: the box height stands in, a little larger.
+      const size = prev?.font?.size ?? prev?.box.h ?? 0
+      const gap = prev ? r.box.x - prev.box.x - prev.box.w : 0
+      const split =
+        prev?.line === r.line &&
+        /[\p{L},;:.]$/u.test(prev.str) &&
+        /^\p{Ll}/u.test(r.str) &&
+        gap >= size * LOST_GAP[0] &&
+        gap <= size * LOST_GAP[1]
+      return `${split ? `(?:${LOST.join('|')})?` : ''}${escape(loose(r.str))}`
+    })
+    .join('')
+  return new RegExp(`^${pattern}$`, 'u').test(loose(model))
+}
 
 export function validatePage(page: PageStructure, e: Extraction): Validation {
   const errors: Finding[] = []
@@ -56,9 +83,15 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
       seenTexts.push(t.seen)
       return t.seen
     }
-    const joined = joinRuns(runsOf(path, t.src))
+    const cited = runsOf(path, t.src)
+    const joined = joinRuns(cited)
     if (t.text !== undefined && loose(t.text) !== loose(joined)) {
-      errors.push({ path, problem: `"${t.text}" does not match the cited words "${joined}"` })
+      if (ligaturesLost(t.text, cited))
+        generated.push({
+          path,
+          problem: `letters read from the image where the text layer lost a ligature: "${t.text}"`,
+        })
+      else errors.push({ path, problem: `"${t.text}" does not match the cited words "${joined}"` })
     }
     return t.text ?? joined
   }
@@ -68,7 +101,11 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     const amount = amountOf(cited, currency)
     const words = cited.map((r) => r.str).join(' ')
     if (amount === null) {
-      if (asPrinted(cited) === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
+      const printed = asPrinted(cited)
+      if (printed === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
+      // Sizes with no label read as numbers only ("3.99/4.99/5.99" whose SMALL/MEDIUM/LARGE is artwork).
+      else if (SIZED.test(printed) && !p.qualifier)
+        review.push({ path, problem: `prices of several sizes with no size label: "${words}"` })
     } else if (amount.currency === null) {
       if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
     } else if (amount.fromBareDigits && fused) review.push({ path, problem: `price read from bare digits "${words}"` })

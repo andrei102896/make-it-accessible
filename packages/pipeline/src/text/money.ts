@@ -4,9 +4,28 @@ const HAS_CURRENCY = /[€£$]|\b(?:EUR|GBP|USD)\b/
 const AMOUNT = /^([1-9]\d{0,2}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|\d|-))?$/
 // Pence written on the digits ("99p"); lower case only, so "12P" (pieces) is not money.
 export const PENCE = /^\d{1,3}p$/
+const NUM = String.raw`\d+(?:\.\d{1,2})?`
+const CENTS = String.raw`\d+\.\d{1,2}`
+// A price per unit ("$30/dz", "$48/2 dz") needs a sign or cents: "1/2 lb" is a measure.
+const PER_UNIT = String.raw`(?:[$€£]${NUM}|${CENTS})\/(?:\d+\s?)?[a-z]{1,6}\.?`
 // Printed price words that are no amount to format, shown as printed: market price, a two-size price ("22/32"),
 // one decimal without a currency ("18.9": the fused-cents misread is about commas, see parseMoney).
-export const AS_PRINTED = /^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|\d+(?:\.\d{1,2})?\/\d+(?:\.\d{1,2})?|\d+\.\d)$/i
+const AS_PRINTED = new RegExp(
+  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|${PER_UNIT})$`,
+  'i',
+)
+// Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count
+// cut short ("$12/2") is no price.
+export const SIZED = new RegExp(String.raw`^(?:[$€£]${NUM}(?:\/${NUM})+|${CENTS}(?:\/${CENTS})+)$`)
+const rising = (words: string): boolean => {
+  if (!/^[$€£]?[\d./]+$/.test(words)) return true
+  const amounts = words
+    .replace(/^[$€£]/, '')
+    .split('/')
+    .map(Number)
+  return amounts.every((a, i) => i === 0 || a > (amounts[i - 1] ?? 0))
+}
+export const printedAsIs = (words: string): boolean => (AS_PRINTED.test(words) || SIZED.test(words)) && rising(words)
 export const CENTS_HEIGHT_RATIO = 0.8
 
 export type PricePart = { str: string; height: number }

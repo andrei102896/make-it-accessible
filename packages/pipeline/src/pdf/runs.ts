@@ -1,5 +1,5 @@
 import {
-  AS_PRINTED,
+  printedAsIs,
   CENTS_HEIGHT_RATIO,
   currenciesIn,
   moneyFromParts,
@@ -92,7 +92,7 @@ export const asPrinted = (cited: readonly Run[]): string | null => {
   const words = joinPriceGlyphs(cited)
     .map((r) => bare(r.str))
     .join(' ')
-  return AS_PRINTED.test(words) ? words : null
+  return printedAsIs(words) ? words : null
 }
 // Leaflet pages print euros with smaller cents beside them; bare digits there read as fused cents ("269" = 2,69).
 export const printsFusedCents = (runs: readonly Run[]): boolean => runs.some((r) => centPartner(r, runs) !== undefined)

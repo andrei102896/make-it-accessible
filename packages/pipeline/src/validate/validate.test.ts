@@ -123,3 +123,74 @@ test('words that are no price are still an error, and a price cited twice for on
     ['price words "-37%" are not an amount', 'price cites the same words as another price of this item'],
   )
 })
+
+test('sizes and a price per unit show as printed; unlabelled sizes go to review; a date or a cut count is none', () => {
+  const e = page([
+    ['Crudités', 0],
+    ['$65/80/90', 100],
+    ['SM/MED/LG', 200],
+    ['Coffee', 0],
+    ['3.99/4.99/5.99', 100],
+    ['Cookies', 0],
+    ['$30/dz', 100],
+    ['Special', 0],
+    ['10/16/2026', 100],
+    ['Rolls', 0],
+    ['$12/2', 100],
+  ])
+  const structure = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [
+            { name: { src: [[0, 0]] }, prices: [{ src: [[1, 1]], qualifier: { src: [[2, 2]] } }] },
+            ...[3, 5, 7, 9].map((n) => ({ name: { src: [[n, n]] }, prices: [{ src: [[n + 1, n + 1]] }] })),
+          ],
+        },
+      ],
+      dropped: [],
+    }),
+  )
+  const v = validatePage(structure, e)
+  assert.deepEqual(
+    v.errors.map((f) => f.problem),
+    ['price words "10/16/2026" are not an amount', 'price words "$12/2" are not an amount'],
+  )
+  assert.deepEqual(
+    v.review.map((f) => f.problem),
+    ['prices of several sizes with no size label: "3.99/4.99/5.99"'],
+  )
+})
+
+test('a word the text layer split where a ligature drew takes the letters the model read, noted as read from the image', () => {
+  // 10 pt words: a dropped glyph leaves 0.55–0.7 em ("fes"+"ve", "apricots,"+"gs"), a word space 0.25 em.
+  const e = page([
+    ['fes', 0],
+    ['ve', 20.5],
+    ['apricots,', 100],
+    ['gs', 152],
+    ['of', 200],
+    ['ice', 212.5],
+    ['par', 300],
+    ['Es', 320.5],
+  ])
+  const para = (from: number, text: string) => ({ kind: 'paragraph', text: { src: [[from, from + 1]], text } })
+  const structure = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [para(0, 'festive'), para(2, 'apricots, figs'), para(4, 'office'), para(6, 'parties')],
+      dropped: [],
+    }),
+  )
+  const v = validatePage(structure, e)
+  assert.deepEqual(
+    v.generated.map((f) => f.path),
+    ['blocks[0]', 'blocks[1]'],
+  )
+  assert.deepEqual(
+    v.errors.map((f) => f.path),
+    ['blocks[2]', 'blocks[3]'],
+  )
+})
