@@ -7,7 +7,8 @@ import { mergeOverlapping } from './geometry.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
-import type { Box, Extraction, PageImage, Run } from './types.ts'
+import type { Box, Extraction, PageImage, Run, Vector } from './types.ts'
+import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
 export const poppler = promisify(execFile)
@@ -58,7 +59,20 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
-  return { pdfPage, width, height, runs, images, duplicates, hidden }
+  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: await extractVectors(pdf, pdfPage) }
+}
+
+// The page's drawn frames and panels, read from pdftocairo's SVG (0.1–0.8 s a page).
+async function extractVectors(pdf: string, pdfPage: number): Promise<Vector[]> {
+  const dir = await mkdtemp(join(tmpdir(), 'mia-vectors-'))
+  try {
+    const page = String(pdfPage)
+    const file = join(dir, 'page.svg')
+    await poppler('pdftocairo', ['-q', '-svg', '-f', page, '-l', page, pdf, file], { maxBuffer: MAX_BUFFER })
+    return parseVectors(await readFile(file, 'utf8'))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 }
 
 async function extractLayout(

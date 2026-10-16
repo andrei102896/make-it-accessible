@@ -19,6 +19,17 @@ const Run = z.object({
   font: Font.optional(),
 })
 const PageImage = z.object({ id: z.string(), box: Box })
+// A box the PDF draws round text (pdf/vectors.ts): a frame (stroke, or a filled ring) or a panel (a fill).
+const Vector = z
+  .object({
+    kind: z.enum(['frame', 'panel']),
+    box: Box,
+    color: z.string().regex(/^#[0-9a-f]{6}$/),
+    width: z.number().nonnegative(),
+    rounded: z.boolean(),
+    double: z.boolean(),
+  })
+  .strict()
 const Extraction = z.object({
   pdfPage: z.number().int().positive(),
   width: z.number().positive(),
@@ -28,12 +39,15 @@ const Extraction = z.object({
   duplicates: z.array(z.string()),
   // Words in the text layer that draw nothing visible; runs extracted before this check have none.
   hidden: z.array(z.string()).default([]),
+  // Frames and panels from the vector layer; runs extracted before they were read have none.
+  vectors: z.array(Vector).optional(),
 })
 
 export type Box = z.infer<typeof Box>
 export type Run = z.infer<typeof Run>
 export type RunFont = z.infer<typeof Font>
 export type PageImage = z.infer<typeof PageImage>
+export type Vector = z.infer<typeof Vector>
 export type Extraction = z.infer<typeof Extraction>
 export type PixelSize = { width: number; height: number }
 
