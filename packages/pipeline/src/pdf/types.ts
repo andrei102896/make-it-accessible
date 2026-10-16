@@ -30,6 +30,17 @@ const Vector = z
     double: z.boolean(),
   })
   .strict()
+// A straight line the PDF draws (pdf/vectors.ts): its box is the centre line (h 0 across, w 0 down); `width` is its
+// thickness in points, both lines and the gap between them when double.
+const Rule = z
+  .object({
+    box: Box,
+    color: z.string().regex(/^#[0-9a-f]{6}$/),
+    width: z.number().nonnegative(),
+    dash: z.enum(['solid', 'dotted', 'dashed']),
+    double: z.boolean(),
+  })
+  .strict()
 const Extraction = z.object({
   pdfPage: z.number().int().positive(),
   width: z.number().positive(),
@@ -41,6 +52,7 @@ const Extraction = z.object({
   hidden: z.array(z.string()).default([]),
   // Frames and panels from the vector layer; runs extracted before they were read have none.
   vectors: z.array(Vector).optional(),
+  rules: z.array(Rule).optional(),
 })
 
 export type Box = z.infer<typeof Box>
@@ -48,6 +60,7 @@ export type Run = z.infer<typeof Run>
 export type RunFont = z.infer<typeof Font>
 export type PageImage = z.infer<typeof PageImage>
 export type Vector = z.infer<typeof Vector>
+export type Rule = z.infer<typeof Rule>
 export type Extraction = z.infer<typeof Extraction>
 export type PixelSize = { width: number; height: number }
 

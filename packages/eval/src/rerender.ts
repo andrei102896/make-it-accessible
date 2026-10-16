@@ -7,9 +7,8 @@ import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { buildHtml, type PageResult } from './process.ts'
 import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
 
-// pnpm rerender <slug>... | --all: renders a saved run again with the current renderer, no model call. The run is
-// copied to out/rebuilt/<slug>; fonts, colours and hidden words are read afresh from the PDF (older runs lack them),
-// lines.json is measured again when its version is behind. page.html carries its pictures inline.
+// pnpm rerender <slug>... | --all: renders a saved run again, no model call, in out/rebuilt/<slug>; fonts, colours,
+// hidden words and drawn shapes are read afresh from the PDF, lines.json again when its version is behind.
 const args = process.argv.slice(2)
 if (!args.length) throw new Error('usage: pnpm rerender <slug>... | --all')
 const sources = await loadSources()
@@ -35,6 +34,7 @@ async function rebuild(s: Source): Promise<string> {
       throw new Error(`${s.slug} ${d}: the PDF's runs differ from the run's`)
     extraction.hidden = fresh.hidden
     extraction.vectors = fresh.vectors
+    extraction.rules = fresh.rules
     extraction.runs.forEach((r, i) => {
       const f = fresh.runs[i]
       if (f?.color) r.color = f.color

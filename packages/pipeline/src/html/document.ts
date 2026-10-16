@@ -1,6 +1,7 @@
 import { runningFigures, textBlocks, visibleText } from './source.ts'
 import { bandTitle, esc, legendLine, legendOf } from './inline.ts'
 import { layoutOf, NO_LAYOUT } from './layout.ts'
+import { linesCss } from './lines.ts'
 import { renderPage } from './page.ts'
 import { navigation } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
@@ -32,6 +33,9 @@ export function renderDocument(doc: HtmlDocument): string {
     ...l.boxes.boxes,
     ...(l.boxes.pageFrame ? [{ vector: l.boxes.pageFrame, ink: null }] : []),
   ])
+  // The rules the vector layer places replace the ones measured from the render, so a line is never drawn twice.
+  const looks = new Map(segments.flatMap((l) => [...l.lines.looks]))
+  const rules = looks.size ? [] : (brand?.rules ?? [])
   if (titleKey) classes.set(titleKey, `${classes.get(titleKey) ?? ''} masthead-title`.trim())
   const rendered = doc.pages.map((p, index) =>
     renderPage(p, {
@@ -94,7 +98,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) : '')}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>

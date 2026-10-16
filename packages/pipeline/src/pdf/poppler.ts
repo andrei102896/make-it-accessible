@@ -7,7 +7,7 @@ import { mergeOverlapping } from './geometry.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
-import type { Box, Extraction, PageImage, Run, Vector } from './types.ts'
+import type { Box, Extraction, PageImage, Run } from './types.ts'
 import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
@@ -59,11 +59,12 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
-  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: await extractVectors(pdf, pdfPage) }
+  const { boxes, rules } = await extractVectors(pdf, pdfPage)
+  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules }
 }
 
-// The page's drawn frames and panels, read from pdftocairo's SVG (0.1–0.8 s a page).
-async function extractVectors(pdf: string, pdfPage: number): Promise<Vector[]> {
+// The page's drawn frames, panels and rules, read from pdftocairo's SVG (0.1–0.8 s a page).
+async function extractVectors(pdf: string, pdfPage: number): Promise<ReturnType<typeof parseVectors>> {
   const dir = await mkdtemp(join(tmpdir(), 'mia-vectors-'))
   try {
     const page = String(pdfPage)

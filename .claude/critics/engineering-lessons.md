@@ -44,3 +44,7 @@
 - A bounding box hides a hole: a filled path with two nested rectangular subpaths is a ring (a frame), not a panel; and drawn content can live in `<defs>` (compositing groups for blend modes), so strip definitions by kind, never wholesale. (Sarge's border, 2026-10-16)
 - A measured claim about a page is checked against its render and its text colours before it drives a rule (Sarge's "red page" was a 5 pt ring; 716 black runs). (2026-10-16)
 - A here-doc `cat > file` with nothing to read blocks on stdin: a stray one hung a whole command for two minutes. (2026-10-16)
+- A rule matched to a heading by height alone takes the next column's rule: bound the horizontal gap too (Sarge's UNREAL DELI, Prohibition PK PREMIUM SIDES, 2026-10-16).
+- pdftohtml run boxes include ascent and descent: "through the middle" needs a tight share (≤ 0.2; an over-the-heading rule sat at 0.30). A printed rule can lean: straightness is a share of its length (Rucola's dividers, 1.5 pt over 135). (2026-10-16)
+- A pseudo-element reset only works when its selector outranks the rule it resets: `:is(h3…).hs-N::after` beats `.cls::after`. (lines plan, 2026-10-16)
+- A stroke's thickness under a non-uniform matrix follows the axis across the line, not the larger scale (Kendells 4.8 pt read for a 1.5 pt rule). (2026-10-16)

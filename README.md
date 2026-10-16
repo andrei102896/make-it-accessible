@@ -54,7 +54,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/crop.ts                 picture crops: word extents in their text colour, own words kept whole, other offers cut at the edge, boxes grown back over a cut-off badge
   pdf/pixels.ts               PPM page renders as pixels
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
-  pdf/vectors.ts              frames and panels from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills
+  pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
   model/schema.ts             page structure schema returned by the model
@@ -72,7 +72,8 @@ packages/pipeline/src/        product code, reused by the MVP
   html/align.ts               lists and headings set centred or right as printed, measured from their first lines
   html/boxes.ts               the PDF's frames and panels as boxes round the blocks inside them, the page frame, their CSS
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
-  html/rules.ts               rules under headings and hairlines between dishes, read from the page render
+  html/lines.ts               the PDF's rules where it draws them: under or through a heading, above or below a block, a band's top, between columns; a rule crossing a band's columns splits it into rows
+  html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
   html/webfonts.ts            vendored font manifests, family and file choice, @font-face with copyright and licence
   html/types.ts               the document and page types the renderer takes
@@ -180,7 +181,7 @@ out/                          run outputs (local only)
 - **A price without a currency is an error only on a page that prints fused euro/cent pairs** (`printsFusedCents`, shared by renderer and validator); elsewhere bare numbers, "MP", "22/32" and one decimal are the menu's own prices, shown as printed (`validate.test.ts`). The scorer's `judge` and `mustFlag` still expect a currency-less key price to be flagged: a US key cannot be scored until they follow (ROADMAP).
 - **The page shows the printed case.** The model's text replaces the cited words only when it differs beyond case (`document-prices.test.ts`); six of Almond's seven headings had been re-cased. The one exception is a role measured as a small-caps face (`profile.ts` smallCaps, a quarter of eight or more items): its layer case is the font's glyph mapping, never the printed case, so the model's case shows and CSS draws the small caps.
 - **Image text under a heading is no ornament.** Carmine's beer names (read from the image, no runs) passed every word-box check and were embedded as flourishes; a shape in four or more pieces at least 0.3 of the heading's height tall is a line of letters (`ornament.test.ts`). lines.json is versioned by the detector (`LINES_VERSION`): a changed rule bumps it, or saved runs keep the old finding.
-- **Drawn geometry comes from the PDF's vectors, not the render.** A box the PDF draws round a section is a stroked rectangle, a filled ring (Sarge's 5 pt red border is a fill with a hole) or a fill; some sit in compositing groups inside `<defs>` (blend modes), so definitions are stripped selectively, never wholesale (`vectors.test.ts`). White fills on paper are knock-outs behind words, not panels.
+- **Drawn geometry comes from the PDF's vectors, not the render.** A box the PDF draws round a section is a stroked rectangle, a filled ring (Sarge's 5 pt red border is a fill with a hole) or a fill; some sit in compositing groups inside `<defs>` (blend modes), so definitions are stripped selectively, never wholesale (`vectors.test.ts`). White fills on paper are knock-outs behind words, not panels. Rules come from the same layer (`lines.test.ts`): a rule is matched to a heading by height *and* nearness (a rule at the same height in the next column is not its own: Sarge's UNREAL DELI, Prohibition PK PREMIUM SIDES), and a stroke's thickness follows the matrix's other axis (Kendells' rules sit under a 4.8× horizontal scale). Once a document's vector layer places a rule, the render-measured signature rules are dropped so a line is never drawn twice. Do not remove.
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
 ## Dead ends

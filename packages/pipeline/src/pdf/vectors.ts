@@ -1,8 +1,8 @@
 import { contrast, fromHex } from '../html/color.ts'
-import type { Box, Vector } from './types.ts'
+import type { Box, Rule, Vector } from './types.ts'
 
-// The PDF's drawn geometry as pdftocairo writes it to SVG: frames (stroked rectangles, or filled rings) and panels
-// (filled rectangles), in PDF points. Text is glyph <use>s and pictures are <image>s: neither is read here.
+// The PDF's drawn geometry as pdftocairo writes it to SVG: frames (stroked rectangles, or filled rings), panels
+// (filled rectangles) and rules (straight lines), in PDF points. Text (glyph <use>s) and pictures are not read here.
 
 type Matrix = [number, number, number, number, number, number]
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
@@ -18,6 +18,13 @@ const DOUBLE = 6
 const PAPER = 0.9
 // A fill this close to white (contrast with it) is paper: a knock-out behind words or a tint too faint to group.
 const NEAR_WHITE = 1.1
+// A rule is at least MIN_RULE long, level within FLAT or LEAN of its length (Rucola's dividers lean 1.5 pt over 135).
+const MIN_RULE = 24
+const FLAT = 0.5
+const LEAN = 0.02
+// A filled bar at most THIN thick is a rule; two rules over one span at most TWIN apart are a double (Osteria's 3).
+const THIN = 3
+const TWIN = 4
 
 const multiply = (m: Matrix, n: Matrix): Matrix => [
   m[0] * n[0] + m[2] * n[1],
@@ -89,7 +96,7 @@ function subpathsOf(d: string, m: Matrix): Subpath[] {
     } else numbers.push(Number(t))
   }
   if (command) flush()
-  return out.filter((s) => s.points.length >= 3)
+  return out.filter((s) => s.points.length >= 2)
 }
 
 const boxOf = (points: readonly Point[]): Box => {
@@ -122,7 +129,8 @@ function clip(b: Box, width: number, height: number): Box | null {
 }
 
 // One drawn element as a frame or a panel, or nothing.
-function classify(tag: string, subpaths: Subpath[], scale: number): Vector | null {
+function classify(tag: string, given: Subpath[], scale: number): Vector | null {
+  const subpaths = given.filter((s) => s.points.length >= 3)
   const stroke = colourOf(attr(tag, 'stroke'))
   const fill = colourOf(attr(tag, 'fill'))
   const strokeOpaque = Number(attr(tag, 'stroke-opacity') ?? 1) >= OPAQUE
@@ -153,7 +161,38 @@ function classify(tag: string, subpaths: Subpath[], scale: number): Vector | nul
   return { kind: 'panel', box: all, color: fill, width: 0, rounded: curved, double: false }
 }
 
-export function parseVectors(svg: string): Vector[] {
+// One drawn element's rules: each straight level or upright stroke of a path, or a thin filled bar. A stroke's
+// thickness across a line follows the matrix's other axis (Kendells' rules sit under a 4.8× horizontal scale).
+function rulesOf(tag: string, subpaths: Subpath[], m: Matrix): Rule[] {
+  const stroke = colourOf(attr(tag, 'stroke'))
+  const fill = colourOf(attr(tag, 'fill'))
+  if (stroke && Number(attr(tag, 'stroke-opacity') ?? 1) >= OPAQUE) {
+    const sw = Number(attr(tag, 'stroke-width') ?? 1)
+    const dashes = (attr(tag, 'stroke-dasharray') ?? '')
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .map(Number)
+    const dash = !dashes.length ? 'solid' : (dashes[0] ?? 0) <= sw ? 'dotted' : 'dashed'
+    return subpaths.flatMap((s): Rule[] => {
+      const b = boxOf(s.points)
+      const level = b.w >= MIN_RULE && b.h <= Math.max(FLAT, b.w * LEAN)
+      if (s.curved || (!level && !(b.h >= MIN_RULE && b.w <= Math.max(FLAT, b.h * LEAN)))) return []
+      const width = sw * (level ? Math.hypot(m[1], m[3]) : Math.hypot(m[0], m[2]))
+      return [{ box: centreLine(b), color: stroke, width, dash, double: false }]
+    })
+  }
+  const [only] = subpaths
+  if (!fill || stroke || subpaths.length !== 1 || !only || Number(attr(tag, 'fill-opacity') ?? 1) < OPAQUE) return []
+  const b = boxOf(only.points)
+  const thick = Math.min(b.w, b.h)
+  if (!rectLike(only.points, b) || thick > THIN || Math.max(b.w, b.h) < MIN_RULE) return []
+  if (contrast(fromHex(fill), [255, 255, 255]) < NEAR_WHITE) return []
+  return [{ box: centreLine(b), color: fill, width: thick, dash: 'solid', double: false }]
+}
+const centreLine = (b: Box): Box =>
+  b.w >= b.h ? { x: b.x, y: b.y + b.h / 2, w: b.w, h: 0 } : { x: b.x + b.w / 2, y: b.y, w: 0, h: b.h }
+
+export function parseVectors(svg: string): { boxes: Vector[]; rules: Rule[] } {
   const width = Number(/<svg[^>]*\swidth="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
   const height = Number(/<svg[^>]*\sheight="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
   // Definitions that never draw on their own go (glyphs, clips, masks, filters, pictures); compositing groups stay:
@@ -164,6 +203,9 @@ export function parseVectors(svg: string): Vector[] {
     .replace(/<image\b[^>]*>/g, '')
   const stack: Matrix[] = [IDENTITY]
   const found: Vector[] = []
+  const rules: Rule[] = []
+  const onPage = (r: Rule): boolean =>
+    r.box.x >= 0 && r.box.y >= 0 && r.box.x + r.box.w <= width && r.box.y + r.box.h <= height
   for (const [tag, close, name = ''] of body.matchAll(/<(\/?)(g|path|rect)\b[^>]*>/g)) {
     const top = stack.at(-1) ?? IDENTITY
     if (name === 'g') {
@@ -181,8 +223,37 @@ export function parseVectors(svg: string): Vector[] {
     const v = classify(tag, subpaths, Math.max(Math.abs(m[0]), Math.abs(m[3])))
     const box = v ? clip(v.box, width, height) : null
     if (v && box && !(v.kind === 'panel' && box.w * box.h >= width * height * PAPER)) found.push({ ...v, box })
+    rules.push(...rulesOf(tag, subpaths, m).filter(onPage))
   }
-  return mergeDoubles(found)
+  return { boxes: mergeDoubles(found), rules: mergeRules(rules) }
+}
+
+// The same line drawn twice is one rule; two parallel lines over the same span a few points apart are a double.
+function mergeRules(rules: readonly Rule[]): Rule[] {
+  const out: Rule[] = []
+  for (const r of rules) {
+    const level = r.box.w > 0
+    const twin = out.find(
+      (o) =>
+        o.box.w > 0 === level &&
+        o.color === r.color &&
+        Math.abs(o.box.x - r.box.x) <= TWIN &&
+        Math.abs(o.box.y - r.box.y) <= TWIN &&
+        Math.abs(o.box.x + o.box.w - r.box.x - r.box.w) <= TWIN &&
+        Math.abs(o.box.y + o.box.h - r.box.y - r.box.h) <= TWIN,
+    )
+    if (!twin) {
+      out.push({ ...r, box: { ...r.box } })
+      continue
+    }
+    const gap = level ? Math.abs(twin.box.y - r.box.y) : Math.abs(twin.box.x - r.box.x)
+    if (gap < FLAT * 2) continue
+    twin.double = true
+    twin.width = gap + Math.max(twin.width, r.width)
+    if (level) twin.box.y = (twin.box.y + r.box.y) / 2
+    else twin.box.x = (twin.box.x + r.box.x) / 2
+  }
+  return out
 }
 
 // Two frames drawn a few points apart are one double rule.

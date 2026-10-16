@@ -4,6 +4,7 @@ import type { Box, Extraction } from '../pdf/types.ts'
 import { unionOf } from './profile.ts'
 import { alignmentsOf, type Align } from './align.ts'
 import { boxesOf, NO_BOXES, wrapBoxes, type Boxes } from './boxes.ts'
+import { linesOf, NO_LINES, splitBands, type PageLines } from './lines.ts'
 import { type ListShape, median, shapesOf } from './shapes.ts'
 import { citedRuns, visibleText } from './source.ts'
 
@@ -26,6 +27,7 @@ export type Layout = Segments & {
   shapes: Map<number, ListShape>
   boxes: Boxes
   align: Map<number, Align>
+  lines: PageLines
 }
 export const NO_LAYOUT: Layout = {
   header: new Set(),
@@ -37,6 +39,7 @@ export const NO_LAYOUT: Layout = {
   shapes: new Map(),
   boxes: NO_BOXES,
   align: new Map(),
+  lines: NO_LINES,
 }
 
 // The header lies within the top share of the page; a tail paragraph starts below the bottom share or is set
@@ -270,9 +273,9 @@ export function bandsOf(
 export function layoutOf(page: Page, first: boolean, body: number, title: string): Layout {
   const segments = segmentsOf(page, first, body, title)
   const shapes = shapesOf(page)
-  const bands = bandsOf(page, segments.header, segments.tail, shapes)
+  const bands = splitBands(page, bandsOf(page, segments.header, segments.tail, shapes))
   const boxes = boxesOf(page, new Set([...segments.header, ...segments.tail]))
-  return { ...segments, bands, shapes, boxes, align: alignmentsOf(page) }
+  return { ...segments, bands, shapes, boxes, align: alignmentsOf(page), lines: linesOf(page, bands, boxes) }
 }
 
 // The page body from its rendered blocks: sections printed side by side share a grid, the tail is small print.
@@ -289,12 +292,14 @@ export function assemble(given: readonly { at: number; html: string }[], layout:
     if (!band) out.push(p.html)
     else if (!done.has(band)) {
       done.add(band)
-      const columns = band.columns.map(
-        (column) => `<div class="col">\n${column.flatMap((at) => htmlOf.get(at) ?? []).join('\n')}\n</div>`,
-      )
-      const boxed = bandClass.get(layout.bands.indexOf(band))
+      const n = layout.bands.indexOf(band)
+      const columns = band.columns.map((column, k) => {
+        const ruled = layout.lines.columns.get(`${String(n)}:${String(k)}`)
+        return `<div class="col${ruled ? ` ${ruled}` : ''}">\n${column.flatMap((at) => htmlOf.get(at) ?? []).join('\n')}\n</div>`
+      })
+      const cls = [bandClass.get(n), layout.lines.bands.get(n)].filter(Boolean).join(' ')
       out.push(
-        `<div class="cols cols-${String(band.columns.length)}${band.side ? ' side' : ''}${boxed ? ` ${boxed}` : ''}">\n${columns.join('\n')}\n</div>`,
+        `<div class="cols cols-${String(band.columns.length)}${band.side ? ' side' : ''}${cls ? ` ${cls}` : ''}">\n${columns.join('\n')}\n</div>`,
       )
     }
   }

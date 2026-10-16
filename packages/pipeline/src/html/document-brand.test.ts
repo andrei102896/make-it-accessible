@@ -111,6 +111,23 @@ test('an ornament under the title is drawn by CSS on that heading only, and fall
   assert.doesNotMatch(css, /content: "[^"]/)
 })
 
+test('a rule the vector layer draws under a heading replaces the rules measured from the render', () => {
+  const ruled = {
+    ...extraction,
+    rules: [{ box: { x: 10, y: 32, w: 40, h: 0 }, color: '#222222', width: 1, dash: 'solid' as const, double: false }],
+  }
+  const rule = { width: 0.4, full: false, centered: true, color: '#222222' }
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Kendells Bistro',
+    pages: [{ ...page, extraction: ruled }],
+    brand: { ...brand, rules: [rule] },
+  })
+  assert.match(html, /class="hs-1 masthead-title ruled rule-under rule-centred ln-solid-222222-1"/)
+  assert.doesNotMatch(html, /\.hs-1::after/)
+  assert.match(html, /\.ln-solid-222222-1 \{ --rule: 1px solid #222222; \}/)
+})
+
 test('without a brand (runs saved before fonts were read) the page keeps the base template', () => {
   const html = renderDocument({ lang: 'en', title: 'Kendells Bistro', pages: [page] })
   assert.doesNotMatch(html, /hs-1|@font-face|border-bottom: 0/)

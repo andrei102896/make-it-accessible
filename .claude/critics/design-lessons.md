@@ -38,3 +38,5 @@
 - A frame in the PDF may be raster: Almond's boxes are page-sized images with one vector page frame; check the layer a box lives in before planning how to reproduce it. (2026-10-16)
 - On a mid-tone panel neither black nor the printed white reaches 4.5:1 (Sarge's red, 4.25 and 4.09): when the printed ink is already at its end, the fill moves, a little. (2026-10-16)
 - A box's membership is per block, not per section: two boxed items printed in one list need the list split. (Frankie's, critic-design 2026-10-16)
+- A rule crossing a band's columns between its sections is a row break in print: split the band, never rule one block (Rucola pastas|sides, 2026-10-16).
+- A rule right under a heading belongs to the heading and centres it as printed; moving it to the next block changes a look the owner has seen (Kendells, 2026-10-16).

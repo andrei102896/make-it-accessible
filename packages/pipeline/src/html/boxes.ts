@@ -19,7 +19,7 @@ type Page = { structure: PageStructure; extraction: Extraction }
 type Part = { at: number; html: string }
 
 // A block's printed extent in PDF points (figures are given in model-image pixels).
-function blockBox(b: Block, e: Extraction): Box | null {
+export function blockBox(b: Block, e: Extraction): Box | null {
   if (b.kind === 'figure') {
     const k = e.width / fitScale(e.width, e.height).width
     const [x, y, w, h] = b.image.box
@@ -28,7 +28,7 @@ function blockBox(b: Block, e: Extraction): Box | null {
   return unionOf(blockRuns(b, e))
 }
 
-function blockRuns(b: Block, e: Extraction): Run[] {
+export function blockRuns(b: Block, e: Extraction): Run[] {
   if (b.kind === 'figure') return []
   return b.kind === 'heading' || b.kind === 'paragraph'
     ? citedRuns(e, b.text)

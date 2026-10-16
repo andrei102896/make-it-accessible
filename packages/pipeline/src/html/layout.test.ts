@@ -4,6 +4,7 @@ import { parsePage } from '../model/schema.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { assemble, bandsOf, segmentsOf } from './layout.ts'
+import { NO_LINES } from './lines.ts'
 
 // A 600 x 800 pt page; words at (x, y) with a font size; 6 pt per character wide.
 const page = (words: [string, number, number, number][]): Extraction => ({
@@ -184,6 +185,7 @@ test('narrow sections side by side form columns in print order; a full-width sec
     shapes: new Map(),
     boxes: { pageFrame: null, boxes: [] },
     align: new Map(),
+    lines: NO_LINES,
   }
   assert.deepEqual(assemble(parts, layout), [
     '<div class="cols cols-2">\n<div class="col">\n<b0>\n<b1>\n<b2>\n<b3>\n</div>\n<div class="col">\n<b4>\n<b5>\n</div>\n</div>',

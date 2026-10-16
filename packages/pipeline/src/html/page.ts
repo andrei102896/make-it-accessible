@@ -134,10 +134,11 @@ export function renderPage(
     notes.set(`blocks[${String(i)}]`, { id, items, headed: lists !== null })
   })
 
-  // A list or heading set centred or right as printed (layout.ts align): its class, for top-level blocks only.
-  const alignAt = (path: string): string => {
-    const a = layout.align.get(Number(/^blocks\[(\d+)\]$/.exec(path)?.[1] ?? -1))
-    return a ? `align-${a}` : ''
+  // A top-level block's layout classes: set centred or right as printed (align.ts), its printed rules (lines.ts).
+  const classAt = (path: string): string => {
+    const at = Number(/^blocks\[(\d+)\]$/.exec(path)?.[1] ?? -1)
+    const a = layout.align.get(at)
+    return [a ? `align-${a}` : '', layout.lines.blocks.get(at) ?? ''].filter(Boolean).join(' ')
   }
   let lastHeading: string | null = null
   const block = (path: string, b: Block): string => {
@@ -154,18 +155,20 @@ export function renderPage(
           : `h${String(index)}${path.replace(/\D+/g, '-')}`
         if (listed) toc.push({ id, label })
         lastHeading = id
-        const own = [classes.get(`${String(index)}:${path}`), alignAt(path)].filter(Boolean).join(' ')
+        const own = [classes.get(`${String(index)}:${path}`), classAt(path)].filter(Boolean).join(' ')
         const cls = own ? ` class="${own}"` : ''
-        return `<h${level} id="${id}"${cls}${flagged(path)}>${text(b.text)}</h${level}>`
+        // Rules either side of a heading are flex items: its words stay one item.
+        const shown = own.includes('rule-through') ? `<span>${text(b.text)}</span>` : text(b.text)
+        return `<h${level} id="${id}"${cls}${flagged(path)}>${shown}</h${level}>`
       }
       case 'paragraph': {
         const words = raw(b.text)
         if (!words) return ''
         const body = inked(b.text, words, linkify)
-        return `<p${flagged(path)}>${body}</p>`
+        return `<p${classAt(path) ? ` class="${classAt(path)}"` : ''}${flagged(path)}>${body}</p>`
       }
       case 'list':
-        return `<ul${alignAt(path) ? ` class="${alignAt(path)}"` : ''}${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${inked(t, raw(t), linkify)}</li>`).join('')}</ul>`
+        return `<ul${classAt(path) ? ` class="${classAt(path)}"` : ''}${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${inked(t, raw(t), linkify)}</li>`).join('')}</ul>`
       case 'table':
         return renderTable(path, b, {
           text,
@@ -196,7 +199,7 @@ export function renderPage(
         // A list without pictures reads as a menu (name and price on one line); with pictures, as cards.
         const by = describedBy.get(path)
         const described = by ? ` aria-describedby="${by}"` : ''
-        const cls = `products ${cards ? 'cards' : 'menu'}${shape?.wide ? ' wide' : ''}${shape?.runOn ? ' run-on' : ''}${alignAt(path) ? ` ${alignAt(path)}` : ''}`
+        const cls = `products ${cards ? 'cards' : 'menu'}${shape?.wide ? ' wide' : ''}${shape?.runOn ? ' run-on' : ''}${classAt(path) ? ` ${classAt(path)}` : ''}`
         return `<ul class="${cls}" role="list"${described}${flagged(path, true)}>${items}</ul>`
       }
       case 'figure': {
@@ -286,7 +289,10 @@ export function renderPage(
       })
     else if (previous && notes.has(`blocks[${String(i - 1)}]`) && html) {
       const note = notes.get(`blocks[${String(i - 1)}]`)
-      const p = html.replace(/^<p/, `<p class="note" id="${note?.id ?? ''}"`)
+      const p = html.replace(
+        /^<p(?: class="([^"]*)")?/,
+        (_, own?: string) => `<p class="note${own ? ` ${own}` : ''}" id="${note?.id ?? ''}"`,
+      )
       if (note?.items || note?.headed) parts.push({ at: i, html: p })
       else {
         const list = (parts.pop()?.html ?? '').replace(/^<ul /, `<ul aria-describedby="${note?.id ?? ''}" `)
