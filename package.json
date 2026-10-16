@@ -26,7 +26,7 @@
     "fonts:add": "node packages/eval/src/fonts-add.ts",
     "preview:add": "node packages/eval/src/preview-add.ts",
     "preview:expire": "node packages/eval/src/preview-expire.ts",
-    "preview:publish": "npx wrangler@4 pages deploy previews --project-name mia-previews --commit-dirty=true"
+    "preview:publish": "node packages/eval/src/preview-publish.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

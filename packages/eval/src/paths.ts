@@ -12,3 +12,5 @@ export const OUT_DIR = join(ROOT, 'out')
 export const FONTS_DIR = join(ROOT, 'packages', 'pipeline', 'fonts')
 // Prospects' pages published as private previews (previews/README.md); the pages themselves stay out of git.
 export const PREVIEWS_DIR = join(ROOT, 'previews')
+// Where the previews are served from: the portfolio site (andreiprojects.com), deployed with the Vercel CLI.
+export const PORTFOLIO_PREVIEW_DIR = join(ROOT, '..', 'portofolio', 'public', 'preview')

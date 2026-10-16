@@ -18,5 +18,3 @@ outreach/
 # Prospects' pages published as private previews (see previews/README.md).
 previews/*
 !previews/README.md
-!previews/_headers
-!previews/index.html

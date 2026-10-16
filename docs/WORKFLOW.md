@@ -20,9 +20,9 @@ Why: the first US batch (20 menus) took ~15 minutes of compute and ~$2.90 of mod
 
 ## Plan, in order of payoff
 
-### 1. Publish previews from this repo (0.5 day) — unblocks the next send · done 2026-10-16 (Cloudflare Pages `mia-previews`, `*.pages.dev` until a domain is set)
+### 1. Publish previews from this repo (0.5 day) — unblocks the next send · done 2026-10-16 (served from andreiprojects.com/preview, deployed with the Vercel CLI; Andrei chose his own site over Cloudflare Pages)
 - `previews/` (gitignored content, tracked `README`) holds the pages to publish; `pnpm preview:add <page.html> <slug>` copies a page in with `noindex`, a random suffix and a row in `previews/EXPIRY.csv` (slug, url, added, delete-by = +30 days).
-- `pnpm preview:publish` deploys the folder with Cloudflare Pages (`wrangler pages deploy previews --project-name mia-previews`); one-time `npx wrangler login` by Andrei. Custom domain later; the `*.pages.dev` URL is fine for a test.
+- `pnpm preview:publish` copies the listed pages into the portfolio site (`../portofolio/public/preview`, Andrei granted write access on 2026-10-16) ; Andrei runs `vercel --prod` there (the CLI needs his login and a readable cwd).
 - `pnpm preview:expire` deletes rows past their date and republishes.
 - Replaces: copying into `~/Desktop/portofolio` (protected by macOS), `vercel --prod`, the commit-author trap.
 
