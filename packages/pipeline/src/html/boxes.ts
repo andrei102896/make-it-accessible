@@ -4,6 +4,7 @@ import type { Box, Extraction, Run, Vector } from '../pdf/types.ts'
 import { contrast, fromHex, hex, readableOn } from './color.ts'
 import { unionOf } from './profile.ts'
 import { citedRuns } from './source.ts'
+import { MUTED } from './style.ts'
 
 // The PDF's frames and panels (pdf/vectors.ts) as boxes round the blocks printed inside them. A frame holding most
 // of the page's content is the page's own frame (Almond, Rucola, Noah's drinks): a border round the page section.
@@ -196,8 +197,12 @@ export function boxesCss(boxes: readonly { vector: Vector; ink: string | null }[
     // A fill whose words cannot be made readable stays a frame in its colour.
     if (!ink && contrast(fromHex(v.color), PAGE_TEXT) < AA) return [`.${cls} { border: 2px solid ${v.color}; }`]
     // Words on a dark panel take its ink over every role colour (the doubled class outranks the role selectors).
+    // On a light panel the page's secondary grey must read too (Kenny & Ziggy's salmon: #555 is 4.17:1); where no
+    // grey does, the text colour stands in. ponytail: role and link colours are checked as printed, not as rendered.
+    const muted = ink ? null : readableOn(fromHex(MUTED), fromHex(v.color), AA)
+    const secondary = ink ? '' : ` --muted: ${muted ? hex(muted) : 'var(--fg)'};`
     return [
-      `.${cls} { background: ${v.color}; border: 1px solid transparent; }`,
+      `.${cls} { background: ${v.color}; border: 1px solid transparent;${secondary} }`,
       ...(ink ? [`section .box.${cls}.${cls} * { color: ${ink}; }`] : []),
     ]
   })

@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Extraction, Run, Vector } from '../pdf/types.ts'
 import { boxesCss, boxesOf, wrapBoxes } from './boxes.ts'
+import { contrast, fromHex } from './color.ts'
 
 // A 600 x 800 pt page: a framed section at the top left (its heading set in the frame's top edge), a framed
 // section beside it, an unframed list below; white words printed on a black panel at the foot.
@@ -122,4 +123,13 @@ test('boxes wrap inside a column, round a whole band, or not at all when they st
   // Outside the bands a box wraps consecutive blocks only.
   assert.equal(wrapBoxes(parts, [], [box([4, 5])]).parts.length, 5)
   assert.equal(wrapBoxes(parts, [], [box([3, 5])]).parts.length, 6)
+})
+
+test("a light panel moves the page's secondary grey until it reads on the fill (Kenny & Ziggy's salmon)", () => {
+  const salmon: Vector = { ...frame(0, 0, 100, 100), kind: 'panel', color: '#ebb6a5', width: 0 }
+  const css = boxesCss([{ vector: salmon, ink: null }])
+  const muted = /--muted: (#[0-9a-f]{6});/.exec(css)?.[1]
+  if (!muted) throw new Error('no muted grey on the panel')
+  assert.ok(contrast(fromHex(muted), fromHex('#ebb6a5')) >= 4.5)
+  assert.ok(contrast(fromHex('#555555'), fromHex('#ebb6a5')) < 4.5)
 })
