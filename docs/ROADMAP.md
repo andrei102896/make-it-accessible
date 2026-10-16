@@ -50,7 +50,7 @@ Phase B, fixes on dev:
 - [~] Workflow automation (`docs/WORKFLOW.md`): preview publishing from this repo (done 2026-10-16), batch report, outreach drafts and due list, self-running guards · 2 d left
 - [ ] Scorer follows the validator on currency-less prices (`score/prices.ts` judge, `metrics.ts` mustFlag) before any US key is written
 - [ ] A qualifier equal to the dish's description is not shown; a dish whose only picture is a tiny logo renders as a row
-- [ ] Brand v2: headings on their printed panels (BILLA yellow on green), sections side by side as printed, boxed lines, ornaments elsewhere on the page, icons, measured letter-spacing
+- [ ] Layout fidelity / brand v2 (`docs/LAYOUT.md`, plan 2026-10-16): header/content/footer segments, title scale, columns by list bands, measured price placement, frames and panels, font library and small caps, chips without scroll, inline brand colours, dietary codes, AI reviewer · ~5.5 d
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d

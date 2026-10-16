@@ -22,10 +22,16 @@ export function visibleText(t: TextValue, e: Extraction): string {
     .map((c) => joinRuns(c))
     .join('')
     .replace(/(\p{L})([£$€])/gu, '$1 $2')
-  // The model's text stands in for a broken text layer ("Truf e"), never for the printed case ("RAW BAR").
-  const recased = t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase()
+  // The model's text stands in for a broken text layer ("Truf e", or small-caps glyphs read as "MEatball app"),
+  // never for a printed case the layer reports whole ("RAW BAR").
+  const recased = t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed)
   return t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
 }
+
+// Every word is all capitals, all lower case, or one capital then lower case: a case a designer could have set.
+// "MEatball" or "sausagE" is a small-caps font's glyph mapping, not the printed case.
+export const caseReliable = (text: string): boolean =>
+  (text.match(/\p{L}+/gu) ?? []).every((w) => /^(?:\p{Lu}+|\p{Ll}+|\p{Lu}\p{Ll}+)$/u.test(w))
 
 // Every run index a product cites: name, prices with their conditions, unit and details.
 function citations(item: Item): number[] {

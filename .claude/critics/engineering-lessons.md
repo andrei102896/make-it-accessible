@@ -27,3 +27,7 @@
 - The validator and the scorer encode the same product decision (prices.ts judge, metrics mustFlag): a change to when a price needs review changes both, or the gap is recorded where the next key writer reads it. (currency-less prices, 2026-10-16)
 - An "allowed diff" in an acceptance criterion is checked against the baseline data first: when the baseline holds no such finding, the criterion is zero diff. (stage-0 review counts, 2026-10-16)
 - Chrome does not scroll a focused element that is partly in view, and scroll-snap acts only after a scroll: a CSS fix for a half-clipped chip must be probed; a probe point outside the viewport is an artefact, not a finding. (Ferrara chips, 2026-10-16)
+- Cluster a page's columns by the lists' x-ranges, not heading centres: headings are left-aligned with varying widths or centred over several columns. (Sarge's, Mezzaluna, 2026-10-16)
+- A geometry feature on run boxes reaches saved runs too: gate new layout on the field it truly needs and prove it with a no-brand identical-render test. (layout plan, 2026-10-16)
+- Size a font budget from measured files: Google latin variable woff2 is 35–50 KB (Inter 73), and base64 adds a third. (layout plan, 2026-10-16)
+- The brief runs before the brand and feeds it: measurements cannot flow back into the brief without a cycle. (layout plan, 2026-10-16)

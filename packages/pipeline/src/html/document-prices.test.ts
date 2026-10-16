@@ -52,6 +52,28 @@ test('a price split in the text layer shows joined; a heading the model only re-
   assert.match(html, />RAW BAR<\/h3>/)
 })
 
+test('a small-caps text layer ("MEatball app") is not a printed case: the model\'s text shows', () => {
+  const smallCaps: Extraction = {
+    ...extraction,
+    runs: extraction.runs.map((r) => (r.id === '1:1' ? { ...r, str: 'MEatball' } : r)),
+  }
+  const recased = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'products', items: [{ name: { src: [[1, 1]], text: 'Meatball' }, prices: [{ src: [[2, 3]] }] }] },
+      ],
+      dropped: [],
+    }),
+  )
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Almond',
+    pages: [{ ...page, structure: recased, extraction: smallCaps }],
+  })
+  assert.match(html, /<p class="name">Meatball<\/p>/)
+})
+
 test('a price cited twice for one dish is shown once', () => {
   const html = renderDocument({ lang: 'en', title: 'Almond', pages: [page] })
   assert.equal((html.match(/<span class="amount">26<\/span>/g) ?? []).length, 1)

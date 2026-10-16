@@ -23,3 +23,7 @@
 - US menus print no currency: bare numbers, "MP", "22/32" and one decimal ("18.9") are the menu's own prices, shown as printed, never flagged. (first 20 NY/FL menus, 2026-10-16)
 - A price cited twice for one dish shows twice: the renderer keeps one per cited words, the validator names the duplicate. (Gargiulo's, 2026-10-16)
 - A row of several labelled prices must wrap on a phone: nowrap on the whole price group pushed Carmine's sparkling wines past 390 px; nowrap belongs on each price with its label, and the price column is capped (fit-content(60%)): with `auto` the grid gave five add-on prices the whole row and left "Steak Burger" one letter wide. (Carmine's, Ridgway, 2026-10-16)
+- Price placement is a brand fact: inline after the name (Moosewood, Noah's) or right-aligned (Carmine's) is measured, never templated. (2026-10-16)
+- The header is wherever the title is printed: a wordmark beside the first heading (Moosewood) is still the header, and a later page can carry its own masthead (Prohibition Post). (2026-10-16)
+- Sections side by side are a grid; an article flowing across columns is multicol; one page can need both (Prohibition page 2). (2026-10-16)
+- A title's scale is its own: compressing it with the section headings turns an 81 pt masthead into a section title. (Prohibition Kitchen, 2026-10-16)

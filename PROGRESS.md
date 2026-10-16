@@ -12,6 +12,7 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 - `docs/SPEC.md` — full product spec (v1, pre-review). Needs the rewrite described below.
 - `docs/VALIDATION.md` — validation protocol (criteria C1–C9, thresholds, decision matrix).
 - `docs/CLIENT_FLOW.md` — agreed client flow (free check → trial with the first 10 pages → review → report → publish on paid plans → billing); input for the SPEC rewrite.
+- `docs/LAYOUT.md` — the layout fidelity plan (2026-10-16, after Andrei stopped the review of the first US batch): segments, columns, title scale, fonts, frames, reviewer.
 - `docs/WORKFLOW.md` — the optimisation and automation plan (2026-10-16): one command per recurring job (previews, batch report, outreach drafts, guards), measured times, what we track.
 - `docs/DESIGN.md` — how converted pages should look per document type (menu, retail, price list, brochure), the AI brief that picks the template, theme and type rules, with research sources.
 - `docs/COSTS.md` — verified fixed and per-page costs (production vs minimal), Paddle, profit per plan, break-even, the NAT decision, what is not calculated.
