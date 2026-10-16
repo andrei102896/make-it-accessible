@@ -10,3 +10,5 @@ export const DOCS_DIR = join(ROOT, 'validation', 'testdocs')
 export const OUT_DIR = join(ROOT, 'out')
 // Open-licensed fonts vendored for embedding, each with its manifest and licence text.
 export const FONTS_DIR = join(ROOT, 'packages', 'pipeline', 'fonts')
+// Prospects' pages published as private previews (previews/README.md); the pages themselves stay out of git.
+export const PREVIEWS_DIR = join(ROOT, 'previews')

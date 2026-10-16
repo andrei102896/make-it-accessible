@@ -23,7 +23,10 @@
     "keys:write": "node packages/eval/src/write-key.ts",
     "keys:compare": "node packages/eval/src/compare-keys-cli.ts",
     "listen": "node packages/eval/src/listen.ts",
-    "fonts:add": "node packages/eval/src/fonts-add.ts"
+    "fonts:add": "node packages/eval/src/fonts-add.ts",
+    "preview:add": "node packages/eval/src/preview-add.ts",
+    "preview:expire": "node packages/eval/src/preview-expire.ts",
+    "preview:publish": "npx wrangler@4 pages deploy previews --project-name mia-previews --commit-dirty=true"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

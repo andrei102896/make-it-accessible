@@ -20,7 +20,7 @@ Why: the first US batch (20 menus) took ~15 minutes of compute and ~$2.90 of mod
 
 ## Plan, in order of payoff
 
-### 1. Publish previews from this repo (0.5 day) — unblocks the next send
+### 1. Publish previews from this repo (0.5 day) — unblocks the next send · done 2026-10-16 (Cloudflare Pages `mia-previews`, `*.pages.dev` until a domain is set)
 - `previews/` (gitignored content, tracked `README`) holds the pages to publish; `pnpm preview:add <page.html> <slug>` copies a page in with `noindex`, a random suffix and a row in `previews/EXPIRY.csv` (slug, url, added, delete-by = +30 days).
 - `pnpm preview:publish` deploys the folder with Cloudflare Pages (`wrangler pages deploy previews --project-name mia-previews`); one-time `npx wrangler login` by Andrei. Custom domain later; the `*.pages.dev` URL is fine for a test.
 - `pnpm preview:expire` deletes rows past their date and republishes.

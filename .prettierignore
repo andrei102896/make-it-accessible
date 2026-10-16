@@ -2,3 +2,5 @@ out/
 validation/
 pnpm-lock.yaml
 *.md
+# Prospects' pages staged for publishing, not source.
+previews/
