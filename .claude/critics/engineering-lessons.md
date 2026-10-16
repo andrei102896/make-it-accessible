@@ -23,3 +23,7 @@
 - A decoration cut from the render carries alpha and takes its colour from CSS (an alpha mask): an opaque crop shows its paper as a rectangle on any other page colour, and background images are not printed. (ornaments plan, Carew #282848, 2026-10-16)
 - A bounded flood fill rejects when it reaches its limit; returning the partial shape lets a photo pass as an ornament. A frame round words never touches them: test the shape's box, not its pixels. (ornamentBelow, 2026-10-16)
 - Size limits on model output go after parsing, never in the schema: one extra or long item must not throw the whole paid response away. (brief details, 2026-10-16)
+- Tally a finding class across the whole batch before sizing a fix: "one decimal (1)" from one sample page was 43 of 87 across three menus. (US menus, 2026-10-16)
+- The validator and the scorer encode the same product decision (prices.ts judge, metrics mustFlag): a change to when a price needs review changes both, or the gap is recorded where the next key writer reads it. (currency-less prices, 2026-10-16)
+- An "allowed diff" in an acceptance criterion is checked against the baseline data first: when the baseline holds no such finding, the criterion is zero diff. (stage-0 review counts, 2026-10-16)
+- Chrome does not scroll a focused element that is partly in view, and scroll-snap acts only after a scroll: a CSS fix for a half-clipped chip must be probed; a probe point outside the viewport is an artefact, not a finding. (Ferrara chips, 2026-10-16)

@@ -39,11 +39,12 @@ p { margin: .5rem 0; }
 .unit { font-size: 1rem; }
 .products { list-style: none; padding: 0; margin: 0 0 1.5rem; }
 .products.menu { columns: 2 24rem; column-gap: 3rem; }
-.products.menu > li { break-inside: avoid; display: grid; grid-template-columns: 1fr auto; column-gap: 1rem;
+.products.menu > li { break-inside: avoid; display: grid; grid-template-columns: 1fr fit-content(60%); column-gap: 1rem;
   padding: .65rem 0; border-bottom: 1px solid var(--line); }
 .products.menu > li > * { margin: 0; }
 .products.menu .name, .products.menu .prices { font-weight: 600; }
-.products.menu .prices { text-align: right; white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
+.products.menu .prices { text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+.price { white-space: nowrap; }
 .products.menu > li > :not(.name, .prices) { grid-column: 1 / -1; color: var(--muted); font-size: 1rem; margin-top: .15rem; }
 .products.menu .addon { padding-left: .75rem; font-size: .875rem; }
 .diet { display: inline-block; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .3rem; margin-left: .25rem;
@@ -99,7 +100,7 @@ td.num { text-align: right; white-space: nowrap; }
 nav.chips { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
   margin: 0 0 1rem; overflow-x: auto; }
 nav.chips ul { display: flex; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
-nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
+nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem; scroll-margin-inline: 1rem;
   border: 1px solid var(--line); border-radius: 999px; color: var(--fg); text-decoration: none; }
 nav.chips a:hover { border-color: var(--accent); }
 .toc-title { font-weight: 600; margin: 0; }

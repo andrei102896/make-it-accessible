@@ -4,6 +4,9 @@ const HAS_CURRENCY = /[€£$]|\b(?:EUR|GBP|USD)\b/
 const AMOUNT = /^([1-9]\d{0,2}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|\d|-))?$/
 // Pence written on the digits ("99p"); lower case only, so "12P" (pieces) is not money.
 export const PENCE = /^\d{1,3}p$/
+// Printed price words that are no amount to format, shown as printed: market price, a two-size price ("22/32"),
+// one decimal without a currency ("18.9": the fused-cents misread is about commas, see parseMoney).
+export const AS_PRINTED = /^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|\d+(?:\.\d{1,2})?\/\d+(?:\.\d{1,2})?|\d+\.\d)$/i
 export const CENTS_HEIGHT_RATIO = 0.8
 
 export type PricePart = { str: string; height: number }

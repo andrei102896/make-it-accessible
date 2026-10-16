@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { formatMoney } from '../text/money.ts'
-import { amountOf } from './runs.ts'
+import { amountOf, asPrinted, printedAmount, printsFusedCents } from './runs.ts'
 import type { Run } from './types.ts'
 
 const run = (id: number, str: string, x: number, y: number, w: number, h: number): Run => ({
@@ -85,4 +85,44 @@ test('amountOf takes the currency the words print, else the page currency, else 
   })
   assert.deepEqual(amountOf([run(0, '12.50', 0, 0, 25, 9)]), { cents: 1250, currency: null, fromBareDigits: false })
   assert.equal(amountOf([run(0, '£5', 0, 0, 10, 9), run(1, '€6', 20, 0, 10, 9)]), null)
+})
+
+test('digits of one price split at the separator join across a word gap; separate numbers and years do not', () => {
+  // Almond "21.9" + "5" at 0.10 h, Gargiulo "18." + "50" at 0.27 h (measured on the first US menus).
+  assert.deepEqual(amountOf([run(0, '21.9', 943, 47, 24, 13), run(1, '5', 968.6, 47, 6, 13)]), {
+    cents: 2195,
+    currency: null,
+    fromBareDigits: false,
+  })
+  assert.deepEqual(amountOf([run(0, '18.', 539.4, 690, 13.56, 10.97), run(1, '50', 555.96, 690, 11.27, 10.97)]), {
+    cents: 1850,
+    currency: null,
+    fromBareDigits: false,
+  })
+  assert.equal(amountOf([run(0, '18.', 539.4, 690, 13.56, 10.97), run(1, '50', 557, 690, 11.27, 10.97)]), null)
+  assert.equal(amountOf([run(0, '2', 0, 0, 5, 10), run(1, '8', 5, 0, 5, 10)]), null)
+  // A third decimal is never joined: "£8.95" stays the amount and the "12" beside it is another word.
+  assert.deepEqual(amountOf([run(0, '£8.95', 0, 0, 25, 10), run(1, '12', 27, 0, 10, 10)]), {
+    cents: 895,
+    currency: 'GBP',
+    fromBareDigits: false,
+  })
+  assert.equal(amountOf([run(0, '18,', 0, 0, 15, 10), run(1, '1917,', 16.5, 0, 25, 10)]), null)
+  assert.deepEqual(amountOf([run(0, '20,', 0, 0, 15, 10)]), { cents: 20, currency: null, fromBareDigits: true })
+})
+
+test('printed amounts keep the citation order and join split digits; as-printed words are market and two-size prices', () => {
+  const split = [run(0, '21.9', 943, 47, 24, 13), run(1, '5', 968.6, 47, 6, 13)]
+  assert.equal(printedAmount(split), '21.95')
+  assert.equal(printedAmount([run(1, 'each', 30, 0, 20, 10), run(0, '12', 0, 0, 10, 10)]), 'each 12')
+  assert.equal(asPrinted([run(0, 'MP', 0, 0, 10, 10)]), 'MP')
+  assert.equal(asPrinted([run(0, '22/32', 0, 0, 25, 10)]), '22/32')
+  assert.equal(asPrinted([run(0, '18.9', 0, 0, 20, 10)]), '18.9')
+  assert.equal(asPrinted([run(0, '-37%', 0, 0, 20, 10)]), null)
+  assert.equal(asPrinted([run(0, '26,9', 0, 0, 20, 10)]), null)
+})
+
+test('a page prints fused cents only when a euro number has small cents beside it', () => {
+  assert.equal(printsFusedCents([run(0, '2', 100, 100, 32, 78), run(1, '69', 132, 109, 34, 40)]), true)
+  assert.equal(printsFusedCents([run(0, 'Crudo', 0, 0, 30, 10), run(1, '19', 100, 0, 10, 10)]), false)
 })

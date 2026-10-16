@@ -11,7 +11,6 @@ export function visibleText(t: TextValue, e: Extraction): string {
   const hidden = new Set(e.hidden)
   const cited = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
   const words = cited.filter((r) => !hidden.has(r.id))
-  if (t.text !== undefined && words.length === cited.length) return t.text
   const chunks: Run[][] = [[]]
   words.forEach((r, i) => {
     const prev = words[i - 1]
@@ -19,10 +18,13 @@ export function visibleText(t: TextValue, e: Extraction): string {
     chunks.at(-1)?.push(r)
   })
   // A currency sign set tight against a word ("for£3.50") gets the space a reader expects.
-  return chunks
+  const printed = chunks
     .map((c) => joinRuns(c))
     .join('')
     .replace(/(\p{L})([£$€])/gu, '$1 $2')
+  // The model's text stands in for a broken text layer ("Truf e"), never for the printed case ("RAW BAR").
+  const recased = t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase()
+  return t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
 }
 
 // Every run index a product cites: name, prices with their conditions, unit and details.

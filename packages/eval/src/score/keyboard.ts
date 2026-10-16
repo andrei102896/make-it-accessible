@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url'
 import { chromium, type Page } from 'playwright'
 
 // What a keyboard user meets: every link, button and scroll region reachable with Tab, each with a visible focus
-// ring, none hidden under the sticky section bar (WCAG 2.1.1, 2.4.7, 2.4.11).
+// ring, none hidden under the sticky section bar (WCAG 2.1.1, 2.4.7, 2.4.11: not entirely hidden).
 export type KeyboardSummary = { stops: number; unreachable: string[]; noRing: string[]; obscured: string[] }
 
 const FOCUSABLE = 'a[href], button, summary, input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -30,8 +30,10 @@ export async function keyboardCheck(tab: Page): Promise<KeyboardSummary> {
       if (!(el instanceof HTMLElement) || !el.dataset.kb) return null
       const style = getComputedStyle(el)
       const ring = (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0) || style.boxShadow !== 'none'
+      // Probed inside the viewport: a chip half out of its own scroller is still visible (WCAG 2.4.11, not 2.4.12).
       const r = el.getBoundingClientRect()
-      const top = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 8))
+      const x = (Math.max(r.left, 0) + Math.min(r.right, window.innerWidth)) / 2
+      const top = document.elementFromPoint(x, Math.max(r.top, 0) + Math.min(r.height / 2, 8))
       const visible = top !== null && (el.contains(top) || top.contains(el))
       return {
         id: el.dataset.kb,

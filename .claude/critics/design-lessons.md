@@ -19,3 +19,7 @@
 - "No break inside a word" includes hyphens: hyphens:auto on a German page turned a heading fix into "KAU-FEN / FÜH-REND". Headings use hyphens:manual with overflow-wrap:break-word as the only fallback. (BILLA, round 2, 2026-10-15)
 - Check a CSS fix in the computed style, not the source: lining-nums was overridden by a more specific menu-price rule. (Kendells, round 2, 2026-10-15)
 - Look for the design's subtleties, not only its lines: ornaments and flourishes under titles, arrow ends, boxed lines, icons, textured or coloured panels behind headings; name each one the page lacks. (Andrei, Kendells title ornament, 2026-10-15)
+- A case-insensitive text check hides re-cased headings: the page shows the cited words' case when the model's text differs only by case. (Almond "Raw Bar" for RAW BAR, 2026-10-16)
+- US menus print no currency: bare numbers, "MP", "22/32" and one decimal ("18.9") are the menu's own prices, shown as printed, never flagged. (first 20 NY/FL menus, 2026-10-16)
+- A price cited twice for one dish shows twice: the renderer keeps one per cited words, the validator names the duplicate. (Gargiulo's, 2026-10-16)
+- A row of several labelled prices must wrap on a phone: nowrap on the whole price group pushed Carmine's sparkling wines past 390 px; nowrap belongs on each price with its label, and the price column is capped (fit-content(60%)): with `auto` the grid gave five add-on prices the whole row and left "Steak Burger" one letter wide. (Carmine's, Ridgway, 2026-10-16)

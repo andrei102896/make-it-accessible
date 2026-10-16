@@ -1,4 +1,4 @@
-import { amountOf, joinRuns } from '../pdf/runs.ts'
+import { amountOf, asPrinted, joinRuns, printsFusedCents } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { pageCurrency } from '../text/money.ts'
@@ -27,7 +27,10 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const seenTexts: string[] = []
   const figureAlts: { path: string; img: ImageValue }[] = []
   const hidden = new Set(e.hidden)
-  const currency = pageCurrency(joinRuns(e.runs.filter((r) => !hidden.has(r.id))))
+  const onPage = e.runs.filter((r) => !hidden.has(r.id))
+  const currency = pageCurrency(joinRuns(onPage))
+  // Only a leaflet with fused cents needs a currency and a check on bare digits; elsewhere "19" is shown as printed.
+  const fused = printsFusedCents(onPage)
 
   const runsOf = (path: string, ranges: readonly Range[], count = true): Run[] => {
     const out: Run[] = []
@@ -64,10 +67,11 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     const cited = runsOf(path, p.src)
     const amount = amountOf(cited, currency)
     const words = cited.map((r) => r.str).join(' ')
-    if (amount === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
-    else if (amount.currency === null)
-      errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
-    else if (amount.fromBareDigits) review.push({ path, problem: `price read from bare digits "${words}"` })
+    if (amount === null) {
+      if (asPrinted(cited) === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
+    } else if (amount.currency === null) {
+      if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
+    } else if (amount.fromBareDigits && fused) review.push({ path, problem: `price read from bare digits "${words}"` })
     return [words, p.qualifier ? text(`${path}.qualifier`, p.qualifier) : ''].join(' ')
   }
 
@@ -113,6 +117,13 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
 
   const product = (path: string, item: Item): string => {
     if (item.uncertain) review.push({ path, problem: `model unsure: ${item.uncertain}` })
+    item.prices.forEach((p, i) => {
+      if (item.prices.slice(0, i).some((q) => JSON.stringify(q.src) === JSON.stringify(p.src)))
+        errors.push({
+          path: `${path}.prices[${i}]`,
+          problem: 'price cites the same words as another price of this item',
+        })
+    })
     const words = [
       text(`${path}.name`, item.name),
       ...item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)),

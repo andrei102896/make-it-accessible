@@ -46,6 +46,9 @@ Phase B, fixes on dev:
 - [ ] Letter-spaced words split in the text layer ("BILL A")
 - [x] Brand from the PDF (2026-10-15): fonts read per word from pdftohtml, open-licensed families embedded (`pnpm fonts:add`), role colours and sizes measured, heading signatures, rules under headings and dish dividers from the render, no automatic dark mode; rescores identical, axe clean at 1280/390/320 and forced colours, WCAG 1.4.12 at 320 px on 5 documents
 - [x] Ornaments under headings (2026-10-16): drawn from the render as alpha masks; the brief lists design details and adhoc prints those the page lacks
+- [x] US menu prices (2026-10-16): bare numbers, market price, two-size prices and one decimal shown as printed without findings; split digits joined; printed case wins over the model's re-casing; a price cited twice shows once; keyboard check measures 2.4.11
+- [ ] Scorer follows the validator on currency-less prices (`score/prices.ts` judge, `metrics.ts` mustFlag) before any US key is written
+- [ ] A qualifier equal to the dish's description is not shown; a dish whose only picture is a tiny logo renders as a row
 - [ ] Brand v2: headings on their printed panels (BILLA yellow on green), sections side by side as printed, boxed lines, ornaments elsewhere on the page, icons, measured letter-spacing
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d

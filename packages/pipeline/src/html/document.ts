@@ -1,4 +1,4 @@
-import { amountOf, centPartner, joinRuns } from '../pdf/runs.ts'
+import { amountOf, joinRuns, printedAmount, printsFusedCents } from '../pdf/runs.ts'
 import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
@@ -110,7 +110,7 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, cl
   const onPage = runs.filter((r) => !hidden.has(r.id))
   const currency = pageCurrency(joinRuns(onPage))
   // Bare digits read as fused cents ("269" = 2,69) only on a page that prints euro/cent pairs; elsewhere they are shown as printed.
-  const fusedCents = onPage.some((r) => centPartner(r, onPage) !== undefined)
+  const fusedCents = printsFusedCents(onPage)
   const cited = (p: PriceValue): Run[] =>
     p.src.flatMap(([from, to]) => runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
   // Prices in one list or table show decimals the same way: whole only when every amount in it is whole.
@@ -122,7 +122,7 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, cl
     const words = cited(p)
     const amount = amountOf(words, currency)
     const proven = amount?.currency && (!amount.fromBareDigits || fusedCents) ? amount.currency : null
-    const printed = joinRuns(words)
+    const printed = printedAmount(words)
     const whole = wholeHere && amount !== null && amount.cents % 100 === 0
     const shown = amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
@@ -266,10 +266,15 @@ function renderPage(page: HtmlPage, { ui, lang, index, long, legend, running, cl
   const name = (path: string, item: Item, codes: readonly string[] = [], shown = text(item.name)): string =>
     `<p class="name"${flagged(`${path}.name`)}>${shown}${codes.map((c) => ` ${dietTag(c, legend)}`).join('')}</p>`
   // role="text" makes VoiceOver read a price with its previous price as one phrase, not one stop per line.
-  const prices = (path: string, item: Item): string =>
-    item.prices.length
-      ? `<p class="prices"><span role="text">${item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)).join(' ')}</span></p>`
+  // A price cited twice for one dish (once with its description as qualifier) is shown once.
+  const prices = (path: string, item: Item): string => {
+    const own = item.prices.filter(
+      (p, i, all) => all.findIndex((q) => JSON.stringify(q.src) === JSON.stringify(p.src)) === i,
+    )
+    return own.length
+      ? `<p class="prices"><span role="text">${own.map((p) => price(`${path}.prices[${item.prices.indexOf(p)}]`, p)).join(' ')}</span></p>`
       : ''
+  }
   const unit = (path: string, item: Item): string =>
     item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : ''
 

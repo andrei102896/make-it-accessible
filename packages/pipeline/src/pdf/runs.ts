@@ -1,4 +1,12 @@
-import { CENTS_HEIGHT_RATIO, currenciesIn, moneyFromParts, parseMoney, PENCE, type Currency } from '../text/money.ts'
+import {
+  AS_PRINTED,
+  CENTS_HEIGHT_RATIO,
+  currenciesIn,
+  moneyFromParts,
+  parseMoney,
+  PENCE,
+  type Currency,
+} from '../text/money.ts'
 import { iou } from './geometry.ts'
 import type { Run } from './types.ts'
 
@@ -6,6 +14,9 @@ const DUPLICATE_IOU = 0.8
 const CURRENCY_WORD = /^[€£$]$/
 const AMOUNT_PART = /^(?:[€£$]|[-\u2212]?\d[\d.,]*(?:,-)?|-,\d{2}|\d{1,3}p)$/
 const TOUCHING_GAP = 0.02
+// Digits of one price split at the separator sit a word gap apart in a letter-spaced text layer: Almond "21.9"+"5"
+// at 0.10 h, Gargiulo "18."+"50" at 0.27 h; the nearest two separate numbers measured were 0.36 h apart.
+const NEAR_GAP = 0.3
 const MIN_CENTS_RATIO = 0.3
 
 export function findDuplicates(runs: readonly Run[]): string[] {
@@ -30,12 +41,13 @@ export function joinRuns(runs: readonly Run[]): string {
     .join('')
 }
 
-// A price set glyph by glyph ("£8." + "95", "1" + ".1" + "9") is one amount when its pieces touch, share a height
-// and meet at the separator; small cents are a pair instead, and a third decimal ("1.99" + "²") is not joined.
-function joinPriceGlyphs(runs: readonly Run[]): Run[] {
-  const sorted = [...runs].sort((a, b) => a.line - b.line || a.box.x - b.box.x)
+// A price set glyph by glyph ("£8." + "95", "1" + ".1" + "9") is one amount when its pieces are close, share a
+// height and meet at the separator; small cents are a pair instead, and a third decimal ("1.99" + "²", a year) is not
+// joined. `sorted` puts the pieces in reading order; the renderer keeps the citation order instead.
+function joinPriceGlyphs(runs: readonly Run[], sorted = true): Run[] {
+  const ordered = sorted ? [...runs].sort((a, b) => a.line - b.line || a.box.x - b.box.x) : runs
   const out: Run[] = []
-  for (const r of sorted) {
+  for (const r of ordered) {
     const prev = out.at(-1)
     const str = prev ? prev.str + r.str : ''
     const sameHeight = prev
@@ -44,7 +56,9 @@ function joinPriceGlyphs(runs: readonly Run[]): Run[] {
     const atSeparator =
       prev !== undefined &&
       (/[.,]$/.test(prev.str) || /^[.,]\d/.test(r.str) || (/[.,]/.test(prev.str) && /^\d+$/.test(r.str)))
-    if (prev && touching(prev, r) && sameHeight && atSeparator && !/[.,]\d{3,}$/.test(str)) {
+    const near =
+      prev !== undefined && prev.line === r.line && Math.abs(r.box.x - (prev.box.x + prev.box.w)) < r.box.h * NEAR_GAP
+    if (prev && near && sameHeight && atSeparator && !/[.,]\d{3}/.test(str)) {
       const right = Math.max(prev.box.x + prev.box.w, r.box.x + r.box.w)
       out[out.length - 1] = { ...prev, str, box: { ...prev.box, w: right - prev.box.x } }
     } else out.push(r)
@@ -69,7 +83,19 @@ export function centPartner(euros: Run, runs: readonly Run[]): Run | undefined {
   return candidates.sort((a, b) => distance(a) - distance(b))[0]
 }
 
-const bare = (word: string): string => word.replace(/^\(+/, '').replace(/[)*]+$/, '')
+const bare = (word: string): string => word.replace(/^\(+/, '').replace(/[)*,;]+$/, '')
+
+// The price as printed, its split digits joined ("21.9" + "5" → "21.95"), in citation order.
+export const printedAmount = (cited: readonly Run[]): string => joinRuns(joinPriceGlyphs(cited, false))
+// The price words a page shows without an amount to format ("MP", "22/32", "18.9"), else null.
+export const asPrinted = (cited: readonly Run[]): string | null => {
+  const words = joinPriceGlyphs(cited)
+    .map((r) => bare(r.str))
+    .join(' ')
+  return AS_PRINTED.test(words) ? words : null
+}
+// Leaflet pages print euros with smaller cents beside them; bare digits there read as fused cents ("269" = 2,69).
+export const printsFusedCents = (runs: readonly Run[]): boolean => runs.some((r) => centPartner(r, runs) !== undefined)
 const SIGN_FIRST = /^[€£$](?=[-\u2212]?\d)/
 
 // `currency` is null when neither the words nor the page state one (an error, never a guess).
