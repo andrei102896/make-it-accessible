@@ -48,3 +48,6 @@
 - pdftohtml run boxes include ascent and descent: "through the middle" needs a tight share (≤ 0.2; an over-the-heading rule sat at 0.30). A printed rule can lean: straightness is a share of its length (Rucola's dividers, 1.5 pt over 135). (2026-10-16)
 - A pseudo-element reset only works when its selector outranks the rule it resets: `:is(h3…).hs-N::after` beats `.cls::after`. (lines plan, 2026-10-16)
 - A stroke's thickness under a non-uniform matrix follows the axis across the line, not the larger scale (Kendells 4.8 pt read for a 1.5 pt rule). (2026-10-16)
+- Measure what a junk filter drops across the whole saved set, not only the cases it targets: "heads a section" dropped 13 headings, 5 of them real sections (held-out step 1, 2026-10-16).
+- Grep before claiming "every entry point": the guard goes in the function every caller shares (`extractPage`, not `pageCount`; Hogfish, 2026-10-16).
+- A geometric acceptance window fires on ordinary data too (6% of word gaps sit in the ligature window): the fill set is the real guard. (Gigi, 2026-10-16)

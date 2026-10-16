@@ -40,3 +40,5 @@
 - A box's membership is per block, not per section: two boxed items printed in one list need the list split. (Frankie's, critic-design 2026-10-16)
 - A rule crossing a band's columns between its sections is a row break in print: split the band, never rule one block (Rucola pastas|sides, 2026-10-16).
 - A rule right under a heading belongs to the heading and centres it as printed; moving it to the next block changes a look the owner has seen (Kendells, 2026-10-16).
+- A page title above real sections must hand the chips to its children; a section can hold only paragraphs (Gargiulo "Speciale"), so "heads a list" marks covers, never single headings. (held-out step 1, 2026-10-16)
+- Widening what shows "as printed" widens what is accepted as a price: dates and portion sizes ("1/2 lb") need explicit guards, and sizes with no label read as bare numbers. (Gigi, La Segunda, 2026-10-16)
