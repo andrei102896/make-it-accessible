@@ -136,6 +136,8 @@ test('a price cited twice for one dish is shown once', () => {
 test('a dish with several priced sizes wraps its prices; each price stays on one line with its label', () => {
   const css = renderDocument({ lang: 'en', title: 'Almond', pages: [page] })
   assert.match(css, /\n\.price \{ white-space: nowrap; \}/)
+  // A long label wraps inside itself, the amount stays whole (Bernini's "Add 1 Scoop Of Vanilla Gelato 3" at 320px).
+  assert.match(css, /\.price \.qualifier \{ white-space: normal; \}/)
   assert.doesNotMatch(css, /\.products\.menu \.prices \{[^}]*nowrap/)
   // The price column never squeezes the name: several add-on prices wrap inside their share of the row.
   assert.match(css, /\.products\.menu > li \{[^}]*grid-template-columns: 1fr fit-content\(60%\)/)
