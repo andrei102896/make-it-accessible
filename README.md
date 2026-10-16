@@ -28,6 +28,7 @@ pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]   # any PDF without
 pnpm preview:add <page.html> "<Business>"                     # stage a converted page as a private preview (random suffix, noindex, 30-day expiry in previews/EXPIRY.csv)
 pnpm preview:publish [--removed <file> ...]                   # copy previews/ into ../portofolio/public/preview; Andrei then runs `vercel --prod` there
 pnpm preview:expire [--remove <file>]                         # delete previews past their date (or one), then publish again
+pnpm wiki                                                     # regenerate docs/wiki: measured facts per document (columns, price placement, title scale, fonts, codes) from validation/private/wiki-sources.json
 pnpm fonts:add "<Family>"                                     # vendor an OFL/Apache Google Fonts family (latin woff2, unmodified, licence beside it) for embedding
 pnpm listen <page.html>                                       # VoiceOver reads the page in Safari, item by item; transcript in <page>.voiceover.txt (needs "Allow VoiceOver to be controlled with AppleScript" and Automation for the terminal)
 pnpm keys:check <key.json> [--pdf <file>] [--set dev|test] [--details]   # one key against its PDF and word snapshot
@@ -127,6 +128,7 @@ packages/eval/src/            evaluation harness, never shipped
   listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
   brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines and ornaments (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
+  wiki.ts, wiki-facts.ts      the layout wiki: facts measured per document from its saved run and PDF (docs/wiki)
   preview.ts                  private previews: unlisted file names, noindex, the 30-day expiry list
   preview-add.ts, preview-expire.ts, preview-publish.ts   CLIs for previews/: stage, expire, copy to the portfolio site and deploy
   font-metrics.ts             a vendored face's x-height, measured in a browser when the family is added

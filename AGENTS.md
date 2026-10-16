@@ -1,6 +1,6 @@
 # AGENTS.md — Make It Accessible
 
-Read before coding, in order: this file → README.md → PROGRESS.md → docs/ROADMAP.md (tracker) → docs/HARDENING.md (current plan).
+Read before coding, in order: this file → README.md → PROGRESS.md → docs/ROADMAP.md (tracker) → docs/LAYOUT.md (current plan) → docs/wiki/index.md (measured facts per document; count on the whole set before planning a layout change).
 
 ## What this is
 A SaaS that turns a designed PDF (retail leaflet, catalog, brochure) into an accessible HTML version, with an honest per-document report and a review editor. The wedge is product grids with price fidelity. Current phase: stage 0, a measured quality test of the pipeline against hand-written answer keys. Stack: pnpm workspaces, Node 26 running TypeScript natively, TypeScript 6 strict, zod, Poppler CLI, Claude (stage 0 via Claude Code headless mode), Playwright + axe for scoring.
