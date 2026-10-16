@@ -1,0 +1,14 @@
+$ node packages/eval/src/run.ts --rescore out/2026-10-12T17-40-38-807Z
+01_billa p6 [tuning]: C1 94% (1 out of order, 0 flagged) FAIL | C2 0/11 (silent 0, role unverified 0) ok | C3 0 ok (words 96%) | C4 alt names product 11/11 ok | C5 headings 1/1 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 2
+01_billa axe: critical 0, serious 0 
+02_pollin p5 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/14 (silent 0, role unverified 0) ok | C3 0 ok (words 98%) | C4 alt names product 13/14 ok | C5 headings 1/1 | rows 5/6 (silent 0, unchecked cells 0) FAIL | decisions 4
+02_pollin axe: critical 0, serious 0 
+04_stonehouse p1 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/0 (silent 0, role unverified 0) ok | C3 0 ok (words 100%) | C4 alt names product 0/0 ok | C5 headings 1/1 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 0
+04_stonehouse p4 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/7 (silent 0, role unverified 0) ok | C3 0 ok (words 95%) | C4 alt names product 0/0 ok | C5 headings 2/2 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 0
+04_stonehouse p5 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/0 (silent 0, role unverified 0) ok | C3 0 ok (words 100%) | C4 alt names product 0/0 ok | C5 headings 1/1 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 0
+04_stonehouse axe: critical 0, serious 0 
+05_bannatyne p1 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/0 (silent 0, role unverified 0) ok | C3 0 ok (words 100%) | C4 alt names product 0/0 ok | C5 headings 1/1 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 0
+05_bannatyne p2 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/0 (silent 0, role unverified 0) ok | C3 0 ok (words 100%) | C4 alt names product 0/0 ok | C5 headings 2/2 | rows 0/0 (silent 0, unchecked cells 0) ok | decisions 0
+05_bannatyne p3 [tuning]: C1 100% (0 out of order, 0 flagged) ok | C2 0/0 (silent 0, role unverified 0) ok | C3 0 ok (words 100%) | C4 alt names product 0/0 ok | C5 headings 2/2 | rows 10/10 (silent 0, unchecked cells 0) ok | decisions 0
+05_bannatyne axe: critical 0, serious 0 
+rescored copy /Users/andrei/Desktop/make it accessible/out/2026-10-12T17-40-38-807Z-rescore-2026-10-16T08-33-29-909Z
