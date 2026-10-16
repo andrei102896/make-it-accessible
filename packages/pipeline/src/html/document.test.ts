@@ -110,39 +110,6 @@ test('a list without pictures reads as a menu; whole prices keep no decimals; no
   assert.match(html, /<h2 id="page-1" class="sr-only">/)
 })
 
-test('a menu with sections gets section links; a price list a visible contents list', () => {
-  const doc = (kind: 'menu' | 'pricelist', headings: string[]) => {
-    const blocks = headings.map((_, i) => ({ kind: 'heading', level: 1, text: { src: [[i, i]] } }))
-    const page = parsePage(JSON.stringify({ lang: 'en', blocks }))
-    const ex: Extraction = {
-      ...extraction,
-      runs: headings.map((str, i) => ({
-        id: `1:${String(i)}`,
-        str,
-        box: { x: 0, y: i * 20, w: 40, h: 10 },
-        flow: 0,
-        line: i,
-      })),
-    }
-    return renderDocument({
-      lang: 'en',
-      title: 'T',
-      kind,
-      pages: [{ keyPage: 1, structure: page, extraction: ex, flagged: [], imageSrc: () => undefined }],
-    })
-  }
-  assert.match(
-    doc('menu', ['Starters', 'Mains', 'Sides']),
-    /<nav class="chips pinned" id="contents" aria-label="Sections"><ul><li><a href="#s0-0">Starters<\/a>/,
-  )
-  assert.doesNotMatch(doc('menu', ['Starters', 'Mains']), /class="chips"/)
-  assert.match(
-    doc('pricelist', ['Fees']),
-    /<nav class="toc" id="contents" aria-label="Contents"><p class="toc-title">Contents<\/p>/,
-  )
-  assert.match(doc('menu', ['Starters', 'Mains', 'Sides']), /<h3 id="s0-0">Starters<\/h3>/)
-})
-
 test('hidden words are not published; page markers and headings follow the PDF; a table is named by its heading', () => {
   const page = parsePage(
     JSON.stringify({

@@ -7,6 +7,7 @@ import { headedLists, inkedHtml, inkSegments, visibleText } from './source.ts'
 import { unionOf } from './profile.ts'
 import { dietTag, emphasizeMoney, esc, isAddOn, isBadge, linkify, noteTargets, trailingCodes } from './inline.ts'
 import { assemble } from './layout.ts'
+import { listedHeadings } from './nav.ts'
 import { renderTable } from './table.ts'
 import { vectorClass } from './boxes.ts'
 import type { Context, HtmlPage, Rendered } from './types.ts'
@@ -19,7 +20,7 @@ const SEPARATOR = /[,;]$/
 
 export function renderPage(
   page: HtmlPage,
-  { ui, lang, index, long, legend, running, classes, layout, kind, inks, inlinePrices, smallCaps }: Context,
+  { ui, lang, index, long, legend, running, classes, layout, kind, inks, inlinePrices, smallCaps, titleWords }: Context,
 ): Rendered {
   const e = page.extraction
   const runs = e.runs
@@ -32,6 +33,8 @@ export function renderPage(
   const topLevel = Math.min(...page.structure.blocks.flatMap((b) => (b.kind === 'heading' ? [b.level] : [])))
   const scale = Number.isFinite(topLevel) ? topLevel : Math.min(...levels(page.structure.blocks))
   const raw = (t: TextValue): string => visibleText(t, e)
+  const heading = (b: Block & { kind: 'heading' }): string => ('seen' in b.text ? b.text.seen : raw(b.text))
+  const chips = listedHeadings(page.structure.blocks, heading, titleWords, kind === 'menu')
   // Plain text for a label reused outside its element (the contents list); inked text, with the runs printed in a
   // brand colour wrapped, for the element itself.
   const plain = (t: TextValue): string => ('seen' in t ? `<span data-seen>${esc(t.seen)}</span>` : esc(raw(t)))
@@ -148,12 +151,12 @@ export function renderPage(
         const level = Math.max(3, Math.min(6, b.level - scale + 3))
         const label = plain(b.text)
         if (!label) return ''
-        // Top-level headings of the page's highest level make the contents list.
-        const listed = /^blocks\[\d+\]$/.test(path) && b.level === topLevel
+        // The page's sections at its highest level make the contents list (nav.ts listedHeadings).
+        const listed = chips.has(Number(/^blocks\[(\d+)\]$/.exec(path)?.[1] ?? -1))
         const id = listed
           ? `s${String(index)}-${path.replace(/\D/g, '')}`
           : `h${String(index)}${path.replace(/\D+/g, '-')}`
-        if (listed) toc.push({ id, label })
+        if (listed) toc.push({ id, label, name: 'seen' in b.text ? b.text.seen : raw(b.text) })
         lastHeading = id
         const own = [classes.get(`${String(index)}:${path}`), classAt(path)].filter(Boolean).join(' ')
         const cls = own ? ` class="${own}"` : ''

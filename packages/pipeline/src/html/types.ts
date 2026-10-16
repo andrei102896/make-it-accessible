@@ -46,4 +46,6 @@ export type Context = {
   inlinePrices: boolean
   // Roles set in a small-caps face: their text takes the model's case (source.ts visibleText).
   smallCaps: ReadonlySet<Role>
+  // The document title's words (nav.ts titleWordsOf): a page heading that names the document is no section chip.
+  titleWords: readonly string[]
 }

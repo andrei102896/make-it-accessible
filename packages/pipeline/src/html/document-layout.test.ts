@@ -77,10 +77,11 @@ const brand: Brand = {
 
 test('with a brand, the name is a masthead at its printed ratio, bounded, and small print is the page tail', () => {
   const html = renderDocument({ lang: 'en', title: 'Prohibition Kitchen', pages: [page], brand })
-  // The masthead stands before the navigation and the pages, as the name does on the printed page.
+  // The masthead stands before the navigation and the pages, as the name does on the printed page; the name is no
+  // section of its own (nav.ts listedHeadings), so it takes a plain heading id.
   assert.match(
     html,
-    /<\/div>\n<header class="masthead centered">\n<h3 id="s0-0" class="hs-1 masthead-title">PROHIBITION KITCHEN<\/h3>\n<\/header>\n<section/,
+    /<\/div>\n<header class="masthead centered">\n<h3 id="h0-0-" class="hs-1 masthead-title">PROHIBITION KITCHEN<\/h3>\n<\/header>\n<section/,
   )
   assert.match(html, /\.masthead-title \{ font-size: clamp\(1\.5rem, min\(7\.824rem, 11vw\), 4\.5rem\)/)
   assert.match(html, /<footer class="small-print">\n<p>Consuming raw<\/p>\n<\/footer>\n<\/section>/)

@@ -3,7 +3,7 @@ import { bandTitle, esc, legendLine, legendOf } from './inline.ts'
 import { layoutOf, NO_LAYOUT } from './layout.ts'
 import { linesCss } from './lines.ts'
 import { renderPage } from './page.ts'
-import { navigation } from './nav.ts'
+import { navigation, titleWordsOf } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
 import { brandCss, headingClasses } from './brand.ts'
 import { ROLES } from './profile.ts'
@@ -28,6 +28,7 @@ export function renderDocument(doc: HtmlDocument): string {
   const segments = doc.pages.map((p, i) => (brand ? layoutOf(p, i === 0, brand.profile.body, doc.title) : NO_LAYOUT))
   const columns = Math.max(0, ...segments.flatMap((l) => l.bands.map((b) => b.columns.length)))
   const titleKey = segments[0]?.title !== null && segments[0] ? `0:blocks[${String(segments[0].title)}]` : null
+  const titleWords = titleWordsOf(doc.title)
   const smallCaps = new Set(ROLES.filter((r) => brand?.profile.roles[r]?.smallCaps))
   const vectors = segments.flatMap((l) => [
     ...l.boxes.boxes,
@@ -51,13 +52,14 @@ export function renderDocument(doc: HtmlDocument): string {
       inks: new Set(brand?.profile.inks ?? []),
       inlinePrices: brand?.profile.pricesInline ?? false,
       smallCaps,
+      titleWords,
     }),
   )
   const parts = doc.title.split(' · ')
   // The band already names the document; a contents entry saying the same again is left out.
   const same = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
   const seen = new Set([doc.title, ...parts].map(same))
-  const toc = rendered.flatMap((r) => r.toc).filter((t) => !seen.has(same(t.label)) && seen.add(same(t.label)))
+  const toc = rendered.flatMap((r) => r.toc).filter((t) => !seen.has(same(t.name)) && seen.add(same(t.name)))
   const kind = doc.kind ?? null
   const nav = navigation(kind, toc, long, ui)
   const validity = doc.validity ? `<p class="validity">${esc(doc.validity)}</p>` : ''
@@ -67,10 +69,6 @@ export function renderDocument(doc: HtmlDocument): string {
   const first = doc.pages[0]
   const opening = first?.structure.blocks[0]
   // A logo names the place when its description carries most of the title's words ("Carmine's Restaurant Ybor…").
-  const titleWords = doc.title
-    .split(/[\s·]+/)
-    .map(same)
-    .filter((w) => w.length >= 3)
   const logoNamed = [...(segments[0]?.header ?? [])].some((i) => {
     const b = first?.structure.blocks[i]
     const alt = b?.kind === 'figure' && b.image.alt !== null ? same(b.image.alt) : ''
