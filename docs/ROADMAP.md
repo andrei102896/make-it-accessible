@@ -2,7 +2,7 @@
 
 Single place for progress. Updated in the same change as the work (AGENTS.md "Docs upkeep"). Status: `[x]` done (date), `[~]` in progress, `[ ]` to do. Estimates are working days, not calendar promises; robustness wins over dates.
 
-**Where we are (2026-10-13):** M0 done (GO). M1: A1–A3 and A5 done; A4 under way (harness step done, page draw next). Engine ready = M1 + M2 done, estimated ~4–5 weeks of work. Website and pricing (M3–M4) start after that.
+**Where we are (2026-10-16):** M0 done (GO). M1 paused at A4 since 2026-10-14 for a demand test (`outreach/`, PROGRESS "Status"); brand fidelity and ornaments shipped meanwhile. Target set on 2026-10-16: independent restaurants with PDF menus, US first, $29 / £25 a month per venue with updates included. M1–M2 resume, or the segment changes, at the demand-test thresholds.
 
 ## M0 — Stage 0 quality gate · done 2026-10-12
 - [x] Pipeline, scorer, keys for 5 documents, prompt frozen (2026-10-12)

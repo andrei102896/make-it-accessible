@@ -1,9 +1,9 @@
 # Make It Accessible — Progress
 
-Last updated: 2026-10-13. Read this first in every new session.
+Last updated: 2026-10-16. Read this first in every new session.
 
 ## Status
-Idea validated on the supply side; demand will be validated by launching. Stage 0 in progress (plan: `docs/STAGE0.md`). Days 0–3 done (log at the end of `docs/STAGE0.md`; model calls run on Andrei's Claude subscription via Claude Code headless mode; Bedrock deferred to the MVP). Day 3 result: all 6 tuning pages pass C1–C4 in 2 of the last 3 runs, 0 silent price errors, ~$0.08/page. Prompt frozen after a cost round (~$0.07/page, see docs/STAGE0.md). Day 4: held-out keys for Honda/Stone House/Bannatyne frozen; two blockers found before the runs (pound prices unreadable, tables not in the gate; see the Day 4 log). Both fixed before any run (Andrei's go). Held-out runs done (Day 5 log): 0 silent price errors in 156 checks. **Stage 0 verdict: GO (Andrei, 2026-10-12).** Hardening under way (`docs/HARDENING.md`, tracker `docs/ROADMAP.md`): A1–A3 and A5 done 2026-10-13; A4 (blind keys) under way: harness step done, key policy and page draw next. Then SPEC rewrite, then MVP with payments from day one.
+Stage 0 verdict GO (Andrei, 2026-10-12); hardening (`docs/HARDENING.md`) reached A4 and is paused since 2026-10-14 for a demand test: is there a buyer at all? 56 cold emails sent 14–15 Oct (UK pubs and restaurants, US agencies and restaurants; lists and templates in `outreach/`, gitignored); one real reply (Kendells Bistro, Leeds), whose page is a private preview; Andrei's reply with the price goes out on 2026-10-16. Meanwhile the page became the brand's own (fonts, colours, sizes, rules and ornaments measured from the PDF; `docs/DESIGN.md`). On 2026-10-16 Andrei set one price ($29 / £25 a month per venue, updates included) and the target (independent restaurants with a PDF menu, New York and Florida first); see Decisions. Next: a wave of 20 NY/FL restaurants, each email linking its page already made; follow-ups to the first 56 on 19–21 Oct; continue or rethink at the thresholds in `outreach/emails.md`. Hardening, the SPEC rewrite and the MVP resume only after that.
 
 Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre-registration recorded 2026-10-12).
 
@@ -36,7 +36,7 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 - Product: upload a designed PDF (catalog, leaflet, brochure) → accessible HTML as the primary output + honest per-document report; review editor before publishing. Wedge = product grids with price fidelity.
 - Website with login (email + password / magic link; Google OAuth optional later).
 - **Payments from day one**: monthly subscription via Stripe (Checkout + Customer Portal + webhooks + Stripe Tax). No 100 % free launch. Free = limited trial only (free checker without account; a small document trial), not a free product.
-- Quotas = page credits, not document counts (review finding B2: document quotas allowed processing cost above revenue).
+- Quotas = page credits, not document counts (review finding B2: document quotas allowed processing cost above revenue). For the restaurant target (2026-10-16): one price per venue covers its documents up to 10 pages in all, every update included; page credits stay for longer documents if those segments return.
 - Launch is the demand test; define kill criteria before launch (proposal: at 30 days ≥ 300 free checks, ≥ 10 % sign-up conversion, ≥ 1 paying customer; otherwise stop/pivot).
 - No real-estate direction. The repository records every choice as its own decision and never says where a design came from (Andrei, 2026-10-13).
 - Brand fidelity (Andrei, 2026-10-15, after the first prospect said our page looked nothing like their menu): the page takes the PDF's measured fonts, colours, sizes and rules; open-licensed fonts are embedded (was: system fonts only); the page follows the PDF's background with no automatic dark mode; a theme and font switch belongs in a later Customize page step.
@@ -47,8 +47,8 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 ## Decisions still open (ask Andrei)
 1. Tagged PDF in v1: recommendation = HTML primary ("publish this instead of the PDF") + a rebuilt tagged PDF generated from our HTML (Chromium tagged PDF), clearly labelled as redesigned; layout-preserving tagging deferred.
 2. Free trial shape: free checker (no AI) + N free documents without card, or card-required trial.
-3. Exact prices and page allowances — set after stage 0 measures cost per page (target ≤ 25 % processing cost / revenue, not 10 %).
-4. Launch market order: Germany + English recommended.
+3. ~~Exact prices and page allowances~~ Set for the demand test on 2026-10-16: $29 / £25 a month per venue, up to 10 pages, updates included (see Decisions); revisit after the test.
+4. ~~Launch market order~~ Decided 2026-10-16: US (New York, Florida) first, UK second; German-speaking markets later.
 
 ## Review findings to apply when rewriting SPEC.md
 (from an independent review of SPEC.md on 2026-10-12)

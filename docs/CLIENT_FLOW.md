@@ -2,6 +2,8 @@
 
 Source for the SPEC.md rewrite. Changes against the original SPEC are listed at the end.
 
+**Superseded in part on 2026-10-16** (PROGRESS, Decisions): the first buyer is a restaurant with a PDF menu, and what it pays for is the kept page, not a conversion: one price per venue ($29 / £25 a month), documents up to 10 pages, every update included, the same link for every new version. Sections 2, 3, 6 and 7 below describe page credits and a self-serve trial for long documents; they stand for later segments and are rewritten with the SPEC after the demand test.
+
 ## 1. Landing: a converted example, and a free check (decided 2026-10-13)
 The landing page shows a **sample PDF already converted**: the original next to the accessible page, with the three labels and the report, served from a file we keep. No upload and no AI cost; it is what convinces the visitor that the tool is useful.
 Next to it, the **free check** stays: the visitor uploads a PDF and gets, in seconds and without AI: whether the document has structure, how many images lack a text alternative, whether the text layer is readable or corrupt. Shown as "N issues in M checks", never as a score. The file is deleted immediately.
