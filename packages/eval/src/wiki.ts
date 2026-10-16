@@ -5,21 +5,24 @@ import { parsePage } from '@make-it-accessible/pipeline/model/schema'
 import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
-import { z } from 'zod'
 import { fontLibrary } from './brand.ts'
 import { BriefFile } from './look.ts'
 import { ROOT } from './paths.ts'
-import { columnsPerPage, dietaryCodes, fontTally, pricePlacement, titleScale, type Page } from './wiki-facts.ts'
+import { loadSources } from './sources.ts'
+import {
+  columnsPerPage,
+  dietaryCodes,
+  fontTally,
+  listShapes,
+  pricePlacement,
+  titleScale,
+  type Page,
+} from './wiki-facts.ts'
 
 // pnpm wiki: one generated page per document under docs/wiki/documents/ from its saved run and PDF, plus the index.
 // A "## Notes" section written by hand in a document page survives regeneration.
-const SourceSchema = z.array(
-  z.object({ slug: z.string(), title: z.string(), group: z.string(), run: z.string(), pdf: z.string() }).strict(),
-)
 const WIKI = join(ROOT, 'docs', 'wiki')
-const sources = SourceSchema.parse(
-  JSON.parse(await readFile(join(ROOT, 'validation', 'private', 'wiki-sources.json'), 'utf8')),
-)
+const sources = await loadSources()
 const library = await fontLibrary()
 await mkdir(join(WIKI, 'documents'), { recursive: true })
 
@@ -54,6 +57,7 @@ for (const s of sources) {
   const prices = pricePlacement(pages)
   const title = titleScale(pages, profile)
   const codes = dietaryCodes(pages)
+  const shapes = listShapes(pages)
   const fonts = fontTally(pages, profile, library).slice(0, 8)
   const file = join(WIKI, 'documents', `${s.slug}.md`)
   const body = `# ${s.title}
@@ -63,6 +67,8 @@ Group: ${s.group} · pages: ${String(pages.length)} · type (brief): ${brief?.ty
 ## Layout
 - Columns of lists per page: ${columns.join(', ')}
 - Price placement: ${String(prices.inline)} inline after the name, ${String(prices.right)} at the column's right
+- Lists one dish per line: ${String(shapes.wide)} of ${String(shapes.lists)} (${String(shapes.runOn)} with the description on the name's line)
+- Inline brand colours: ${profile?.inks.length ? profile.inks.join(', ') : 'none'}
 - Body text ${String(title.body)} pt; largest text ${String(title.largest)} pt (${title.body ? (title.largest / title.body).toFixed(1) : '?'}×): "${title.words}"
 - Heading signatures: ${String(profile?.signatures.length ?? 0)}${profile ? ` (${profile.signatures.map((h) => `${h.face.key} ${String(h.size)}pt`).join(', ')})` : ''}
 - Dietary legend entries: ${String(codes.legendEntries)}; coded lines "(V, GF)": ${String(codes.codedLines)}

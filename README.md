@@ -54,6 +54,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/crop.ts                 picture crops: word extents in their text colour, own words kept whole, other offers cut at the edge, boxes grown back over a cut-off badge
   pdf/pixels.ts               PPM page renders as pixels
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
+  pdf/vectors.ts              frames and panels from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
   model/schema.ts             page structure schema returned by the model
@@ -65,7 +66,11 @@ packages/pipeline/src/        product code, reused by the MVP
   html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
   html/profile.ts             the document's printed style per role and heading signature, from the words each element cites
   html/page.ts                one printed page as HTML: blocks, menu rows and cards, tables, notes, header and tail wrappers
-  html/layout.ts              a page's segments (header with the name or logo, tail of small print) from geometry
+  html/layout.ts              a page's segments (header with the name or logo, tail of small print) and column bands from geometry
+  html/shapes.ts              a menu list's printed shape: one dish per line, the description running on from the name
+  html/table.ts               tables with scope and a named region; on a menu a two-column price table as menu rows
+  html/align.ts               lists and headings set centred or right as printed, measured from their first lines
+  html/boxes.ts               the PDF's frames and panels as boxes round the blocks inside them, the page frame, their CSS
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
@@ -133,6 +138,10 @@ packages/eval/src/            evaluation harness, never shipped
   brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines and ornaments (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
   review-page.ts              CLI: render the PDF pages, screenshot our page, ask the reviewer, write review.json
+  sources.ts                  the measured documents (saved run + PDF, local list) and where rebuilt pages go (out/rebuilt)
+  rerender.ts                 CLI: render a saved run again with the current renderer, no model call (pnpm rerender <slug>|--all)
+  check-page.ts               CLI: axe, overflow and text-spacing checks of one page at 1280/390/320 and forced colours, with screenshots
+  preview-refresh.ts          CLI: every listed preview takes its rebuilt page under the same unlisted name
   wiki.ts, wiki-facts.ts      the layout wiki: facts measured per document from its saved run and PDF (docs/wiki)
   preview.ts                  private previews: unlisted file names, noindex, the 30-day expiry list
   preview-add.ts, preview-expire.ts, preview-publish.ts   CLIs for previews/: stage, expire, copy to the portfolio site and deploy
@@ -166,10 +175,12 @@ out/                          run outputs (local only)
 - **An image-only amount is told from a text price by its box, not its value.** By value, an image £1 was rejected because another product printed £1 in the text layer (`key-v3-split.test.ts`).
 - **A page price is checked with its currency and offer words in one block.** Checking the amount alone let "Everything £1" vanish while another £1 on the page counted for it (`rules.test.ts`).
 - **An unmapped glyph ("£�.99") reads as nothing, never as an amount.** It read as 99p; such occurrences carry their value from the render (`money.test.ts`, `ledger.test.ts`).
-- **Hidden text is never published.** A pub menu's "Served 5.00–8.30pm" sat under a shape, Lidl CH printed a price under a "Lieferverzug" sticker, Elddis a running head under its cover: all in the text layer, none visible. `hiddenRuns` judges each word by the ink in its box, after removing other words' boxes; a word too covered to judge is hidden only when it continues a hidden word side by side (an overlapping one is drawn on top, and showed on Lidl GB). Do not judge by text colour: the pub menu's hidden text is white like the rest of the page.
+- **Hidden text is never published.** A pub menu's "Served 5.00–8.30pm" sat under a shape, Lidl CH printed a price under a "Lieferverzug" sticker, Elddis a running head under its cover: all in the text layer, none visible. `hiddenRuns` judges each word by the ink in its box, after removing other words' boxes; a word too covered to judge is hidden only when it continues a hidden word side by side (an overlapping one is drawn on top, and showed on Lidl GB). Do not judge by text colour: the pub menu's hidden text is white like the rest of the page. Only words at the same scale (height within 2×) count as covering: Moosewood's 32 pt script heading box reached over "any" and the word was dropped (`visibility.test.ts`).
 - **Crops keep the product whole.** No cut is chosen by pixel content (paper and marble textures read as product, cuts got refused and the fallback swallowed neighbouring prices). The product's own words are taken in whole; another offer's words and pictures are cut only within a 25 % edge band, never through the product's words. Growth is vertical only and stops at another offer and at full-width photos or bands (horizontal growth crept into a leaflet's sidebar). Word extents use the text colour pdftohtml reports: guessing the ink from the font box took the paper or a green footer band for a red price digit. No crop is marked `data-review` (a flagged image counts its image-read prices as confirmed in the scorer).
 - **A price without a currency is an error only on a page that prints fused euro/cent pairs** (`printsFusedCents`, shared by renderer and validator); elsewhere bare numbers, "MP", "22/32" and one decimal are the menu's own prices, shown as printed (`validate.test.ts`). The scorer's `judge` and `mustFlag` still expect a currency-less key price to be flagged: a US key cannot be scored until they follow (ROADMAP).
-- **The page shows the printed case.** The model's text replaces the cited words only when it differs beyond case (`document-prices.test.ts`); six of Almond's seven headings had been re-cased.
+- **The page shows the printed case.** The model's text replaces the cited words only when it differs beyond case (`document-prices.test.ts`); six of Almond's seven headings had been re-cased. The one exception is a role measured as a small-caps face (`profile.ts` smallCaps, a quarter of eight or more items): its layer case is the font's glyph mapping, never the printed case, so the model's case shows and CSS draws the small caps.
+- **Image text under a heading is no ornament.** Carmine's beer names (read from the image, no runs) passed every word-box check and were embedded as flourishes; a shape in four or more pieces at least 0.3 of the heading's height tall is a line of letters (`ornament.test.ts`). lines.json is versioned by the detector (`LINES_VERSION`): a changed rule bumps it, or saved runs keep the old finding.
+- **Drawn geometry comes from the PDF's vectors, not the render.** A box the PDF draws round a section is a stroked rectangle, a filled ring (Sarge's 5 pt red border is a fill with a hole) or a fill; some sit in compositing groups inside `<defs>` (blend modes), so definitions are stripped selectively, never wholesale (`vectors.test.ts`). White fills on paper are knock-outs behind words, not panels.
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
 ## Dead ends

@@ -99,7 +99,8 @@ td.num { text-align: right; white-space: nowrap; }
 .validity { margin: .5rem 0 0; font-weight: 600; }
 nav.chips { background: var(--bg); border-bottom: 1px solid var(--line); margin: 0 0 1rem; }
 nav.chips ul { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
-nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
+nav.chips li { flex: none; max-width: 100%; }
+nav.chips a { display: inline-block; max-width: 100%; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
   border: 1px solid var(--line); border-radius: 999px; color: var(--fg); text-decoration: none; }
 nav.chips a:hover { border-color: var(--accent); }
 nav.chips .chips-fold { display: none; }
@@ -121,11 +122,33 @@ nav.chips .chips-fold summary { cursor: pointer; font-weight: 600; min-height: 2
   .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .cols.side { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
   .cols.side .col:last-child .products.menu { columns: 2 16rem; }
+  .cols.side .col:last-child .products.menu.wide { columns: 1; }
 }
+.products.menu.wide { columns: 1; }
+.products.menu.wide:not(.run-on) > li { max-width: 44rem; }
+.products.menu.run-on > li { display: block; }
+.products.menu.run-on > li > .name, .products.menu.run-on > li > .lead, .products.menu.run-on > li > .prices { display: inline; }
+.products.menu.run-on > li > .prices, .products.menu.run-on > li > .lead { margin-left: .5em; text-align: left; white-space: normal; }
+@media (min-width: 40rem) {
+  .products.menu.wide.run-on > li { display: grid; grid-template-columns: fit-content(50%) minmax(0, 1fr) fit-content(30%);
+    column-gap: .6em; align-items: baseline; }
+  .products.menu.wide.run-on > li > .lead { grid-column: auto; margin: 0; }
+  .products.menu.wide.run-on > li > .prices { margin-left: 0; text-align: right; }
+}
+.cols .products.menu.run-on > li { display: block; }
+.cols .products.menu.run-on > li > .prices, .cols .products.menu.run-on > li > .lead { margin: 0 0 0 .5em; text-align: left; }
 .back { margin: 1.5rem 0 0; font-size: .9375rem; }
 .back a { display: inline-block; min-height: 2.75rem; line-height: 2.75rem; }
 .price[data-role="current"] .qualifier { display: inline-block; border: 1.5px solid var(--accent); color: var(--accent);
   border-radius: .25rem; padding: 0 .35rem; font-size: .875rem; font-weight: 700; }
+:is(h3, h4, h5, h6).align-center { text-align: center; }
+ul.align-center, ul.align-right { list-style: none; padding: 0; }
+.align-center { text-align: center; } .align-right { text-align: right; }
+.products.menu.align-center > li, .products.menu.align-right > li { display: block; }
+.products.menu.align-center, .products.menu.align-right { columns: 1; }
+.products.menu.align-center > li > :is(.name, .prices, .lead), .products.menu.align-right > li > :is(.name, .prices, .lead) {
+  display: inline; margin-inline: .25em; text-align: inherit; }
+.doc-menu .price .qualifier { display: inline; border: 0; padding: 0; color: var(--muted); font-weight: 400; font-size: 1rem; }
 section p a, section li a, section td a { display: inline-block; padding-block: .55rem; margin-inline-end: .75rem; }
 a[href^="tel:"] { white-space: nowrap; }
 .doc-menu main { max-width: 60rem; }

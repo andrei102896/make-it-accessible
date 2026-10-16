@@ -2,11 +2,12 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
+import { area, intersection } from '@make-it-accessible/pipeline/pdf/geometry'
 import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
-import { cropPicture, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
+import { cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
 import { extractPage, renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
@@ -26,6 +27,11 @@ export type PageResult = {
   validation: Validation
   usd: number
 }
+
+const IMAGE_FIT = 0.95
+const IMAGE_MAX = 2
+const FIGURE_SCALE = 2
+const BACKGROUND_WORDS = 3
 
 export const pageDir = (docDir: string, keyPage: number): string => join(docDir, `p${String(keyPage).padStart(2, '0')}`)
 
@@ -107,12 +113,27 @@ export async function buildHtml(
         ...pictures.filter((_, j) => j !== i).map((box) => ({ box, own: false })),
       ]
       const model = pictures[i] ?? { x: 0, y: 0, w: 0, h: 0 }
-      const crop = cropPicture(img ? growToPicture(model, words, img) : model, words)
+      // A figure with other words printed over it is a background illustration (Noah's octopus): not a picture to
+      // show; its words are the page's.
+      const overprinted = painted.filter((p) => !mine.has(p.i) && intersection(p.box, model) > area(p.box) / 2)
+      if (boxes[i]?.figure && overprinted.length >= BACKGROUND_WORDS) continue
+      // The PDF's own image box bounds a figure when the model's box lies inside it and it is not a page-wide
+      // background (Carmine's logo arc was cut; Mezzaluna's backdrop is 17x its logo).
+      const placed = r.extraction.images.find((im) => im.id === boxes[i]?.ref)
+      const limit = placed
+        ? { x: placed.box.x * k, y: placed.box.y * k, w: placed.box.w * k, h: placed.box.h * k }
+        : null
+      const bounded =
+        limit && intersection(model, limit) >= area(model) * IMAGE_FIT && area(limit) <= area(model) * IMAGE_MAX
+      const start = bounded && img ? fillToImage(model, limit, words, img) : model
+      const crop = cropPicture(img ? growToPicture(start, words, img) : start, words)
+      // A figure (a logo, a photo on its own) is shown large: rendered at twice the model's scale.
+      const scale = boxes[i]?.figure ? FIGURE_SCALE : 1
       const file = await renderCrop(
         pdfPath,
         r.pdfPage,
-        size,
-        [crop.x, crop.y, crop.w, crop.h],
+        { width: size.width * scale, height: size.height * scale },
+        [crop.x * scale, crop.y * scale, crop.w * scale, crop.h * scale],
         join(r.dir, `img-${String(i)}`),
       )
       sources.set(path, file.slice(docDir.length + 1))

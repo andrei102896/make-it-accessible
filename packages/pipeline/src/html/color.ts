@@ -30,6 +30,15 @@ function toOklab(c: Rgb): [number, number, number] {
     0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
   ]
 }
+// How far apart two colours look, and how far from grey one is (OKLab chroma): what tells a brand colour from ink.
+export function distanceOk(a: Rgb, b: Rgb): number {
+  const [l1, a1, b1] = toOklab(a)
+  const [l2, a2, b2] = toOklab(b)
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2)
+}
+export const chromaOk = (c: Rgb): number => Math.hypot(toOklab(c)[1], toOklab(c)[2])
+export const lightnessOk = (c: Rgb): number => toOklab(c)[0]
+
 function fromOklab([L, a, b]: readonly [number, number, number]): Rgb {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3

@@ -26,6 +26,7 @@ const extraction: Extraction = {
   images: [],
   duplicates: [],
   hidden: [],
+  vectors: [],
 }
 const structure = parsePage(
   JSON.stringify({
@@ -74,6 +75,59 @@ test('a small-caps text layer ("MEatball app") is not a printed case: the model\
   assert.match(html, /<p class="name">Meatball<\/p>/)
 })
 
+test('a small-caps name role takes the model\'s case: "plantain Chips" shows as "Plantain Chips", rendered small caps', () => {
+  const lower: Extraction = {
+    ...extraction,
+    runs: extraction.runs.map((r) => (r.id === '1:1' ? { ...r, str: 'plantain' } : r)),
+  }
+  const named = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'products', items: [{ name: { src: [[1, 1]], text: 'Plantain' }, prices: [{ src: [[2, 3]] }] }] },
+      ],
+      dropped: [],
+    }),
+  )
+  const doc = (smallCaps: boolean) =>
+    renderDocument({
+      lang: 'en',
+      title: 'Carmine',
+      pages: [{ ...page, structure: named, extraction: lower }],
+      brand: {
+        profile: {
+          body: 11,
+          roles: {
+            name: {
+              face: { key: 'bodonibt', weight: 700, italic: false },
+              size: 16,
+              color: '#000000',
+              caps: false,
+              words: 2,
+              smallCaps,
+            },
+          },
+          signatures: [],
+          headings: new Map(),
+          accent: null,
+          headingBoxes: [],
+          itemBoxes: [],
+          pricesInline: false,
+          inks: [],
+        },
+        library: [],
+        faces: [],
+        background: '#ffffff',
+        rules: [],
+        dividers: null,
+        alternate: null,
+        ornaments: [],
+      },
+    })
+  assert.match(doc(true), /<p class="name">Plantain<\/p>/)
+  assert.match(doc(false), /<p class="name">plantain<\/p>/)
+})
+
 test('a price cited twice for one dish is shown once', () => {
   const html = renderDocument({ lang: 'en', title: 'Almond', pages: [page] })
   assert.equal((html.match(/<span class="amount">26<\/span>/g) ?? []).length, 1)
@@ -85,4 +139,50 @@ test('a dish with several priced sizes wraps its prices; each price stays on one
   assert.doesNotMatch(css, /\.products\.menu \.prices \{[^}]*nowrap/)
   // The price column never squeezes the name: several add-on prices wrap inside their share of the row.
   assert.match(css, /\.products\.menu > li \{[^}]*grid-template-columns: 1fr fit-content\(60%\)/)
+})
+
+test('a price label sits where it is printed, a separator between prices stays outside them; menu labels are words', () => {
+  // "3.5 ea, 20 half dozen": the label after the amount, the comma after the pair.
+  const runs: Run[] = [
+    { id: '1:0', str: 'Oysters', box: { x: 10, y: 40, w: 40, h: 13 }, flow: 0, line: 2 },
+    { id: '1:1', str: '3.5', box: { x: 400, y: 40, w: 18, h: 13 }, flow: 0, line: 2 },
+    { id: '1:2', str: 'ea,', box: { x: 422, y: 40, w: 16, h: 13 }, flow: 0, line: 2 },
+    { id: '1:3', str: 'Half', box: { x: 450, y: 40, w: 22, h: 13 }, flow: 0, line: 2 },
+    { id: '1:4', str: 'Dozen', box: { x: 475, y: 40, w: 30, h: 13 }, flow: 0, line: 2 },
+    { id: '1:5', str: '20,', box: { x: 510, y: 40, w: 18, h: 13 }, flow: 0, line: 2 },
+  ]
+  const noah = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [
+            {
+              name: { src: [[0, 0]] },
+              prices: [
+                { src: [[1, 1]], qualifier: { src: [[2, 2]] } },
+                { src: [[5, 5]], qualifier: { src: [[3, 4]] } },
+              ],
+            },
+          ],
+        },
+      ],
+      dropped: [],
+    }),
+  )
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Noah',
+    kind: 'menu',
+    pages: [{ ...page, structure: noah, extraction: { ...extraction, runs } }],
+  })
+  assert.match(
+    html,
+    /<span class="price" data-role="current"><span class="amount">3\.5<\/span> <span class="qualifier">ea<\/span><\/span>, <span class="price" data-role="current"><span class="qualifier">Half Dozen<\/span> <span class="amount">20<\/span><\/span>,<\/span><\/p>/,
+  )
+  assert.match(
+    html,
+    /\.doc-menu \.price \.qualifier \{ display: inline; border: 0; padding: 0; color: var\(--muted\); font-weight: 400; font-size: 1rem; \}/,
+  )
 })

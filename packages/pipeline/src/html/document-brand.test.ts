@@ -21,6 +21,7 @@ const extraction: Extraction = {
   images: [],
   duplicates: [],
   hidden: [],
+  vectors: [],
 }
 const structure = parsePage(
   JSON.stringify({
@@ -44,6 +45,7 @@ const profile: Profile = {
   headingBoxes: [],
   itemBoxes: [],
   pricesInline: false,
+  inks: [],
 }
 const brand: Brand = {
   profile,

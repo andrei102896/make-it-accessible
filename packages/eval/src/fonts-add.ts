@@ -53,7 +53,8 @@ const files: FontManifest['files'] = []
 for (const [, block] of css.matchAll(/\/\* latin \*\/\s*@font-face \{([^}]*)\}/g)) {
   const url = /url\((https:[^)]+\.woff2)\)/.exec(block ?? '')?.[1]
   const style = /font-style: (normal|italic)/.exec(block ?? '')?.[1] === 'italic' ? 'italic' : 'normal'
-  const weight = /font-weight: (\d{3}(?: \d{3})?)/.exec(block ?? '')?.[1] ?? '400'
+  // A variable range may reach 1000 (Nunito Sans 200 1000).
+  const weight = /font-weight: (\d{3,4}(?: \d{3,4})?)/.exec(block ?? '')?.[1] ?? '400'
   const unicodeRange = /unicode-range: ([^;]+);/.exec(block ?? '')?.[1] ?? ''
   if (!url) continue
   const file = `${key}-${style}-${weight.replace(' ', '-')}.woff2`

@@ -4,9 +4,14 @@ import { joinRuns } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
 
+// Every run a text cites (none for text read from the image), hidden ones included: geometry wants every box.
+export const citedRuns = (e: Extraction, t: TextValue): Run[] =>
+  'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
+
 // The words a text cites, without those the page does not show; a line-end hyphen before a capital joins
 // ("MARILLEN-" + "PALATSCHINKEN"), before a small letter it stays a word break the model may clean.
-export function visibleText(t: TextValue, e: Extraction): string {
+// `modelCase`: the role is a small-caps face, whose layer case is never the printed one (profile.ts smallCaps).
+export function visibleText(t: TextValue, e: Extraction, modelCase = false): string {
   if ('seen' in t) return t.seen
   const hidden = new Set(e.hidden)
   const cited = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
@@ -24,7 +29,8 @@ export function visibleText(t: TextValue, e: Extraction): string {
     .replace(/(\p{L})([£$€])/gu, '$1 $2')
   // The model's text stands in for a broken text layer ("Truf e", or small-caps glyphs read as "MEatball app"),
   // never for a printed case the layer reports whole ("RAW BAR").
-  const recased = t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed)
+  const recased =
+    t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed) && !modelCase
   return t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
 }
 
@@ -65,10 +71,12 @@ function citations(item: Item): number[] {
 }
 
 // Every picture of a page with the runs its own product cites (none for a figure).
-export function imageBoxes(page: PageStructure): { path: string; box: readonly number[]; own: number[] }[] {
-  const out: { path: string; box: readonly number[]; own: number[] }[] = []
+export type PictureBox = { path: string; box: readonly number[]; own: number[]; ref: string | null; figure: boolean }
+export function imageBoxes(page: PageStructure): PictureBox[] {
+  const out: PictureBox[] = []
   const block = (path: string, b: Block): void => {
-    if (b.kind === 'figure') out.push({ path: `${path}.image`, box: b.image.box, own: [] })
+    if (b.kind === 'figure')
+      out.push({ path: `${path}.image`, box: b.image.box, own: [], ref: b.image.ref ?? null, figure: true })
     if (b.kind === 'products')
       b.items.forEach((item, i) => {
         product(`${path}.items[${i}]`, item)
@@ -78,7 +86,14 @@ export function imageBoxes(page: PageStructure): { path: string; box: readonly n
     item.details.forEach((d, i) => {
       block(`${path}.details[${i}]`, d)
     })
-    if (item.image) out.push({ path: `${path}.image`, box: item.image.box, own: citations(item) })
+    if (item.image)
+      out.push({
+        path: `${path}.image`,
+        box: item.image.box,
+        own: citations(item),
+        ref: item.image.ref ?? null,
+        figure: false,
+      })
   }
   page.blocks.forEach((b, i) => {
     block(`blocks[${i}]`, b)
@@ -134,4 +149,59 @@ export function headedLists(blocks: readonly Block[], note: number, raw: (t: Tex
     return lists.length ? lists : null
   }
   return null
+}
+
+export type Segment = { text: string; color: string | null }
+// The shown text's characters matched to the cited runs' characters (whitespace and case aside), each taking its
+// run's colour. When the letters differ (the model's text stands in for a broken layer), one segment, coloured only
+// when every run agrees.
+export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
+  if ('seen' in t) return [{ text: shown, color: null }]
+  const hidden = new Set(e.hidden)
+  const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
+  const chars = runs.flatMap((r) =>
+    Array.from(r.str.replace(/\s+/g, '')).map((ch) => ({ ch: ch.toLowerCase(), color: r.color ?? null })),
+  )
+  const letters = Array.from(shown)
+  const colors: (string | null)[] = []
+  let at = 0
+  for (const ch of letters) {
+    if (/\s/.test(ch)) {
+      colors.push(colors.at(-1) ?? null)
+      continue
+    }
+    const c = chars[at++]
+    if (c?.ch !== ch.toLowerCase()) {
+      const all = new Set(runs.map((r) => r.color ?? null))
+      return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null }]
+    }
+    colors.push(c.color)
+  }
+  const out: Segment[] = []
+  letters.forEach((ch, i) => {
+    const color = colors[i] ?? null
+    const last = out.at(-1)
+    if (last && last.color === color) last.text += ch
+    else out.push({ text: ch, color })
+  })
+  return out
+}
+
+// The segments as HTML: runs printed in a brand ink wrapped in its class, the rest joined so `each` (escape or
+// link) sees whole words.
+export function inkedHtml(
+  segments: readonly Segment[],
+  inks: ReadonlySet<string>,
+  each: (s: string) => string,
+): string {
+  const groups: Segment[] = []
+  for (const s of segments) {
+    const color = s.color !== null && inks.has(s.color) ? s.color : null
+    const last = groups.at(-1)
+    if (last && last.color === color) last.text += s.text
+    else groups.push({ text: s.text, color })
+  }
+  return groups
+    .map((g) => (g.color ? `<span class="ink-${g.color.slice(1)}">${each(g.text)}</span>` : each(g.text)))
+    .join('')
 }

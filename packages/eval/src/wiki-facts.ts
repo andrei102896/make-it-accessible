@@ -1,5 +1,6 @@
 import type { Profile } from '@make-it-accessible/pipeline/html/profile'
 import { priceInline, unionOf } from '@make-it-accessible/pipeline/html/profile'
+import { shapesOf } from '@make-it-accessible/pipeline/html/shapes'
 import { familyFor, type FontManifest } from '@make-it-accessible/pipeline/html/webfonts'
 import type { Block, Item, PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Box, Extraction, Run } from '@make-it-accessible/pipeline/pdf/types'
@@ -43,6 +44,18 @@ export function pricePlacement(pages: readonly Page[]): { inline: number; right:
       if (!name || !price) continue
       if (priceInline(name, price)) out.inline++
       else out.right++
+    }
+  return out
+}
+
+// How the menu lists are printed: one dish per line (`wide`), the description running on from the name (`runOn`).
+export function listShapes(pages: readonly Page[]): { lists: number; wide: number; runOn: number } {
+  const out = { lists: 0, wide: 0, runOn: 0 }
+  for (const p of pages)
+    for (const s of shapesOf(p).values()) {
+      out.lists++
+      if (s.wide) out.wide++
+      if (s.runOn) out.runOn++
     }
   return out
 }

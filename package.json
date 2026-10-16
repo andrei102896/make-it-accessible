@@ -28,7 +28,10 @@
     "preview:expire": "node packages/eval/src/preview-expire.ts",
     "preview:publish": "node packages/eval/src/preview-publish.ts",
     "wiki": "node packages/eval/src/wiki.ts",
-    "review:page": "node packages/eval/src/review-page.ts"
+    "review:page": "node packages/eval/src/review-page.ts",
+    "rerender": "node packages/eval/src/rerender.ts",
+    "check:page": "node packages/eval/src/check-page.ts",
+    "preview:refresh": "node packages/eval/src/preview-refresh.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

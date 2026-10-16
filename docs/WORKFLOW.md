@@ -30,7 +30,7 @@ Why: the first US batch (20 menus) took ~15 minutes of compute and ~$2.90 of mod
 - `pnpm batch <targets.csv> [--out batch/<date>]`: downloads each PDF into its own empty folder, gates it (`pdfinfo`: ≤10 pages, text layer with words, not copy-protected), runs `pnpm adhoc` with 4 in parallel, then writes `batch/<date>/report.html`:
   - per menu: PDF render (page 1) beside our page at 1280 and 390, findings (errors, review, design details not reproduced), axe/forced/1.4.12/overflow/keyboard results, cost, the researched hook line, an approve/reject checkbox that writes `decisions.json` (local file, no server);
   - a summary row: converted, gated out and why, cost, total findings.
-- Promote the scratch scripts to commands used by `batch` and on their own: `pnpm rebuild <run> <pdf>`, `pnpm recount <run>`, `pnpm shots <run>`, `pnpm check:page <html>` (axe at 1280/390/320, forced colours, 1.4.12, overflow at 320, keyboard).
+- Promote the scratch scripts to commands used by `batch` and on their own: `pnpm rerender <slug>|--all` (done 2026-10-16; `rebuild` is pnpm's own command: renders a saved run again into out/rebuilt, from the local source list), `pnpm check:page <html> [--shots]` (done: axe at 1280/390/320, forced colours, 1.4.12, overflow), `pnpm preview:refresh [--copy <dir>]` (done: the listed previews take their rebuilt pages); still scratch: recount, keyboard.
 - Replaces: the zz-* scripts, manual screenshot folders, me reading findings out of logs.
 
 ### 3. Outreach as commands (0.5 day) — drafts, never sends

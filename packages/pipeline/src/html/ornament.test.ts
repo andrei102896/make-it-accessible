@@ -93,6 +93,19 @@ test('a solid band is a panel, and a large sparse shape is rejected at the pixel
   assert.equal(ornamentBelow(page(sparse), 1, { ...heading, h: 150 }, 600, [], WHITE), null)
 })
 
+test('a line of letters under a heading (image text) is no ornament; a dotted rule with arrow heads is', () => {
+  // Five letter-like blobs 7 px wide and 9 px tall, 3 px apart, right under the heading.
+  const letters = (x: number, y: number): boolean => y >= 76 && y <= 84 && x >= 250 && x < 300 && (x - 250) % 10 < 7
+  assert.equal(ornamentBelow(page(letters), 1, heading, 600, [], WHITE), null)
+  // Dots 2 px square a pixel apart from x 200 to 400, an arrow head of 5 rows at each end.
+  const dotted = (x: number, y: number): boolean =>
+    (y >= 80 && y <= 81 && x >= 200 && x <= 400 && x % 3 < 2) ||
+    (Math.abs(y - 80) <= 2 && (x - 196 === Math.abs(y - 80) || 404 - x === Math.abs(y - 80)))
+  const o = ornamentBelow(page(dotted), 1, heading, 600, [], WHITE)
+  assert.ok(o)
+  assert.ok(o.box.w >= 200)
+})
+
 test('an ornament on a dark page is read against that page', () => {
   const navy: Rgb = [40, 40, 72]
   const o = ornamentBelow(page(flourish, navy, [248, 248, 248]), 1, heading, 600, [], navy)

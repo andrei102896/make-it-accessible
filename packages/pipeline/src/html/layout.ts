@@ -1,8 +1,11 @@
 import type { Block, PageStructure, TextValue } from '../model/schema.ts'
 import { fitScale } from '../pdf/raster.ts'
-import type { Box, Extraction, Run } from '../pdf/types.ts'
+import type { Box, Extraction } from '../pdf/types.ts'
 import { unionOf } from './profile.ts'
-import { visibleText } from './source.ts'
+import { alignmentsOf, type Align } from './align.ts'
+import { boxesOf, NO_BOXES, wrapBoxes, type Boxes } from './boxes.ts'
+import { type ListShape, median, shapesOf } from './shapes.ts'
+import { citedRuns, visibleText } from './source.ts'
 
 // A page's segments: the header (the name as text or logo, tagline, address, printed at the top of the first page
 // before the first section) and the tail (small print at the foot of a page). Everything else is content.
@@ -18,7 +21,12 @@ export type Segments = {
 // one narrow column beside sections whose items flow across the rest of the page (Almond's raw bar beside the
 // appetizers).
 export type Band = { columns: number[][]; side?: boolean }
-export type Layout = Segments & { bands: Band[] }
+export type Layout = Segments & {
+  bands: Band[]
+  shapes: Map<number, ListShape>
+  boxes: Boxes
+  align: Map<number, Align>
+}
 export const NO_LAYOUT: Layout = {
   header: new Set(),
   tail: new Set(),
@@ -26,6 +34,9 @@ export const NO_LAYOUT: Layout = {
   centered: false,
   logoShare: null,
   bands: [],
+  shapes: new Map(),
+  boxes: NO_BOXES,
+  align: new Map(),
 }
 
 // The header lies within the top share of the page; a tail paragraph starts below the bottom share or is set
@@ -43,9 +54,7 @@ const OVERLAP = 0.03
 
 type Page = { structure: PageStructure; extraction: Extraction }
 const same = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
-const cited = (e: Extraction, t: TextValue): Run[] =>
-  'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
-const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? 0
+const cited = citedRuns
 
 const textOf = (b: Block): TextValue | null => (b.kind === 'heading' || b.kind === 'paragraph' ? b.text : null)
 const isSection = (b: Block | undefined, next: Block | undefined): boolean =>
@@ -88,14 +97,31 @@ export function segmentsOf(page: Page, first: boolean, body: number, title: stri
       const box = boxOf(b, e)
       const seen = t !== null && 'seen' in t && names
       if (!seen && (!box || box.y / e.height > TOP)) break
-      // A short line is a tagline only as a paragraph: a heading that neither names the place nor towers over
-      // the body opens the first section (Carmine's "DEVILED CRABS" box under the logo).
-      const tagline = b.kind === 'paragraph' && words.split(/\s+/).filter(Boolean).length <= TAGLINE_WORDS
-      if (!(b.kind === 'figure' || names || big || tagline)) break
+      // A short paragraph is a tagline; a heading that opens no list is a header line too ("TO GO DINNER" beside
+      // Pastabilities' logo; a heading over a list opened the first section above). Once the header holds the name
+      // (title or logo), a big heading is a section (Moosewood's 32 pt script "shared").
+      const short = words.split(/\s+/).filter(Boolean).length <= TAGLINE_WORDS
+      const namedAlready = titleAt !== null || [...header].some((h) => blocks[h]?.kind === 'figure')
+      // A heading owns the lists up to the next heading: with one, it is a section (Carmine's "DEVILED CRABS").
+      const owns = blocks.slice(i + 1).findIndex((x) => x.kind === 'heading')
+      const ownsList = blocks
+        .slice(i + 1, owns === -1 ? undefined : i + 1 + owns)
+        .some((x) => x.kind === 'products' || x.kind === 'list' || x.kind === 'table')
+      const line = (b.kind === 'paragraph' || (b.kind === 'heading' && !ownsList)) && short && !(big && namedAlready)
+      if (!(b.kind === 'figure' || names || (big && !(b.kind === 'heading' && namedAlready)) || line)) break
       header.add(i)
       if (b.kind === 'heading' && (names || big) && titleAt === null) titleAt = i
     }
   }
+  // Lines alone make no header: without a logo or the name among them, they are the page's first content.
+  const anchored =
+    titleAt !== null ||
+    [...header].some((h) => {
+      const b = blocks[h]
+      const t = b ? textOf(b) : null
+      return b?.kind === 'figure' || (t !== null && 'seen' in t)
+    })
+  if (!anchored) header.clear()
   const tail = new Set<number>()
   for (let i = blocks.length - 1; i >= 0 && !header.has(i); i--) {
     const b = blocks[i]
@@ -140,16 +166,18 @@ function sectionsOf(page: Page, header: Set<number>, tail: Set<number>): Section
     if (b.kind === 'heading') {
       const box = boxOf(b, e)
       if (box) section.range = widen(section.range, span(box))
-    } else if (b.kind === 'products' || b.kind === 'table') {
+    } else if (b.kind === 'products' || b.kind === 'table' || b.kind === 'list') {
       const runs =
         b.kind === 'products'
           ? b.items.flatMap((it) => [...cited(e, it.name), ...it.prices.flatMap((pr) => cited(e, { src: pr.src }))])
-          : b.rows
-              .flat()
-              .flatMap((c) => [
-                ...(c.text ? cited(e, c.text) : []),
-                ...(c.prices ?? []).flatMap((pr) => cited(e, { src: pr.src })),
-              ])
+          : b.kind === 'list'
+            ? b.items.flatMap((t) => cited(e, t))
+            : b.rows
+                .flat()
+                .flatMap((c) => [
+                  ...(c.text ? cited(e, c.text) : []),
+                  ...(c.prices ?? []).flatMap((pr) => cited(e, { src: pr.src })),
+                ])
       const box = unionOf(runs)
       if (box) {
         section.flow = widen(section.flow, span(box))
@@ -189,9 +217,15 @@ function clustersOf(run: readonly Section[]): Cluster[] {
   return columns
 }
 
-// Consecutive narrow sections form a band of columns; a section whose items flow across the page is a row of its
-// own, unless it starts to the right of a single narrow column, which it then stands beside (a side band).
-export function bandsOf(page: Page, header: Set<number>, tail: Set<number>): Band[] {
+// Consecutive narrow sections form a band of columns; a section whose items flow across the page, or whose list
+// prints one dish per line (`shapes`), is a row of its own, unless it starts to the right of a single narrow column,
+// which it then stands beside (a side band).
+export function bandsOf(
+  page: Page,
+  header: Set<number>,
+  tail: Set<number>,
+  shapes: ReadonlyMap<number, ListShape> = new Map(),
+): Band[] {
   const bands: Band[] = []
   let run: Section[] = []
   let side: { x1: number; left: Section[]; right: Section[] } | null = null
@@ -205,7 +239,8 @@ export function bandsOf(page: Page, header: Set<number>, tail: Set<number>): Ban
     run = []
   }
   for (const s of sectionsOf(page, header, tail)) {
-    const wide = !s.range || !s.flow || s.flow[1] - s.flow[0] > FULL_WIDTH
+    const wide =
+      !s.range || !s.flow || s.flow[1] - s.flow[0] > FULL_WIDTH || s.blocks.some((i) => shapes.get(i)?.wide === true)
     const flowsRightOf = (x1: number): boolean => s.flow !== null && s.flow[0] >= x1 - OVERLAP
     if (!wide) {
       if (side && s.range && s.range[0] < side.x1 - OVERLAP) side.left.push(s)
@@ -234,11 +269,15 @@ export function bandsOf(page: Page, header: Set<number>, tail: Set<number>): Ban
 
 export function layoutOf(page: Page, first: boolean, body: number, title: string): Layout {
   const segments = segmentsOf(page, first, body, title)
-  return { ...segments, bands: bandsOf(page, segments.header, segments.tail) }
+  const shapes = shapesOf(page)
+  const bands = bandsOf(page, segments.header, segments.tail, shapes)
+  const boxes = boxesOf(page, new Set([...segments.header, ...segments.tail]))
+  return { ...segments, bands, shapes, boxes, align: alignmentsOf(page) }
 }
 
 // The page body from its rendered blocks: sections printed side by side share a grid, the tail is small print.
-export function assemble(parts: readonly { at: number; html: string }[], layout: Layout): string[] {
+export function assemble(given: readonly { at: number; html: string }[], layout: Layout): string[] {
+  const { parts, bandClass } = wrapBoxes(given, layout.bands, layout.boxes.boxes)
   const inBand = new Map<number, Band>()
   for (const band of layout.bands) for (const column of band.columns) for (const at of column) inBand.set(at, band)
   const htmlOf = new Map(parts.map((p) => [p.at, p.html]))
@@ -253,8 +292,9 @@ export function assemble(parts: readonly { at: number; html: string }[], layout:
       const columns = band.columns.map(
         (column) => `<div class="col">\n${column.flatMap((at) => htmlOf.get(at) ?? []).join('\n')}\n</div>`,
       )
+      const boxed = bandClass.get(layout.bands.indexOf(band))
       out.push(
-        `<div class="cols cols-${String(band.columns.length)}${band.side ? ' side' : ''}">\n${columns.join('\n')}\n</div>`,
+        `<div class="cols cols-${String(band.columns.length)}${band.side ? ' side' : ''}${boxed ? ` ${boxed}` : ''}">\n${columns.join('\n')}\n</div>`,
       )
     }
   }

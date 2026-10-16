@@ -1,11 +1,16 @@
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
+import { joinRuns, touching } from '../pdf/runs.ts'
 import type { Box, Extraction, Run } from '../pdf/types.ts'
+import { chromaOk, distanceOk, fromHex, lightnessOk, type Rgb } from './color.ts'
+import { caseReliable } from './source.ts'
 
 // The printed style measured from the words each element cites: a role takes its words' dominant face, size and
 // colour; a heading takes its own, grouped with headings printed alike, whatever level the model gave it.
 export type Face = { key: string; weight: number; italic: boolean }
-export type RoleStyle = { face: Face; size: number; color: string; caps: boolean; words: number }
+// `smallCaps`: the role is set in a small-caps face (see smallCapsIn); synthesised on the page.
+export type RoleStyle = { face: Face; size: number; color: string; caps: boolean; words: number; smallCaps?: boolean }
 export type Role = 'name' | 'price' | 'desc' | 'text' | 'th'
+export const ROLES: readonly Role[] = ['name', 'price', 'desc', 'text', 'th']
 export type Profile = {
   body: number
   roles: Partial<Record<Role, RoleStyle>>
@@ -18,6 +23,11 @@ export type Profile = {
   itemBoxes: { page: number; boxes: Box[] }[]
   // Whether the document prints a dish's price right after its name (Moosewood) rather than at the column's edge.
   pricesInline: boolean
+  // Brand colours printed inside a role's words (Almond's red farm names), most characters first.
+  inks: string[]
+  // Per page (index), a role's style where the page prints it differently from the document (Bernini's bold
+  // dish names on page 1, light wine names on page 2).
+  pageRoles?: Partial<Record<Role, RoleStyle>>[]
 }
 
 // A price starting within this many price heights of the name's end, on the name's line, is printed inline.
@@ -32,6 +42,17 @@ const MAX_SIGNATURES = 4
 const CAPS = 0.9
 // A colour this close to grey (spread of its channels) is ink, not a brand colour.
 const NEUTRAL_SPREAD = 40
+// Two colours look different from this OKLab distance; below INK_CHROMA a colour is grey or ink, and a dark one
+// prints black (Carmine's #05262d), so it takes the page's text colour rather than a tint.
+export const INK_DISTINCT = 0.15
+export const INK_CHROMA = 0.06
+const INK_LIGHT = 0.4
+const MIN_INK_CHARS = 3
+// A role is a small-caps face when this share of its items (at least SMALL_CAPS_MIN of them) show one of the two
+// patterns a small-caps font leaves in the text layer; measured: Almond names 30 of 48, Carmine's 48 of 61, else ≤ 2.
+const SMALL_CAPS_SHARE = 0.25
+const SMALL_CAPS_MIN = 8
+export const inkLike = (c: Rgb): boolean => chromaOk(c) < INK_CHROMA && lightnessOk(c) < INK_LIGHT
 
 const cites = (t: TextValue | undefined, e: Extraction, hidden: Set<string>): Run[] =>
   t && 'src' in t
@@ -85,15 +106,58 @@ const neutral = (c: string): boolean => {
   return Math.max(r ?? 0, g ?? 0, b ?? 0) - Math.min(r ?? 0, g ?? 0, b ?? 0) < NEUTRAL_SPREAD
 }
 
+// A second colour inside a role's words is a brand accent when it looks different from the role's own colour
+// and one of the two is not ink; a few characters of it suffice (a farm name).
+function inksOf(groups: readonly { color: string; runs: readonly Run[] }[]): string[] {
+  const chars = new Map<string, number>()
+  for (const g of groups) {
+    const base = fromHex(g.color)
+    for (const r of g.runs) {
+      if (!r.color) continue
+      const c = fromHex(r.color)
+      if (distanceOk(c, base) < INK_DISTINCT || (chromaOk(c) < INK_CHROMA && chromaOk(base) < INK_CHROMA)) continue
+      chars.set(r.color, (chars.get(r.color) ?? 0) + r.str.length)
+    }
+  }
+  return [...chars]
+    .filter(([, n]) => n >= MIN_INK_CHARS)
+    .sort((a, b) => b[1] - a[1])
+    .map(([c]) => c)
+}
+
+// Small caps in a text layer: SC glyphs mapped to the wrong case ("MEatball app"), or an initial capital in a larger
+// size touching the rest of the word in smaller capitals ("C" 12pt + "URRIED" 9pt).
+const smallCapsPattern = (runs: readonly Run[]): boolean =>
+  !caseReliable(joinRuns(runs)) ||
+  runs.some((r, i) => {
+    const next = runs[i + 1]
+    return (
+      next !== undefined &&
+      /^\p{Lu}$/u.test(r.str) &&
+      /^\p{Lu}+$/u.test(next.str) &&
+      (next.font?.size ?? 0) < (r.font?.size ?? 0) &&
+      touching(r, next)
+    )
+  })
+const smallCapsIn = (items: readonly (readonly Run[])[]): boolean =>
+  items.length >= SMALL_CAPS_MIN && items.filter(smallCapsPattern).length >= items.length * SMALL_CAPS_SHARE
+
 export function profileOf(pages: readonly Page[]): Profile | null {
   const byRole = new Map<Role, Run[]>()
+  const itemsOf = new Map<Role, Run[][]>()
+  const byPage: Map<Role, Run[]>[] = []
   const headings: { id: string; style: RoleStyle; runs: Run[]; page: number }[] = []
   const itemBoxes: Profile['itemBoxes'] = []
   const placement = { inline: 0, right: 0 }
   pages.forEach(({ structure, extraction: e }, index) => {
     const hidden = new Set(e.hidden)
+    const onPage = byPage[index] ?? new Map<Role, Run[]>()
+    byPage[index] = onPage
     const add = (role: Role, t: TextValue | undefined): void => {
-      byRole.set(role, [...(byRole.get(role) ?? []), ...cites(t, e, hidden)])
+      const runs = cites(t, e, hidden)
+      byRole.set(role, [...(byRole.get(role) ?? []), ...runs])
+      onPage.set(role, [...(onPage.get(role) ?? []), ...runs])
+      if (runs.length) itemsOf.set(role, [...(itemsOf.get(role) ?? []), runs])
     }
     const block = (path: string, b: Block, inItem: boolean): void => {
       if (b.kind === 'heading') {
@@ -149,7 +213,7 @@ export function profileOf(pages: readonly Page[]): Profile | null {
   const roles: Profile['roles'] = {}
   for (const [role, runs] of byRole) {
     const s = styleOf(runs)
-    if (s) roles[role] = s
+    if (s) roles[role] = { ...s, smallCaps: smallCapsIn(itemsOf.get(role) ?? []) }
   }
   const bodyRuns = [...(byRole.get('desc') ?? []), ...(byRole.get('text') ?? [])]
   const body = styleOf(bodyRuns.length ? bodyRuns : pages.flatMap((p) => p.extraction.runs))?.size
@@ -188,5 +252,17 @@ export function profileOf(pages: readonly Page[]): Profile | null {
     return box && sig !== undefined ? [{ page: h.page, sig, box, key: h.id }] : []
   })
   const pricesInline = placement.inline > placement.right
-  return { body, roles, signatures, headings: ids, accent, headingBoxes, itemBoxes, pricesInline }
+  const inks = inksOf([
+    ...[...byRole].flatMap(([role, runs]) => (roles[role] ? [{ color: roles[role].color, runs }] : [])),
+    ...headings.map((h) => ({ color: signatures[ids.get(h.id) ?? -1]?.color ?? h.style.color, runs: h.runs })),
+  ])
+  const pageRoles = pages.map((_, i) => {
+    const out: Partial<Record<Role, RoleStyle>> = {}
+    for (const [role, runs] of byPage[i] ?? []) {
+      const s = styleOf(runs)
+      if (s) out[role] = s
+    }
+    return out
+  })
+  return { body, roles, signatures, headings: ids, accent, headingBoxes, itemBoxes, pricesInline, inks, pageRoles }
 }

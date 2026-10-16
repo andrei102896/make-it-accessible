@@ -69,6 +69,51 @@ test('a heading that names the place, or one twice the body, is the title; later
   assert.equal(segmentsOf({ structure: named, extraction }, true, 8, 'Bistro').title, 0)
   assert.equal(segmentsOf({ structure: named, extraction }, true, 10, 'Bistro').title, null)
   assert.equal(segmentsOf({ structure, extraction }, false, 10, "Carmine's").header.size, 0)
+  // Once the header holds the name, a big heading under it is the first section (Moosewood's script "shared").
+  const bigUnderName = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'heading', level: 1, text: { src: [[2, 2]] } },
+        { kind: 'heading', level: 2, text: { src: [[0, 1]] } },
+        ...structure.blocks.slice(3),
+      ],
+      dropped: [],
+    }),
+  )
+  const big = {
+    ...extraction,
+    runs: extraction.runs.map((r, i) =>
+      i <= 1 ? { ...r, font: { key: 'oswald', weight: 400, italic: false, size: 32 } } : r,
+    ),
+  }
+  assert.deepEqual(
+    [...segmentsOf({ structure: bigUnderName, extraction: big }, true, 10, 'Appetizers Bistro').header],
+    [0],
+  )
+  // A heading that opens no list is a header line beside the logo ("TO GO DINNER", hours, phone); lines alone,
+  // without a logo or the name, make no header.
+  const infoFirst = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'heading', level: 2, text: { src: [[0, 1]] } },
+        { kind: 'paragraph', text: { src: [[0, 1]] } },
+        structure.blocks[0],
+        ...structure.blocks.slice(2),
+      ],
+      dropped: [],
+    }),
+  )
+  assert.deepEqual([...segmentsOf({ structure: infoFirst, extraction }, true, 10, "Carmine's").header], [0, 1, 2])
+  const linesOnly = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [{ kind: 'paragraph', text: { src: [[0, 1]] } }, ...structure.blocks.slice(2)],
+      dropped: [],
+    }),
+  )
+  assert.equal(segmentsOf({ structure: linesOnly, extraction }, true, 10, "Carmine's").header.size, 0)
   // A plain section heading right under the logo is content, not a tagline.
   const boxed = parsePage(
     JSON.stringify({
@@ -136,6 +181,9 @@ test('narrow sections side by side form columns in print order; a full-width sec
     centered: false,
     logoShare: null,
     bands,
+    shapes: new Map(),
+    boxes: { pageFrame: null, boxes: [] },
+    align: new Map(),
   }
   assert.deepEqual(assemble(parts, layout), [
     '<div class="cols cols-2">\n<div class="col">\n<b0>\n<b1>\n<b2>\n<b3>\n</div>\n<div class="col">\n<b4>\n<b5>\n</div>\n</div>',
@@ -176,4 +224,8 @@ test('a narrow column beside lists that flow across the rest of the page is a si
       side: true,
     },
   ])
+  // A list printed one dish per line is a row whatever its names and prices span (Moosewood's salads under a
+  // narrow dressings note): no band forms around it.
+  const wide = new Map([[1, { wide: true, runOn: true }]])
+  assert.deepEqual(bandsOf({ structure: s, extraction: e }, new Set(), new Set(), wide), [])
 })

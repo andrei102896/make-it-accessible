@@ -97,6 +97,28 @@ export function cropPicture(box: Box, words: readonly CropWord[]): Box {
 
 // A model's box can stop inside its picture (a badge's top cut off): top and bottom grow while the next rows show
 // picture content, by at most GROW; a row of another offer, or all content (a full-width photo or band), stops it.
+// A figure's crop fills the image the PDF placed it in (`limit`): the model's box often stops short of a logo's arc
+// or a photo's edge. The ink inside the image, foreign words aside, sets the crop; blank margins are not taken.
+export function fillToImage(box: Box, limit: Box, words: readonly CropWord[], img: Pixels): Box {
+  const x0 = Math.max(0, Math.floor(limit.x))
+  const y0 = Math.max(0, Math.floor(limit.y))
+  const x1 = Math.min(img.width, Math.ceil(limit.x + limit.w))
+  const y1 = Math.min(img.height, Math.ceil(limit.y + limit.h))
+  const ring: Rgb[] = []
+  for (let x = x0; x < x1; x++) ring.push(img.at(x, y0), img.at(x, y1 - 1))
+  for (let y = y0; y < y1; y++) ring.push(img.at(x0, y), img.at(x1 - 1, y))
+  const ground = dominant(ring)
+  const foreign = words.filter((w) => !w.own && intersection(w.box, limit) > 0).map((w) => w.box)
+  let ink: Box | null = null
+  for (let y = y0; y < y1; y++)
+    for (let x = x0; x < x1; x++) {
+      if (foreign.some((f) => x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h)) continue
+      if (differs(img.at(x, y), ground, CONTENT_DIFF))
+        ink = ink ? union(ink, { x, y, w: 1, h: 1 }) : { x, y, w: 1, h: 1 }
+    }
+  return ink ? union(box, ink) : box
+}
+
 const GROW = 0.15
 const CONTENT_DIFF = 64
 const MIN_LINE_CONTENT = 0.02

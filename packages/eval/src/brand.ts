@@ -31,7 +31,7 @@ const LINES_DPI = 100
 // An ornament's mask: 3 pixels per point stays sharp on a 2x phone screen at the printed size.
 const ORNAMENT_DPI = 216
 // Bumped when lines.json gains a measurement, so older files are measured again.
-const LINES_VERSION = 2
+const LINES_VERSION = 3
 // Dishes are stacked in one column when the next starts below and within this share of the page width.
 const SAME_COLUMN = 0.1
 

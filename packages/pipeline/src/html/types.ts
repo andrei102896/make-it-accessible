@@ -4,6 +4,7 @@ import type { PageStructure } from '../model/schema.ts'
 import type { Brand } from './brand.ts'
 import type { Legend } from './inline.ts'
 import type { Layout } from './layout.ts'
+import type { Role } from './profile.ts'
 import type { TocEntry } from './nav.ts'
 import type { Strings } from './strings.ts'
 import type { Theme } from './theme.ts'
@@ -37,6 +38,12 @@ export type Context = {
   running: Set<string>
   // Per heading (profile key), the classes of its printed style (brand.ts headingClasses).
   classes: ReadonlyMap<string, string>
-  // The page's header, tail and column bands (layout.ts); empty without a brand.
+  // The page's header, tail, column bands and list shapes (layout.ts); empty without a brand.
   layout: Layout
+  kind: DocumentType | null
+  // The brand's inline colours (profile.ts inks) and whether its prices follow the dish names; none without a brand.
+  inks: ReadonlySet<string>
+  inlinePrices: boolean
+  // Roles set in a small-caps face: their text takes the model's case (source.ts visibleText).
+  smallCaps: ReadonlySet<Role>
 }

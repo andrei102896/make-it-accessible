@@ -1,6 +1,7 @@
 import { classOf } from '../pdf/face.ts'
-import { contrast, fromHex, hex, readableOn, type Rgb } from './color.ts'
-import type { Profile, Role, RoleStyle } from './profile.ts'
+import { contrast, distanceOk, fromHex, hex, readableOn, type Rgb } from './color.ts'
+import { INK_DISTINCT, inkLike, ROLES, type Profile, type Role, type RoleStyle } from './profile.ts'
+import { mastheadCss, SEEN_TITLE_RATIO } from './masthead.ts'
 import { STACKS } from './style.ts'
 import { familyFor, fontFaces, type EmbeddedFace, type FontManifest } from './webfonts.ts'
 
@@ -22,6 +23,8 @@ export type Brand = {
   masthead?: { key: string | null; logoShare: number | null }
   // The most columns any page prints side by side (layout.ts), set by the renderer.
   columns?: number
+  // The pages' key numbers in order (section[data-page]), set by the renderer: per-page role overrides target them.
+  pages?: number[]
 }
 export type HeadingRule = { width: number; full: boolean; centered: boolean; color: string }
 // A drawing printed under headings (ornament.ts): an alpha mask (base64 PNG) painted in its printed colour, sized in
@@ -62,11 +65,10 @@ const MIN_RULE = '2.5rem'
 const SYSTEM_TEXT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
-const ROLES: readonly Role[] = ['name', 'price', 'desc', 'text', 'th']
 // The base stylesheet's own selectors, so a role wins by order, not by specificity. Card prices keep their size.
 const ROLE_SELECTORS: Record<Role, string> = {
   name: '.products.menu .name, .products.cards .name',
-  price: '.products.menu .prices, td.num',
+  price: '.products.menu .prices, .products.menu .price[data-role="current"], td.num',
   desc: '.products.menu > li > :not(.name, .prices), .products.cards .more > p',
   text: 'section p, section li',
   th: 'th',
@@ -87,14 +89,20 @@ export type Part = {
   manifest: FontManifest | undefined
 }
 // `apart` is a signature that keeps its own scale (the masthead) and so never sets the top of the compression.
+const usableFor = (s: RoleStyle, library: readonly FontManifest[]): FontManifest | undefined => {
+  const m = familyFor(s.face.key, library)
+  return m?.category === 'text' ? m : undefined
+}
+
 export function brandPlan(
   p: Profile,
   library: readonly FontManifest[],
   apart?: number,
 ): { roles: Map<Role, Part>; headings: Part[] } {
-  const usable = (s: RoleStyle, heading: boolean, size: number): FontManifest | undefined => {
+  // A display face (script, hand-print, stencil) only where it is large and short, or on dish names set in it.
+  const usable = (s: RoleStyle, heading: boolean, size: number, role?: Role): FontManifest | undefined => {
     const m = familyFor(s.face.key, library)
-    const display = heading && size >= DISPLAY_MIN_REM && s.words <= DISPLAY_MAX_WORDS
+    const display = (heading && size >= DISPLAY_MIN_REM && s.words <= DISPLAY_MAX_WORDS) || role === 'name'
     return m && (m.category === 'text' || display) ? m : undefined
   }
   const roles = new Map<Role, Part>()
@@ -105,7 +113,13 @@ export function brandPlan(
     // Details never outgrow the product's name (a leaflet prints them large, the name larger still).
     const name = roles.get('name')
     if (role === 'desc' && name) size = Math.min(size, name.size)
-    roles.set(role, { style: s, size, heading: false, running: RUNNING.has(role), manifest: usable(s, false, size) })
+    roles.set(role, {
+      style: s,
+      size,
+      heading: false,
+      running: RUNNING.has(role),
+      manifest: usable(s, false, size, role),
+    })
   }
   const floor = Math.max(MIN_HEADING, (roles.get('name')?.size ?? 0) * OVER_NAME)
   const headings: Part[] = []
@@ -132,6 +146,8 @@ function family(b: Brand, part: Part): string {
 // A printed colour made readable on the page; one that reads only after a large move gives way to the document's
 // other brand colour when that already reads (BILLA's yellow headline: its green, not an invented mustard).
 function colour(c: string, bg: Rgb, alternate: string | null = null): string | null {
+  // On a light page a dark ink with a tinge of colour prints black: it takes the text colour, not a tint.
+  if (inkLike(fromHex(c)) && contrast(bg, BLACK) > contrast(bg, WHITE)) return null
   const alt = alternate && contrast(fromHex(alternate), bg) >= AA ? alternate : null
   if (alt && contrast(fromHex(c), bg) < FAR) return alt
   const ok = readableOn(fromHex(c), bg, AA)
@@ -146,9 +162,10 @@ function declarations(b: Brand, part: Part, bg: Rgb, withColour = true): string 
     `font-family: ${face}`,
     `font-weight: ${String(s.face.weight)}`,
     `font-style: ${s.face.italic ? 'italic' : 'normal'}`,
-    // Headings shrink on a phone: a measured 40px headline would break words at 320px.
+    // Headings shrink on a phone: a measured 40px headline would break words at 320px; a display face never below
+    // the size it was admitted at.
     heading
-      ? `font-size: clamp(${rem(Math.min(size, Math.max(part.floor ?? MIN_HEADING, size * 0.75)))}, ${rem(size * 0.55)} + 2vw, ${rem(size)})`
+      ? `font-size: clamp(${rem(Math.min(size, Math.max(part.floor ?? MIN_HEADING, part.manifest?.category === 'display' ? DISPLAY_MIN_REM : 0, size * 0.75)))}, ${rem(size * 0.55)} + 2vw, ${rem(size)})`
       : `font-size: ${rem(size)}`,
     c ? `color: ${c}` : '',
     // Names and prices are paragraphs too: they reset what the running-text rule would otherwise give them.
@@ -159,6 +176,8 @@ function declarations(b: Brand, part: Part, bg: Rgb, withColour = true): string 
         : 'font-size-adjust: none',
     // Capitals set in a condensed face are printed tracked; other capitals keep the face's own spacing.
     heading && s.caps && classOf(s.face.key) === 'condensed' ? 'letter-spacing: .08em' : '',
+    // The page sets font-synthesis: none; a small-caps face needs the synthesis back (Google files carry no smcp).
+    s.smallCaps ? 'font-variant-caps: small-caps; font-synthesis: small-caps' : '',
     // Lines break between words; a word wider than the screen is the only one split, and never hyphenated.
     heading ? 'overflow-wrap: break-word; hyphens: manual' : '',
   ]
@@ -188,6 +207,27 @@ export function brandCss(b: Brand): string {
   const cardPrice = price
     ? `.products.cards .price[data-role="current"] { font-family: ${family(b, price)}; font-size-adjust: none;${priceColour ? ` color: ${priceColour};` : ''} }`
     : ''
+  // A page that prints a role in another weight, face or style than the document keeps its own (Bernini).
+  const perPage = (b.pages ?? []).flatMap((keyPage, i) =>
+    ROLES.flatMap((role) => {
+      const own = p.pageRoles?.[i]?.[role]
+      const doc = p.roles[role]
+      if (!own || !doc) return []
+      const differs =
+        own.face.key !== doc.face.key || own.face.weight !== doc.face.weight || own.face.italic !== doc.face.italic
+      if (!differs) return []
+      const part = {
+        style: own,
+        size: plan.roles.get(role)?.size ?? BASE_REM,
+        heading: false,
+        manifest: usableFor(own, b.library),
+      }
+      const face = family(b, part)
+      return [
+        `section[data-page="${String(keyPage)}"] :is(${ROLE_SELECTORS[role]}) { font-family: ${face}; font-weight: ${String(own.face.weight)}; font-style: ${own.face.italic ? 'italic' : 'normal'}; }`,
+      ]
+    }),
+  )
   const body = plan.roles.get('desc') ?? plan.roles.get('text')
   const headings = plan.headings.flatMap((part, i) => {
     const sel = `:is(h3, h4, h5, h6).hs-${String(i + 1)}`
@@ -220,10 +260,23 @@ export function brandCss(b: Brand): string {
     .sort((x, y) => x[0].localeCompare(y[0], 'en', { numeric: true }))[0]
   const top = first ? plan.headings[first[1]] : undefined
   const title = top ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, bg, false)}; }` : ''
-  const masthead = mastheadCss(b, mastSig === undefined ? null : (p.signatures[mastSig]?.size ?? 0) / p.body)
+  // A name read from the image (a wordmark with no text layer) has no measured size: it takes a wordmark's.
+  const titleRatio =
+    mastSig === undefined ? (b.masthead?.key ? SEEN_TITLE_RATIO : null) : (p.signatures[mastSig]?.size ?? 0) / p.body
+  const masthead = mastheadCss(b, titleRatio)
   const palette = dark
     ? '--fg: #f2f2f2; --muted: #c4c4c4; --line: #4a4a4a; --panel: #1e1e1e; --focus: #93b4ff; color-scheme: dark;'
     : ''
+  // Inline brand colours made readable on the page, never swapped for another colour; one that lands on the text
+  // colour is left to it. On a menu price the class outranks the role rules.
+  const textColour = fromHex(
+    (body ? colour(body.style.color, bg, b.alternate) : null) ?? (dark ? '#f2f2f2' : '#1a1a1a'),
+  )
+  const inks = p.inks.flatMap((c) => {
+    const ok = readableOn(fromHex(c), bg, AA)
+    if (!ok || distanceOk(ok, textColour) < INK_DISTINCT) return []
+    return [`.ink-${c.slice(1)}, .products.menu .price.ink-${c.slice(1)} { color: ${hex(ok)}; }`]
+  })
   return [
     fontFaces(b.faces),
     `:root { --bg: ${b.background}; ${palette} --accent: ${accentOf(b, bg)}; font-synthesis: none; }`,
@@ -235,12 +288,14 @@ export function brandCss(b: Brand): string {
     ...headings,
     ...ornaments,
     plain,
+    ...inks,
+    ...perPage,
     title,
     ...masthead,
     // Three or more printed columns need the room; a dish's price printed after its name stays there.
     (b.columns ?? 0) >= 3 ? 'main, .doc-menu main { max-width: 80rem; }' : '',
     p.pricesInline
-      ? '.products.menu > li { display: block; } .products.menu .name, .products.menu .prices { display: inline; } .products.menu .prices { margin-left: .5em; text-align: left; white-space: normal; }'
+      ? '.products.menu > li, .products.menu.run-on > li { display: block; } .products.menu .name, .products.menu .prices, .products.menu.run-on > li > .lead { display: inline; } .products.menu .prices, .products.menu.run-on > li > .prices, .products.menu.run-on > li > .lead { margin: 0 0 0 .5em; text-align: left; white-space: normal; }'
       : '',
     b.dividers === false ? '.products.menu > li { border-bottom: 0; padding: .45rem 0; }' : '',
   ]
@@ -256,25 +311,4 @@ export function headingClasses(b: Brand): Map<string, string> {
     for (const key of o.headings) out.set(key, `${out.get(key) ?? ''} orn-${String(i + 1)}`.trim())
   })
   return out
-}
-
-// The masthead as printed: the name at its printed ratio to the body text (at least 1.5rem, at most 4.5rem and
-// 11vw, so a newspaper title still fits a phone), the logo at its printed share of the width, small print smaller.
-const MASTHEAD_MIN = 1.5
-const MASTHEAD_MAX = 4.5
-function mastheadCss(b: Brand, ratio: number | null): string[] {
-  if (!b.masthead) return []
-  const title =
-    ratio === null
-      ? ''
-      : `:is(h1, h2, h3, h4, h5, h6).masthead-title { font-size: clamp(${rem(MASTHEAD_MIN)}, min(${rem(ratio * BASE_REM)}, 11vw), ${rem(MASTHEAD_MAX)}); line-height: 1.05; margin-top: 0; }`
-  const logo = b.masthead.logoShare
-    ? `.masthead img.logo { width: clamp(8rem, ${String(Math.round(b.masthead.logoShare * 100))}%, 60%); height: auto; }`
-    : ''
-  return [
-    '.masthead { margin: 0 0 2rem; } .masthead.centered { text-align: center; } .masthead .logo { margin: 0 0 .75rem; }',
-    title,
-    logo,
-    '.small-print { font-size: .9375rem; color: var(--muted); margin-top: 2rem; }',
-  ]
 }

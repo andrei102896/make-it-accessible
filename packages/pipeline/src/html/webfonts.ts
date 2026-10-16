@@ -16,7 +16,7 @@ export const FontManifestSchema = z
           .object({
             file: z.string().regex(/^[\w.-]+\.woff2$/),
             style: z.enum(['normal', 'italic']),
-            weight: z.string().regex(/^\d{3}( \d{3})?$/),
+            weight: z.string().regex(/^\d{3,4}( \d{3,4})?$/),
             unicodeRange: z.string().regex(/^[\dA-Fa-fU+,\s-]+$/),
           })
           .strict(),
@@ -29,24 +29,42 @@ export type FontFile = FontManifest['files'][number]
 // A face chosen for the page, with its bytes read by the caller (the html modules do no IO).
 export type EmbeddedFace = { manifest: FontManifest; file: FontFile; data: Uint8Array }
 
-// Commercial families printed in many documents, mapped only where the free face is a recognised stand-in.
-const LOOKALIKES: Record<string, string> = {
-  futura: 'jost',
-  garamond: 'ebgaramond',
-  adobegaramond: 'ebgaramond',
-  didot: 'playfairdisplay',
-  bodoni: 'playfairdisplay',
-}
+// Commercial families printed in the documents measured so far, each mapped to the free face of the same genre
+// (docs/wiki); the key's rest after the match must be a weight or style word, as for a vendored name.
+const LOOKALIKES: [RegExp, string][] = [
+  [/^dincondensed/, 'barlowcondensed'],
+  [/^din(pro|ot|next|text)?/, 'barlow'],
+  [/^(gotham|baufra|novecentosans(wide)?|articulatcf|semplicita|proximanova|brandon(grotesque|text)?)/, 'montserrat'],
+  [/^(futura|neutra(text|face)?(tf)?)/, 'jost'],
+  [/^(adobe|a)?garamond(premier|classic(fs)?)?/, 'ebgaramond'],
+  [/^minion/, 'crimsonpro'],
+  [/^bodoni(egyptian|flf)?/, 'bodonimoda'],
+  [/^didot/, 'playfairdisplay'],
+  [/^avenir(next)?/, 'nunitosans'],
+  [/^myriad/, 'ptsans'],
+  [/^(helvetica(neue)?|arial)/, 'arimo'],
+  [/^cambria/, 'caladea'],
+  [/^calibri/, 'carlito'],
+  [/^betont?/, 'robotoslab'],
+  [/^gillsans/, 'lato'],
+  [/^recoleta/, 'fraunces'],
+  [/^inkwell(sans)?/, 'kalam'],
+  [/^bimbo/, 'caveat'],
+  [/^(snellroundhand|allura|edwardianscript|zapfino)/, 'greatvibes'],
+]
 // What may follow a family name and still be that family: weights, styles and foundry suffixes, not "slab" or "mono".
 const STYLE_REST =
   /^(thin|hairline|extralight|ultralight|light|regular|book|normal|medium|semibold|demibold|bold|extrabold|ultrabold|heavy|black|italic|oblique|it|mt|std|pro|lt|pt|bt|ot)*$/
 const named = (key: string, name: string): boolean => key.startsWith(name) && STYLE_REST.test(key.slice(name.length))
 
-// The vendored family for a PDF font key: its own, or a recognised stand-in for a commercial family.
+// The vendored family for a PDF font key: its own, or the stand-in for a commercial family.
 export function familyFor(key: string, library: readonly FontManifest[]): FontManifest | undefined {
   const own = library.find((m) => named(key, m.key))
   if (own) return own
-  const alike = Object.entries(LOOKALIKES).find(([name]) => named(key, name))?.[1]
+  const alike = LOOKALIKES.find(([re]) => {
+    const m = re.exec(key)
+    return m !== null && STYLE_REST.test(key.slice(m[0].length))
+  })?.[1]
   return alike ? library.find((m) => m.key === alike) : undefined
 }
 

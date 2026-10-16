@@ -5,6 +5,8 @@ import { renderPage } from './page.ts'
 import { navigation } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
 import { brandCss, headingClasses } from './brand.ts'
+import { ROLES } from './profile.ts'
+import { boxesCss } from './boxes.ts'
 import { css } from './style.ts'
 
 export type { HtmlDocument, HtmlPage } from './types.ts'
@@ -25,6 +27,11 @@ export function renderDocument(doc: HtmlDocument): string {
   const segments = doc.pages.map((p, i) => (brand ? layoutOf(p, i === 0, brand.profile.body, doc.title) : NO_LAYOUT))
   const columns = Math.max(0, ...segments.flatMap((l) => l.bands.map((b) => b.columns.length)))
   const titleKey = segments[0]?.title !== null && segments[0] ? `0:blocks[${String(segments[0].title)}]` : null
+  const smallCaps = new Set(ROLES.filter((r) => brand?.profile.roles[r]?.smallCaps))
+  const vectors = segments.flatMap((l) => [
+    ...l.boxes.boxes,
+    ...(l.boxes.pageFrame ? [{ vector: l.boxes.pageFrame, ink: null }] : []),
+  ])
   if (titleKey) classes.set(titleKey, `${classes.get(titleKey) ?? ''} masthead-title`.trim())
   const rendered = doc.pages.map((p, index) =>
     renderPage(p, {
@@ -36,6 +43,10 @@ export function renderDocument(doc: HtmlDocument): string {
       running: running[index] ?? new Set(),
       classes,
       layout: segments[index] ?? NO_LAYOUT,
+      kind: doc.kind ?? null,
+      inks: new Set(brand?.profile.inks ?? []),
+      inlinePrices: brand?.profile.pricesInline ?? false,
+      smallCaps,
     }),
   )
   const parts = doc.title.split(' · ')
@@ -83,7 +94,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? null }, columns }) : '')}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) : '')}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>

@@ -68,6 +68,55 @@ test('headings keep their printed signature even on one level; roles take their 
   assert.equal(p.itemBoxes[0]?.boxes.length, 1)
 })
 
+test('a role whose items show the small-caps patterns in a quarter of cases is a small-caps face', () => {
+  // Eight names: "C"+"URRIED" style (an initial capital touching smaller capitals) in three, plain in five.
+  const words: [string, number][][] = [
+    [
+      ['C', 12],
+      ['URRIED', 9],
+    ],
+    [
+      ['M', 12],
+      ['USSELS', 9],
+    ],
+    [
+      ['S', 12],
+      ['ALAD', 9],
+    ],
+    [['Soup', 10]],
+    [['Bread', 10]],
+    [['Fries', 10]],
+    [['Steak', 10]],
+    [['Cake', 10]],
+  ]
+  const runs: Run[] = []
+  const items = words.map((ws) => {
+    const from = runs.length
+    let x = 10
+    for (const [str, size] of ws) {
+      runs.push({
+        ...run(runs.length, str, 'betont', size, '#000000', 20 * words.indexOf(ws)),
+        box: { x, y: 0, w: str.length * 6, h: size },
+        line: words.indexOf(ws),
+      })
+      x += str.length * 6
+    }
+    return { name: { src: [[from, runs.length - 1]] }, prices: [] }
+  })
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  const s = parsePage(JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items }], dropped: [] }))
+  assert.equal(profileOf([{ structure: s, extraction: e }])?.roles.name?.smallCaps, true)
+  // Two of eight, or three of three, are not enough.
+  const few = parsePage(
+    JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items: items.slice(1) }], dropped: [] }),
+  )
+  assert.equal(profileOf([{ structure: few, extraction: e }])?.roles.name?.smallCaps, false)
+  const three = parsePage(
+    JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items: items.slice(0, 3) }], dropped: [] }),
+  )
+  assert.equal(profileOf([{ structure: three, extraction: e }])?.roles.name?.smallCaps, false)
+})
+
 test('without fonts on the runs (saved runs) there is no profile', () => {
   const bare = {
     ...extraction,

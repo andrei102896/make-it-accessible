@@ -1,0 +1,22 @@
+{
+  "family": "Nunito Sans",
+  "key": "nunitosans",
+  "license": "OFL",
+  "copyright": "Copyright 2016 The Nunito Sans Project Authors (https://github.com/Fonthausen/NunitoSans)",
+  "category": "text",
+  "xHeight": 0.486,
+  "files": [
+    {
+      "file": "nunitosans-italic-200-1000.woff2",
+      "style": "italic",
+      "weight": "200 1000",
+      "unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+    },
+    {
+      "file": "nunitosans-normal-200-1000.woff2",
+      "style": "normal",
+      "weight": "200 1000",
+      "unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+    }
+  ]
+}

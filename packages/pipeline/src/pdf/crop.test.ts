@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Rgb } from '../html/color.ts'
-import { cropPicture, growToPicture, inkBox } from './crop.ts'
+import { cropPicture, fillToImage, growToPicture, inkBox } from './crop.ts'
 import type { Pixels } from './pixels.ts'
 import type { Box } from './types.ts'
 
@@ -51,4 +51,16 @@ test('a box stopping inside a badge grows up to take it whole, never into anothe
   assert.deepEqual(growToPicture({ x: 10, y: 20, w: 100, h: 100 }, [], img), { x: 10, y: 5, w: 100, h: 115 })
   const neighbour = { box: { x: 30, y: 10, w: 10, h: 5 }, own: false }
   assert.deepEqual(growToPicture({ x: 10, y: 20, w: 100, h: 100 }, [neighbour], img), { x: 10, y: 15, w: 100, h: 105 })
+})
+
+test("a figure fills the image the PDF placed it in: the logo's arc the model's box cut off comes back", () => {
+  // A green logo painted at 40..200 x 30..180 inside an image placed at 30..210 x 20..190; the model boxed 60..180.
+  const img = page({ x: 40, y: 30, w: 160, h: 150 }, [])
+  const limit = { x: 30, y: 20, w: 180, h: 170 }
+  const filled = fillToImage({ x: 60, y: 60, w: 120, h: 100 }, limit, [], img)
+  assert.deepEqual(filled, { x: 40, y: 30, w: 160, h: 150 })
+  // A foreign word painted inside the image is left out of the fill.
+  const word = { x: 40, y: 30, w: 160, h: 10 }
+  const kept = fillToImage({ x: 60, y: 60, w: 120, h: 100 }, limit, [{ box: word, own: false }], img)
+  assert.deepEqual(kept, { x: 40, y: 40, w: 160, h: 140 })
 })

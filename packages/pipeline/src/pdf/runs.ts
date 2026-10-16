@@ -28,7 +28,7 @@ export function findDuplicates(runs: readonly Run[]): string[] {
   return duplicates
 }
 
-const touching = (a: Run, b: Run): boolean =>
+export const touching = (a: Run, b: Run): boolean =>
   a.line === b.line && Math.abs(b.box.x - (a.box.x + a.box.w)) < b.box.h * TOUCHING_GAP
 
 // Ligatures and kerning split one word into touching runs ("effi" + "ciency"); those join without a space.

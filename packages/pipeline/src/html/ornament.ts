@@ -16,6 +16,11 @@ const MIN_WIDTH = 12
 // Ornaments are line art: a shape inked over more than this share of its box is a bar or a panel.
 const MAX_DENSITY = 0.5
 const PAD = 2
+// A line of letters: MIN_LETTERS or more pieces of the shape (no joining gap) at least this share of the heading's
+// height tall (a 13 pt x-height under a 20 pt heading is 0.29). Image text under a heading (Carmine's beer names)
+// is no ornament; the dots of a dotted rule are smaller.
+const MIN_LETTERS = 4
+const LETTER_SHARE = 0.2
 // Ornaments of the same size (points) are the same drawing repeated; a page embeds at most MAX_ORNAMENTS of them.
 const SAME_SIZE = 1.5
 export const MAX_ORNAMENTS = 4
@@ -53,9 +58,11 @@ export function ornamentBelow(
     }
   let [x0, y0, x1, y1, n] = [Infinity, Infinity, -1, -1, 0]
   const colors = new Map<string, number>()
+  const inked: number[] = []
   for (let next = stack.pop(); next; next = stack.pop()) {
     const [x, y] = next
     if (++n > MAX_PIXELS || text.some((r) => inside(r, x, y))) return null
+    inked.push(y * img.width + x)
     ;[x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)]
     if (y1 - y0 > heading.h * k) return null
     const c = hex(img.at(x, y))
@@ -72,10 +79,33 @@ export function ornamentBelow(
   if (!n || h <= MAX_THICK + 1 || w < MIN_WIDTH || n > w * h * MAX_DENSITY) return null
   // A frame drawn round words: its lines touch none of them, its box holds them.
   if (text.some((r) => r.x0 < x1 && r.x1 > x0 && r.y0 < y1 && r.y1 > y0)) return null
+  if (lettersIn(inked, img.width, heading.h * k * LETTER_SHARE) >= MIN_LETTERS) return null
   const box = { x: (x0 - PAD) / k, y: (y0 - PAD) / k, w: (w + 2 * PAD) / k, h: (h + 2 * PAD) / k }
   const offset = Math.abs(box.x + box.w / 2 - (heading.x + heading.w / 2)) / pageWidth
   const color = [...colors].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '#000000'
   return { box, color, centered: offset < CENTRED }
+}
+
+// How many pieces of the shape, joined only where pixels touch, are at least `minHeight` tall.
+function lettersIn(inked: readonly number[], width: number, minHeight: number): number {
+  const left = new Set(inked)
+  let letters = 0
+  for (const start of inked) {
+    if (!left.delete(start)) continue
+    const stack = [start]
+    let [y0, y1] = [Infinity, -1]
+    for (let p = stack.pop(); p !== undefined; p = stack.pop()) {
+      const [x, y] = [p % width, Math.floor(p / width)]
+      ;[y0, y1] = [Math.min(y0, y), Math.max(y1, y)]
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const q = (y + dy) * width + x + dx
+          if (x + dx >= 0 && x + dx < width && left.delete(q)) stack.push(q)
+        }
+    }
+    if (y1 - y0 + 1 >= minHeight) letters++
+  }
+  return letters
 }
 
 export type Found = Ornament & { key: string; page: number }

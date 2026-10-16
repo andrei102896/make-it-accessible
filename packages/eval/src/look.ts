@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { contrast, fromHex, type Rgb } from '@make-it-accessible/pipeline/html/color'
+import { type Rgb, chromaOk, contrast, fromHex } from '@make-it-accessible/pipeline/html/color'
 import {
   pagePixels,
   pageTheme,
@@ -27,8 +27,10 @@ const BRIEF_PAGES = 4
 const THUMB_EDGE = 768
 const AA = 4.5
 const NEUTRAL = 1.6
-// Swatches sit at colour-bucket centres: a near-white page is white (#f8f8f8 cost a brand red its 4.5:1).
+// Swatches sit at colour-bucket centres: a near-white grey page is white (#f8f8f8 cost a brand red its 4.5:1), but a
+// tinted one (Bernini's cream #f8f8e8) is the page's own colour.
 const NEAR_WHITE = 1.1
+const TINT_CHROMA = 0.02
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
 
@@ -81,7 +83,9 @@ export function printedTitle(title: string, pageText: string): string | undefine
 const PAGE_SHARE = 0.5
 function pageBackground(swatches: readonly Swatch[]): string {
   const bg = swatches.find((s) => s.role === 'background')
-  return !bg || bg.share < PAGE_SHARE || contrast(fromHex(bg.hex), WHITE) < NEAR_WHITE ? '#ffffff' : bg.hex
+  if (!bg || bg.share < PAGE_SHARE) return '#ffffff'
+  const pale = contrast(fromHex(bg.hex), WHITE) < NEAR_WHITE && chromaOk(fromHex(bg.hex)) < TINT_CHROMA
+  return pale ? '#ffffff' : bg.hex
 }
 
 // Colours from the brief's choice of measured swatches; the band's text is the document's own ink when it reads.

@@ -3,18 +3,23 @@ import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency } from '../text/money.ts'
-import { headedLists, visibleText } from './source.ts'
+import { headedLists, inkedHtml, inkSegments, visibleText } from './source.ts'
+import { unionOf } from './profile.ts'
 import { dietTag, emphasizeMoney, esc, isAddOn, isBadge, linkify, noteTargets, trailingCodes } from './inline.ts'
 import { assemble } from './layout.ts'
+import { renderTable } from './table.ts'
+import { vectorClass } from './boxes.ts'
 import type { Context, HtmlPage, Rendered } from './types.ts'
 
 // A lone picture keeps its printed size class (share of the page width); pictures printed together are tiles.
 const SMALL_FIGURE = 1 / 3
 const LARGE_FIGURE = 0.6
+// A separator the print puts after a price or its label ("ea," "20,") belongs to neither: it stands between the prices.
+const SEPARATOR = /[,;]$/
 
 export function renderPage(
   page: HtmlPage,
-  { ui, lang, index, long, legend, running, classes, layout }: Context,
+  { ui, lang, index, long, legend, running, classes, layout, kind, inks, inlinePrices, smallCaps }: Context,
 ): Rendered {
   const e = page.extraction
   const runs = e.runs
@@ -27,7 +32,13 @@ export function renderPage(
   const topLevel = Math.min(...page.structure.blocks.flatMap((b) => (b.kind === 'heading' ? [b.level] : [])))
   const scale = Number.isFinite(topLevel) ? topLevel : Math.min(...levels(page.structure.blocks))
   const raw = (t: TextValue): string => visibleText(t, e)
-  const text = (t: TextValue): string => ('seen' in t ? `<span data-seen>${esc(t.seen)}</span>` : esc(raw(t)))
+  // Plain text for a label reused outside its element (the contents list); inked text, with the runs printed in a
+  // brand colour wrapped, for the element itself.
+  const plain = (t: TextValue): string => ('seen' in t ? `<span data-seen>${esc(t.seen)}</span>` : esc(raw(t)))
+  const inked = (t: TextValue, shown: string, each: (s: string) => string = esc): string =>
+    'seen' in t ? plain(t) : inks.size ? inkedHtml(inkSegments(t, e, shown), inks, each) : each(shown)
+  const text = (t: TextValue): string => inked(t, raw(t))
+  const rawName = (t: TextValue): string => visibleText(t, e, smallCaps.has('name'))
   // The narrowest element carrying a finding is marked, so a reviewer (and the scorer) sees what was flagged.
   const flagged = (path: string, exact = false): string =>
     page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
@@ -39,23 +50,42 @@ export function renderPage(
   const currency = pageCurrency(joinRuns(onPage))
   // Bare digits read as fused cents ("269" = 2,69) only on a page that prints euro/cent pairs; elsewhere they are shown as printed.
   const fusedCents = printsFusedCents(onPage)
-  const cited = (p: PriceValue): Run[] =>
-    p.src.flatMap(([from, to]) => runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
+  const visibleRuns = (t: { src: readonly (readonly [number, number])[] }): Run[] =>
+    t.src.flatMap(([from, to]) => runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
+  const inkOf = (words: readonly Run[]): string => {
+    const [c, ...rest] = new Set(words.map((r) => r.color ?? ''))
+    return c && !rest.length && inks.has(c) ? ` ink-${c.slice(1)}` : ''
+  }
   // Prices in one list or table show decimals the same way: whole only when every amount in it is whole.
   let wholeHere = false
-  const allWhole = (prices: readonly PriceValue[]): boolean =>
-    prices.every((p) => (amountOf(cited(p), currency)?.cents ?? 0) % 100 === 0)
+  const withWhole = <T>(prices: readonly PriceValue[], render: () => T): T => {
+    const outer = wholeHere
+    wholeHere = prices.every((p) => (amountOf(visibleRuns(p), currency)?.cents ?? 0) % 100 === 0)
+    const out = render()
+    wholeHere = outer
+    return out
+  }
   const price = (path: string, p: PriceValue): string => {
-    const label = p.qualifier ? text(p.qualifier) : p.role === 'previous' ? ui.previous : ''
-    const words = cited(p)
+    const words = visibleRuns(p)
     const amount = amountOf(words, currency)
     const proven = amount?.currency && (!amount.fromBareDigits || fusedCents) ? amount.currency : null
     const printed = printedAmount(words)
     const whole = wholeHere && amount !== null && amount.cents % 100 === 0
-    const shown = amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed
+    const shown = (amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed).replace(SEPARATOR, '')
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
-    const qualifier = label ? `<span class="qualifier">${label}</span> ` : ''
-    return `<span class="price" data-role="${p.role}"${data}${flagged(path)}>${qualifier}<span class="amount">${esc(shown)}</span></span>`
+    const printedLabel = p.qualifier ? raw(p.qualifier) : ''
+    const label = p.qualifier ? printedLabel.replace(SEPARATOR, '') : p.role === 'previous' ? ui.previous : ''
+    const qualifier = label
+      ? `<span class="qualifier">${p.qualifier ? inked(p.qualifier, label) : esc(label)}</span>`
+      : ''
+    // The label sits where it is printed: "Bowl 8" before the amount, "3.5 ea" after it.
+    const labelBox = p.qualifier && 'src' in p.qualifier ? unionOf(visibleRuns(p.qualifier)) : null
+    const amountBox = unionOf(words)
+    const after = labelBox !== null && amountBox !== null && labelBox.x > amountBox.x
+    const sep = SEPARATOR.exec(after ? printedLabel : printed)?.[0] ?? ''
+    const amountHtml = `<span class="amount">${esc(shown)}</span>`
+    const parts = (after ? [amountHtml, qualifier] : [qualifier, amountHtml]).filter(Boolean).join(' ')
+    return `<span class="price${inkOf(words)}" data-role="${p.role}"${data}${flagged(path)}>${parts}</span>${sep}`
   }
 
   const { width: pageWidth } = fitScale(e.width, e.height)
@@ -104,13 +134,18 @@ export function renderPage(
     notes.set(`blocks[${String(i)}]`, { id, items, headed: lists !== null })
   })
 
+  // A list or heading set centred or right as printed (layout.ts align): its class, for top-level blocks only.
+  const alignAt = (path: string): string => {
+    const a = layout.align.get(Number(/^blocks\[(\d+)\]$/.exec(path)?.[1] ?? -1))
+    return a ? `align-${a}` : ''
+  }
   let lastHeading: string | null = null
   const block = (path: string, b: Block): string => {
     switch (b.kind) {
       case 'heading': {
         // Each page's highest heading is an h3 under its "Page N" h2, whatever level the model gave it.
         const level = Math.max(3, Math.min(6, b.level - scale + 3))
-        const label = text(b.text)
+        const label = plain(b.text)
         if (!label) return ''
         // Top-level headings of the page's highest level make the contents list.
         const listed = /^blocks\[\d+\]$/.test(path) && b.level === topLevel
@@ -119,36 +154,50 @@ export function renderPage(
           : `h${String(index)}${path.replace(/\D+/g, '-')}`
         if (listed) toc.push({ id, label })
         lastHeading = id
-        const own = classes.get(`${String(index)}:${path}`)
+        const own = [classes.get(`${String(index)}:${path}`), alignAt(path)].filter(Boolean).join(' ')
         const cls = own ? ` class="${own}"` : ''
-        return `<h${level} id="${id}"${cls}${flagged(path)}>${label}</h${level}>`
+        return `<h${level} id="${id}"${cls}${flagged(path)}>${text(b.text)}</h${level}>`
       }
       case 'paragraph': {
         const words = raw(b.text)
         if (!words) return ''
-        const body = 'seen' in b.text ? text(b.text) : linkify(words)
+        const body = inked(b.text, words, linkify)
         return `<p${flagged(path)}>${body}</p>`
       }
       case 'list':
-        return `<ul${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${'seen' in t ? text(t) : linkify(raw(t))}</li>`).join('')}</ul>`
+        return `<ul${alignAt(path) ? ` class="${alignAt(path)}"` : ''}${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${inked(t, raw(t), linkify)}</li>`).join('')}</ul>`
       case 'table':
-        return table(path, b)
+        return renderTable(path, b, {
+          text,
+          linked: (t) => inked(t, raw(t), linkify),
+          price,
+          flagged,
+          withWhole,
+          keyPage: page.keyPage,
+          lastHeading,
+          tableLabel: ui.table,
+          menu: kind === 'menu',
+        })
       case 'products': {
-        const outer = wholeHere
-        wholeHere = allWhole(b.items.flatMap((item) => item.prices))
         const cards = b.items.some((i) => i.image)
         const note = notes.get(path)
-        const items = b.items
-          .map((item, i) => {
-            const html = (cards ? card : dish)(`${path}.items[${i}]`, item)
-            return note?.items?.includes(i) ? html.replace(/^<li/, `<li aria-describedby="${note.id}"`) : html
-          })
-          .join('')
-        wholeHere = outer
+        const shape = layout.shapes.get(Number(/^blocks\[(\d+)\]$/.exec(path)?.[1] ?? -1))
+        const items = withWhole(
+          b.items.flatMap((item) => item.prices),
+          () =>
+            b.items
+              .map((item, i) => {
+                const at = `${path}.items[${i}]`
+                const html = cards ? card(at, item) : dish(at, item, shape?.runOn === true && !inlinePrices)
+                return note?.items?.includes(i) ? html.replace(/^<li/, `<li aria-describedby="${note.id}"`) : html
+              })
+              .join(''),
+        )
         // A list without pictures reads as a menu (name and price on one line); with pictures, as cards.
         const by = describedBy.get(path)
         const described = by ? ` aria-describedby="${by}"` : ''
-        return `<ul class="products ${cards ? 'cards' : 'menu'}" role="list"${described}${flagged(path, true)}>${items}</ul>`
+        const cls = `products ${cards ? 'cards' : 'menu'}${shape?.wide ? ' wide' : ''}${shape?.runOn ? ' run-on' : ''}${alignAt(path) ? ` ${alignAt(path)}` : ''}`
+        return `<ul class="${cls}" role="list"${described}${flagged(path, true)}>${items}</ul>`
       }
       case 'figure': {
         const top = /^blocks\[(\d+)\]$/.exec(path)?.[1]
@@ -160,44 +209,12 @@ export function renderPage(
     }
   }
 
-  const table = (path: string, b: Extract<Block, { kind: 'table' }>): string => {
-    const outer = wholeHere
-    wholeHere = allWhole(b.rows.flatMap((row) => row.flatMap((cell) => cell.prices ?? [])))
-    const id = `${path.replace(/[^a-z0-9]/gi, '-')}-p${page.keyPage}`
-    const caption = b.caption ? `<caption id="${id}"${flagged(`${path}.caption`)}>${text(b.caption)}</caption>` : ''
-    const rows = b.rows.map((row, r) => {
-      const cells = row.map((cell, c) => {
-        const at = `${path}.rows[${r}][${c}]`
-        const content = [
-          cell.text ? ('seen' in cell.text ? text(cell.text) : linkify(raw(cell.text))) : '',
-          ...(cell.prices ?? []).map((p, i) => price(`${at}.prices[${i}]`, p)),
-        ]
-          .filter(Boolean)
-          .join(' ')
-        const span = `${cell.colSpan ? ` colspan="${cell.colSpan}"` : ''}${cell.rowSpan ? ` rowspan="${cell.rowSpan}"` : ''}`
-        // A cell holding only prices is a money column: right-aligned, figures lined up.
-        const num = cell.prices?.length && !cell.text ? ' class="num"' : ''
-        if (!cell.header) return `<td${span}${num}>${content}</td>`
-        const group = cell.header === 'col' ? (cell.colSpan ? 'colgroup' : 'col') : cell.rowSpan ? 'rowgroup' : 'row'
-        return `<th scope="${group}"${span}>${content}</th>`
-      })
-      return `<tr${flagged(`${path}.rows[${r}]`)}>${cells.join('')}</tr>`
-    })
-    // Leading rows of column headers are the table's head: printed again on every page, ruled off below. A header
-    // cell spanning down into the body would be cut at the boundary, so then there is no head.
-    const head = b.rows.findIndex((row) => !row.every((cell) => cell.header === 'col'))
-    const leading = head === -1 ? rows.length : head
-    const crossing = b.rows.slice(0, leading).some((row, r) => row.some((cell) => r + (cell.rowSpan ?? 1) > leading))
-    const split = crossing ? 0 : leading
-    const thead = split ? `<thead>${rows.slice(0, split).join('')}</thead>` : ''
-    // Without a caption, the table is named by the heading it sits under, so two tables never share a name.
-    const named = b.caption ? id : lastHeading
-    const name = named ? `aria-labelledby="${named}"` : `aria-label="${ui.table}"`
-    wholeHere = outer
-    return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}><table ${name}>${caption}${thead}<tbody>${rows.slice(split).join('')}</tbody></table></div>`
-  }
-
-  const name = (path: string, item: Item, codes: readonly string[] = [], shown = text(item.name)): string =>
+  const name = (
+    path: string,
+    item: Item,
+    codes: readonly string[] = [],
+    shown = inked(item.name, rawName(item.name)),
+  ): string =>
     `<p class="name"${flagged(`${path}.name`)}>${shown}${codes.map((c) => ` ${dietTag(c, legend)}`).join('')}</p>`
   // role="text" makes VoiceOver read a price with its previous price as one phrase, not one stop per line.
   // A price cited twice for one dish (once with its description as qualifier) is shown once.
@@ -212,21 +229,27 @@ export function renderPage(
   const unit = (path: string, item: Item): string =>
     item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : ''
 
-  // A dish: name and price on one line, the description below; the legend's codes move next to the name.
-  const dish = (path: string, item: Item): string => {
-    const own = trailingCodes(raw(item.name), legend)
+  // A dish: name and price on one line, the description below; the legend's codes move next to the name. Where
+  // the print runs the description on from the name (`leadFirst`), the lead description comes before the price.
+  const dish = (path: string, item: Item, leadFirst = false): string => {
+    const own = trailingCodes(rawName(item.name), legend)
     const codes = [...own.codes]
+    let lead = -1
     const details = item.details.map((d, i) => {
       const at = `${path}.details[${i}]`
       if (d.kind !== 'paragraph' || 'seen' in d.text) return block(at, d)
-      const { rest, codes: found } = trailingCodes(raw(d.text), legend)
+      const { rest, codes: found } = trailingCodes(visibleText(d.text, e, smallCaps.has('desc')), legend)
       codes.push(...found)
       if (!rest) return ''
-      const body = isAddOn(rest) ? emphasizeMoney(linkify(rest)) : linkify(rest)
-      return `<p class="${isAddOn(rest) ? 'addon' : 'desc'}"${flagged(at)}>${body}</p>`
+      const addon = isAddOn(rest)
+      const body = inked(d.text, rest, addon ? (s) => emphasizeMoney(linkify(s)) : linkify)
+      if (!addon && lead < 0) lead = i
+      return `<p class="${addon ? 'addon' : lead === i ? 'desc lead' : 'desc'}"${flagged(at)}>${body}</p>`
     })
-    const shown = own.codes.length ? esc(own.rest) : text(item.name)
-    return `<li${flagged(path, true)}>${name(path, item, codes, shown)}${prices(path, item)}${unit(path, item)}${details.join('')}</li>`
+    const shown = inked(item.name, own.rest)
+    const first = leadFirst && lead >= 0 ? (details[lead] ?? '') : ''
+    const rest = first ? details.filter((_, i) => i !== lead) : details
+    return `<li${flagged(path, true)}>${name(path, item, codes, shown)}${first}${prices(path, item)}${unit(path, item)}${rest.join('')}</li>`
   }
 
   // A card: picture, name, offer, then the rest; each part sits on a row shared with the cards beside it
@@ -272,8 +295,12 @@ export function renderPage(
     } else if (html) parts.push({ at: i, html })
     gallery = b.kind === 'figure' && Boolean(html) && !ornament
   })
+  // The masthead reads logo, name, then the lines (hours, address), whatever order the print scatters them in.
+  const rank = (p: { at: number; html: string }): number =>
+    p.html.includes('class="logo"') ? 0 : p.at === layout.title ? 1 : 2
   const masthead = parts
     .filter((p) => layout.header.has(p.at))
+    .sort((a, b) => rank(a) - rank(b) || a.at - b.at)
     .map((p) => p.html)
     .join('\n')
   const header = masthead
@@ -281,6 +308,7 @@ export function renderPage(
     : ''
   const body = assemble(parts, layout)
   const marker = long ? '' : ' class="sr-only"'
-  const html = `<section aria-labelledby="${id}" data-page="${page.keyPage}">\n<h2 id="${id}"${marker}>${ui.page} ${e.pdfPage}</h2>\n${body.join('\n')}\n</section>`
+  const framed = layout.boxes.pageFrame ? ` class="box ${vectorClass(layout.boxes.pageFrame)}"` : ''
+  const html = `<section aria-labelledby="${id}"${framed} data-page="${page.keyPage}">\n<h2 id="${id}"${marker}>${ui.page} ${e.pdfPage}</h2>\n${body.join('\n')}\n</section>`
   return { html, toc, masthead: header }
 }
