@@ -133,7 +133,7 @@ test('a menu with sections gets section links; a price list a visible contents l
   }
   assert.match(
     doc('menu', ['Starters', 'Mains', 'Sides']),
-    /<nav class="chips" id="contents" aria-label="Sections"><ul><li><a href="#s0-0">Starters<\/a>/,
+    /<nav class="chips pinned" id="contents" aria-label="Sections"><ul><li><a href="#s0-0">Starters<\/a>/,
   )
   assert.doesNotMatch(doc('menu', ['Starters', 'Mains']), /class="chips"/)
   assert.match(

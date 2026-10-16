@@ -18,6 +18,10 @@ export type Brand = {
   // The document's other brand colour (its band), used when the heading colour must move far to be readable.
   alternate: string | null
   ornaments: readonly BrandOrnament[]
+  // The header's name heading (profile key) and logo width (share of the page), set by the renderer (layout.ts).
+  masthead?: { key: string | null; logoShare: number | null }
+  // The most columns any page prints side by side (layout.ts), set by the renderer.
+  columns?: number
 }
 export type HeadingRule = { width: number; full: boolean; centered: boolean; color: string }
 // A drawing printed under headings (ornament.ts): an alpha mask (base64 PNG) painted in its printed colour, sized in
@@ -82,7 +86,12 @@ export type Part = {
   floor?: number
   manifest: FontManifest | undefined
 }
-export function brandPlan(p: Profile, library: readonly FontManifest[]): { roles: Map<Role, Part>; headings: Part[] } {
+// `apart` is a signature that keeps its own scale (the masthead) and so never sets the top of the compression.
+export function brandPlan(
+  p: Profile,
+  library: readonly FontManifest[],
+  apart?: number,
+): { roles: Map<Role, Part>; headings: Part[] } {
   const usable = (s: RoleStyle, heading: boolean, size: number): FontManifest | undefined => {
     const m = familyFor(s.face.key, library)
     const display = heading && size >= DISPLAY_MIN_REM && s.words <= DISPLAY_MAX_WORDS
@@ -101,7 +110,7 @@ export function brandPlan(p: Profile, library: readonly FontManifest[]): { roles
   const floor = Math.max(MIN_HEADING, (roles.get('name')?.size ?? 0) * OVER_NAME)
   const headings: Part[] = []
   // Printed sizes are compressed into [floor, MAX_HEADING], not clipped, so distinct levels stay distinct.
-  const printed = p.signatures.map((s) => Math.max(floor, BASE_REM * (s.size / p.body)))
+  const printed = p.signatures.map((s, i) => (i === apart ? floor : Math.max(floor, BASE_REM * (s.size / p.body))))
   const top = Math.max(floor, ...printed)
   const squeeze = top > MAX_HEADING ? (MAX_HEADING - floor) / (top - floor) : 1
   for (const [i, s] of p.signatures.entries()) {
@@ -165,7 +174,11 @@ export function brandCss(b: Brand): string {
   const bg = fromHex(b.background)
   const dark = contrast(bg, WHITE) > contrast(bg, BLACK)
   const p = b.profile
-  const plan = brandPlan(p, b.library)
+  // The masthead keeps the printed ratio to the body (bounded), outside the section headings' compression when
+  // no section heading shares its signature.
+  const mastSig = b.masthead?.key ? p.headings.get(b.masthead.key) : undefined
+  const solo = mastSig !== undefined && [...p.headings.values()].filter((v) => v === mastSig).length === 1
+  const plan = brandPlan(p, b.library, solo ? mastSig : undefined)
   const roles = ROLES.flatMap((role) => {
     const part = plan.roles.get(role)
     return part ? [`${ROLE_SELECTORS[role]} { ${declarations(b, part, bg)}; }`] : []
@@ -207,6 +220,7 @@ export function brandCss(b: Brand): string {
     .sort((x, y) => x[0].localeCompare(y[0], 'en', { numeric: true }))[0]
   const top = first ? plan.headings[first[1]] : undefined
   const title = top ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, bg, false)}; }` : ''
+  const masthead = mastheadCss(b, mastSig === undefined ? null : (p.signatures[mastSig]?.size ?? 0) / p.body)
   const palette = dark
     ? '--fg: #f2f2f2; --muted: #c4c4c4; --line: #4a4a4a; --panel: #1e1e1e; --focus: #93b4ff; color-scheme: dark;'
     : ''
@@ -222,6 +236,12 @@ export function brandCss(b: Brand): string {
     ...ornaments,
     plain,
     title,
+    ...masthead,
+    // Three or more printed columns need the room; a dish's price printed after its name stays there.
+    (b.columns ?? 0) >= 3 ? 'main, .doc-menu main { max-width: 80rem; }' : '',
+    p.pricesInline
+      ? '.products.menu > li { display: block; } .products.menu .name, .products.menu .prices { display: inline; } .products.menu .prices { margin-left: .5em; text-align: left; white-space: normal; }'
+      : '',
     b.dividers === false ? '.products.menu > li { border-bottom: 0; padding: .45rem 0; }' : '',
   ]
     .filter(Boolean)
@@ -236,4 +256,25 @@ export function headingClasses(b: Brand): Map<string, string> {
     for (const key of o.headings) out.set(key, `${out.get(key) ?? ''} orn-${String(i + 1)}`.trim())
   })
   return out
+}
+
+// The masthead as printed: the name at its printed ratio to the body text (at least 1.5rem, at most 4.5rem and
+// 11vw, so a newspaper title still fits a phone), the logo at its printed share of the width, small print smaller.
+const MASTHEAD_MIN = 1.5
+const MASTHEAD_MAX = 4.5
+function mastheadCss(b: Brand, ratio: number | null): string[] {
+  if (!b.masthead) return []
+  const title =
+    ratio === null
+      ? ''
+      : `:is(h1, h2, h3, h4, h5, h6).masthead-title { font-size: clamp(${rem(MASTHEAD_MIN)}, min(${rem(ratio * BASE_REM)}, 11vw), ${rem(MASTHEAD_MAX)}); line-height: 1.05; margin-top: 0; }`
+  const logo = b.masthead.logoShare
+    ? `.masthead img.logo { width: clamp(8rem, ${String(Math.round(b.masthead.logoShare * 100))}%, 60%); height: auto; }`
+    : ''
+  return [
+    '.masthead { margin: 0 0 2rem; } .masthead.centered { text-align: center; } .masthead .logo { margin: 0 0 .75rem; }',
+    title,
+    logo,
+    '.small-print { font-size: .9375rem; color: var(--muted); margin-top: 2rem; }',
+  ]
 }

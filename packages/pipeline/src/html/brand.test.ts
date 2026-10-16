@@ -89,6 +89,7 @@ const profile = (signatures: RoleStyle[], roles: Profile['roles'] = {}): Profile
   accent: '#dd2931',
   headingBoxes: [],
   itemBoxes: [],
+  pricesInline: false,
 })
 const brand = (p: Profile, background = '#ffffff'): Brand => ({
   profile: p,

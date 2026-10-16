@@ -16,7 +16,14 @@ export type Profile = {
   // Where headings and the items of menu-style lists are printed, for the lines the document draws (rules.ts).
   headingBoxes: { page: number; sig: number; box: Box; key: string }[]
   itemBoxes: { page: number; boxes: Box[] }[]
+  // Whether the document prints a dish's price right after its name (Moosewood) rather than at the column's edge.
+  pricesInline: boolean
 }
+
+// A price starting within this many price heights of the name's end, on the name's line, is printed inline.
+const INLINE_GAP = 1.5
+export const priceInline = (name: Box, price: Box): boolean =>
+  price.x - (name.x + name.w) <= INLINE_GAP * price.h && price.y < name.y + name.h
 type Page = { structure: PageStructure; extraction: Extraction }
 
 // Headings printed alike share a style when their sizes differ by at most this (pdftohtml rounds to whole points).
@@ -82,6 +89,7 @@ export function profileOf(pages: readonly Page[]): Profile | null {
   const byRole = new Map<Role, Run[]>()
   const headings: { id: string; style: RoleStyle; runs: Run[]; page: number }[] = []
   const itemBoxes: Profile['itemBoxes'] = []
+  const placement = { inline: 0, right: 0 }
   pages.forEach(({ structure, extraction: e }, index) => {
     const hidden = new Set(e.hidden)
     const add = (role: Role, t: TextValue | undefined): void => {
@@ -124,6 +132,9 @@ export function profileOf(pages: readonly Page[]): Profile | null {
     }
     const product = (path: string, item: Item): void => {
       add('name', item.name)
+      const nameBox = unionOf(cites(item.name, e, hidden))
+      const priceBox = item.prices[0] ? unionOf(cites({ src: item.prices[0].src }, e, hidden)) : null
+      if (nameBox && priceBox) placement[priceInline(nameBox, priceBox) ? 'inline' : 'right']++
       item.prices.forEach((p) => {
         add('price', { src: p.src })
       })
@@ -176,5 +187,6 @@ export function profileOf(pages: readonly Page[]): Profile | null {
     const sig = ids.get(h.id)
     return box && sig !== undefined ? [{ page: h.page, sig, box, key: h.id }] : []
   })
-  return { body, roles, signatures, headings: ids, accent, headingBoxes, itemBoxes }
+  const pricesInline = placement.inline > placement.right
+  return { body, roles, signatures, headings: ids, accent, headingBoxes, itemBoxes, pricesInline }
 }

@@ -35,6 +35,10 @@ Header (title text or logo, tagline, address, running head), content (sections i
 ## Files
 `html/document.ts` is at 293/300 lines and `document.test.ts` at 313 physical: split first (`html/page.ts` takes `renderPage`; new pure `html/layout.ts` + `layout.test.ts` for segmentation, bands, price placement, masthead key; new renderer tests in `document-layout.test.ts`).
 
+## Progress (2026-10-16)
+Done: 1 chips (wrap, fold, pinned only when short), 2 header/tail/masthead (logo first, title at its printed ratio), 3 columns (sections clustered by heading position, flowing lists as rows, side bands, inline prices), 4 AI reviewer (`pnpm review:page`, ~$0.025 a page). Rescores identical throughout; 215 tests.
+Reviewer findings on the five checkpoint menus that the remaining slices must close: frames and panels (Carmine's red boxes, Prohibition's grey panels, Noah's teal frames, Almond's orange panels); fonts and small caps (every page: "small-caps serif dish names", script headings at Moosewood, the Prohibition display face); inline brand colours (Carmine's red sub-headings and Bread prices, Almond's red farm names); dietary tags beside the name and the legend as a key (Moosewood). New items from the reviewer: qualifiers ("bowl", "ea,") must not look like buttons; a two-column price list (Carmine's Bread, Almond's Plats du jour) renders as a list, not a ruled table; a list printed as single wide lines with inline prices stays one column (Moosewood, Almond appetizers); "Mini 8 • Jumbo 12" stays one line; a small-caps name role ("plantain Chips") always takes the model's text; the add-on line keeps its italics; the Prohibition Post page 2 as a newspaper (masthead, multicol article) is still to do.
+
 ## Order and estimate (~5.5 days)
 1. Chips without scroll (0.2 d) — the hard "never".
 2. Split document.ts; header, footer, title scale, masthead logo (1 d).

@@ -48,9 +48,10 @@ Phase B, fixes on dev:
 - [x] Ornaments under headings (2026-10-16): drawn from the render as alpha masks; the brief lists design details and adhoc prints those the page lacks
 - [x] US menu prices (2026-10-16): bare numbers, market price, two-size prices and one decimal shown as printed without findings; split digits joined; printed case wins over the model's re-casing; a price cited twice shows once; keyboard check measures 2.4.11
 - [~] Workflow automation (`docs/WORKFLOW.md`): preview publishing from this repo (done 2026-10-16), batch report, outreach drafts and due list, self-running guards · 2 d left
+- [ ] Scorer reads the masthead (`header.masthead`, outside `section[data-page]`) as part of the first page before any brand-rendered page is keyed
 - [ ] Scorer follows the validator on currency-less prices (`score/prices.ts` judge, `metrics.ts` mustFlag) before any US key is written
 - [ ] A qualifier equal to the dish's description is not shown; a dish whose only picture is a tiny logo renders as a row
-- [ ] Layout fidelity / brand v2 (`docs/LAYOUT.md`, plan 2026-10-16): header/content/footer segments, title scale, columns by list bands, measured price placement, frames and panels, font library and small caps, chips without scroll, inline brand colours, dietary codes, AI reviewer · ~5.5 d
+- [~] Layout fidelity / brand v2 (`docs/LAYOUT.md`, plan 2026-10-16; slices 1–4 done the same day: chips, masthead, columns, AI reviewer): header/content/footer segments, title scale, columns by list bands, measured price placement, frames and panels, font library and small caps, chips without scroll, inline brand colours, dietary codes, AI reviewer · ~5.5 d
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d

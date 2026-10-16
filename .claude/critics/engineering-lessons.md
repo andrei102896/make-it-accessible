@@ -31,3 +31,5 @@
 - A geometry feature on run boxes reaches saved runs too: gate new layout on the field it truly needs and prove it with a no-brand identical-render test. (layout plan, 2026-10-16)
 - Size a font budget from measured files: Google latin variable woff2 is 35–50 KB (Inter 73), and base64 adds a third. (layout plan, 2026-10-16)
 - The brief runs before the brand and feeds it: measurements cannot flow back into the brief without a cycle. (layout plan, 2026-10-16)
+- A section's column is where its heading is printed; its items' flow decides its shape. Clustering sections by their items' x-range merged every column a long list flowed through (Gargiulo's antipasti over three columns, Almond's appetizers over three). (2026-10-16)
+- Edits scripted against source text break after Prettier reformats it: anchor on comment lines or function names, never on a long expression. (layout slice, three aborted scripts, 2026-10-16)

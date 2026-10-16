@@ -97,14 +97,31 @@ thead tr:last-child > * { border-bottom: 2px solid var(--fg); }
 .table tr > th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); box-shadow: inset -1px 0 var(--line); }
 td.num { text-align: right; white-space: nowrap; }
 .validity { margin: .5rem 0 0; font-weight: 600; }
-nav.chips { position: sticky; top: 0; z-index: 1; background: var(--bg); border-bottom: 1px solid var(--line);
-  margin: 0 0 1rem; overflow-x: auto; }
-nav.chips ul { display: flex; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
-nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem; scroll-margin-inline: 1rem;
+nav.chips { background: var(--bg); border-bottom: 1px solid var(--line); margin: 0 0 1rem; }
+nav.chips ul { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
+nav.chips a { display: inline-block; white-space: nowrap; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
   border: 1px solid var(--line); border-radius: 999px; color: var(--fg); text-decoration: none; }
 nav.chips a:hover { border-color: var(--accent); }
+nav.chips .chips-fold { display: none; }
+nav.chips .chips-fold summary { cursor: pointer; font-weight: 600; min-height: 2.75rem; line-height: 2.75rem; }
+@media (max-width: 39.99rem) {
+  nav.chips:has(.chips-fold) > ul { display: none; }
+  nav.chips .chips-fold { display: block; }
+}
+@media (min-width: 60rem) {
+  nav.chips.pinned { position: sticky; top: 0; z-index: 1; }
+  html:has(nav.chips.pinned) { scroll-padding-top: 6rem; }
+}
 .toc-title { font-weight: 600; margin: 0; }
-html:has(nav.chips) { scroll-padding-top: 4.5rem; }
+.cols .products.menu { columns: 1; }
+@media (min-width: 60rem) {
+  .cols { display: grid; column-gap: 2.5rem; align-items: start; }
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cols.side { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  .cols.side .col:last-child .products.menu { columns: 2 16rem; }
+}
 .back { margin: 1.5rem 0 0; font-size: .9375rem; }
 .back a { display: inline-block; min-height: 2.75rem; line-height: 2.75rem; }
 .price[data-role="current"] .qualifier { display: inline-block; border: 1.5px solid var(--accent); color: var(--accent);

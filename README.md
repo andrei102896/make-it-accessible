@@ -28,6 +28,7 @@ pnpm adhoc <file.pdf> [--pages 1-5] [--title "Evening menu"]   # any PDF without
 pnpm preview:add <page.html> "<Business>"                     # stage a converted page as a private preview (random suffix, noindex, 30-day expiry in previews/EXPIRY.csv)
 pnpm preview:publish [--removed <file> ...]                   # copy previews/ into ../portofolio/public/preview; Andrei then runs `vercel --prod` there
 pnpm preview:expire [--remove <file>]                         # delete previews past their date (or one), then publish again
+pnpm review:page <run dir> <file.pdf> [--model <id>]      # the AI reviewer: PDF pages beside our page at 1280 and 390 px; verdict and differences in review.json
 pnpm wiki                                                     # regenerate docs/wiki: measured facts per document (columns, price placement, title scale, fonts, codes) from validation/private/wiki-sources.json
 pnpm fonts:add "<Family>"                                     # vendor an OFL/Apache Google Fonts family (latin woff2, unmodified, licence beside it) for embedding
 pnpm listen <page.html>                                       # VoiceOver reads the page in Safari, item by item; transcript in <page>.voiceover.txt (needs "Allow VoiceOver to be controlled with AppleScript" and Automation for the terminal)
@@ -63,6 +64,8 @@ packages/pipeline/src/        product code, reused by the MVP
   html/document.ts            deterministic accessible HTML renderer: menus as rows, products with pictures as cards, galleries, contents on long documents
   html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
   html/profile.ts             the document's printed style per role and heading signature, from the words each element cites
+  html/page.ts                one printed page as HTML: blocks, menu rows and cards, tables, notes, header and tail wrappers
+  html/layout.ts              a page's segments (header with the name or logo, tail of small print) from geometry
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
@@ -73,6 +76,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/source.ts              the visible words a text cites (hidden ones left out); picture boxes of a page
   html/inline.ts              links from printed addresses and phone numbers, a menu's dietary legend and tags, badges
   html/nav.ts                 section links for menus and leaflets, a contents list for price lists and long documents
+  model/review.ts             the AI reviewer: what an owner would notice between the PDF and our page (layout, type, colour, missing, text)
   model/brief.ts              one AI look per document: type, title, brand swatch picks, heading class, validity dates, design details
   pdf/fonts.ts                the heading class from the PDF's font names (pdffonts), before the brief's guess
   pdf/face.ts                 a pdftohtml font name as family key, weight and italic; a word's text line (smallest containing it)
@@ -128,6 +132,7 @@ packages/eval/src/            evaluation harness, never shipped
   listen.ts                   CLI: what VoiceOver says on a page, through VoiceOver's AppleScript
   brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines and ornaments (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
+  review-page.ts              CLI: render the PDF pages, screenshot our page, ask the reviewer, write review.json
   wiki.ts, wiki-facts.ts      the layout wiki: facts measured per document from its saved run and PDF (docs/wiki)
   preview.ts                  private previews: unlisted file names, noindex, the 30-day expiry list
   preview-add.ts, preview-expire.ts, preview-publish.ts   CLIs for previews/: stage, expire, copy to the portfolio site and deploy

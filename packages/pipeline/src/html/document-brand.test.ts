@@ -43,6 +43,7 @@ const profile: Profile = {
   accent: null,
   headingBoxes: [],
   itemBoxes: [],
+  pricesInline: false,
 }
 const brand: Brand = {
   profile,
@@ -57,7 +58,7 @@ const brand: Brand = {
 
 test('with the document brand: headings carry their signature; a printed title shows once, the band is sr-only', () => {
   const html = renderDocument({ lang: 'en', title: 'Kendells Bistro', pages: [page], brand })
-  assert.match(html, /<h3 id="[^"]+" class="hs-1">KENDELLS BISTRO<\/h3>/)
+  assert.match(html, /<h3 id="[^"]+" class="hs-1 masthead-title">KENDELLS BISTRO<\/h3>/)
   assert.match(html, /<div class="band sr-only"><h1>/)
   assert.match(html, /\.products\.menu > li \{ border-bottom: 0/)
   // The validity line stays visible outside the hidden band; print is black on white.
@@ -70,10 +71,11 @@ test('with the document brand: headings carry their signature; a printed title s
   })
   assert.match(dated, /<div class="band sr-only"><h1>.*<\/h1><\/div><p class="validity">Valid until 31 October<\/p>/s)
   assert.match(html, /@media print \{[^@]*body \* \{ color: #000000 !important; \}/)
-  // A title the heading prints only in part keeps the band visible.
+  // A masthead that names the place hides the band too, whatever the document part of the title; the h1 keeps
+  // the full name for screen readers.
   assert.match(
     renderDocument({ lang: 'en', title: 'Kendells Bistro · Menu', pages: [page], brand }),
-    /<div class="band"><h1>/,
+    /<div class="band sr-only"><h1>/,
   )
 })
 
@@ -93,7 +95,7 @@ test('an ornament under the title is drawn by CSS on that heading only, and fall
     pages: [page],
     brand: { ...brand, rules: [rule], ornaments: [ornament] },
   })
-  assert.match(html, /<h3 id="[^"]+" class="hs-1 orn-1">KENDELLS BISTRO<\/h3>/)
+  assert.match(html, /<h3 id="[^"]+" class="hs-1 orn-1 masthead-title">KENDELLS BISTRO<\/h3>/)
   const css = html.slice(html.indexOf('<style>'), html.indexOf('</style>'))
   const own = css.indexOf(':is(h1, h2, h3, h4, h5, h6).orn-1::after { content: ""; display: block; width: 12.9em;')
   // Same specificity as the signature's rule: the ornament wins by coming after it.

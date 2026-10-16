@@ -1,5 +1,5 @@
 import type { Profile } from '@make-it-accessible/pipeline/html/profile'
-import { unionOf } from '@make-it-accessible/pipeline/html/profile'
+import { priceInline, unionOf } from '@make-it-accessible/pipeline/html/profile'
 import { familyFor, type FontManifest } from '@make-it-accessible/pipeline/html/webfonts'
 import type { Block, Item, PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Box, Extraction, Run } from '@make-it-accessible/pipeline/pdf/types'
@@ -9,8 +9,6 @@ export type Page = { structure: PageStructure; extraction: Extraction }
 
 // A list wider than this share of the page is a full-width row; narrower lists side by side form columns.
 const FULL_WIDTH = 0.6
-// A price starting within this many price heights of the name's end is printed inline after it.
-const INLINE_GAP = 1.5
 
 const cited = (e: Extraction, src: readonly (readonly [number, number])[]): Run[] =>
   src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
@@ -43,7 +41,7 @@ export function pricePlacement(pages: readonly Page[]): { inline: number; right:
       const name = unionOf(cited(e, it.name.src))
       const price = unionOf(cited(e, it.prices[0]?.src ?? []))
       if (!name || !price) continue
-      if (price.x - (name.x + name.w) <= INLINE_GAP * price.h && price.y < name.y + name.h) out.inline++
+      if (priceInline(name, price)) out.inline++
       else out.right++
     }
   return out

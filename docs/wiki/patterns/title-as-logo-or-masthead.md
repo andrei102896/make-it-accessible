@@ -4,4 +4,4 @@
 
 **Today:** the logo renders as a small figure, the text title is compressed into the section-heading scale (≤ 2.4rem), a wordmark beside the first heading becomes a section.
 
-**Rule (planned):** header segment = title-like blocks (text ≥ 2× body or a logo) in the top 12% of page 1 at any x; the masthead keeps its own scale `clamp(2rem, 11vw, 4.5rem)`; the logo keeps its printed share of the page width and its alt; a later page whose first block is text ≥ 3× body gets it as the page heading.
+**Rule (2026-10-16, `html/layout.ts`, `html/brand.ts` mastheadCss):** header segment = title-like blocks (text ≥ 2× body or a logo) in the top 12% of page 1 at any x; the masthead keeps its own scale `clamp(2rem, 11vw, 4.5rem)`; the logo keeps its printed share of the page width and its alt; a later page whose first block is text ≥ 3× body gets it as the page heading (still to do).

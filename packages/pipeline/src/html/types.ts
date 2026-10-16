@@ -3,6 +3,7 @@ import type { DocumentType, HeadingClass } from '../model/brief.ts'
 import type { PageStructure } from '../model/schema.ts'
 import type { Brand } from './brand.ts'
 import type { Legend } from './inline.ts'
+import type { Layout } from './layout.ts'
 import type { TocEntry } from './nav.ts'
 import type { Strings } from './strings.ts'
 import type { Theme } from './theme.ts'
@@ -25,7 +26,8 @@ export type HtmlDocument = {
   validity?: string | null
   brand?: Brand | null
 }
-export type Rendered = { html: string; toc: TocEntry[] }
+// `masthead`: the first page's header, placed before the navigation.
+export type Rendered = { html: string; toc: TocEntry[]; masthead: string }
 export type Context = {
   ui: Strings
   lang: string
@@ -35,4 +37,6 @@ export type Context = {
   running: Set<string>
   // Per heading (profile key), the classes of its printed style (brand.ts headingClasses).
   classes: ReadonlyMap<string, string>
+  // The page's header, tail and column bands (layout.ts); empty without a brand.
+  layout: Layout
 }

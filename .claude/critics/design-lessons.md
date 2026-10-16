@@ -27,3 +27,5 @@
 - The header is wherever the title is printed: a wordmark beside the first heading (Moosewood) is still the header, and a later page can carry its own masthead (Prohibition Post). (2026-10-16)
 - Sections side by side are a grid; an article flowing across columns is multicol; one page can need both (Prohibition page 2). (2026-10-16)
 - A title's scale is its own: compressing it with the section headings turns an 81 pt masthead into a section title. (Prohibition Kitchen, 2026-10-16)
+- A header's tagline rule ("a short line at the top") holds for paragraphs only: a short heading under the logo opens the first section, and taking it into the masthead swallowed Carmine's "DEVILED CRABS" box. (2026-10-16)
+- The masthead stands before the section navigation: on paper the name comes first, the chips are ours. (Carmine's, 2026-10-16)
