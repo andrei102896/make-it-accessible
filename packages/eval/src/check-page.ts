@@ -1,13 +1,14 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { AxeBuilder } from '@axe-core/playwright'
 import { chromium } from 'playwright'
+import { printWidthIn } from '@make-it-accessible/pipeline/html/print'
 
-// pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe (critical and serious) at 1280, 390 and 320 px and
-// in forced colours, a horizontal-overflow check at every width, WCAG 1.4.12 text spacing at 320 px, and
-// screenshots when asked. One line per page, so a batch reads as a table.
+// pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe (critical and serious) at 1280, 390 and 320 px, in
+// forced colours and in the printed view, a horizontal-overflow check, WCAG 1.4.12 text spacing at 320 px, the
+// printed view's words against the text view's, and screenshots when asked. One line per page, as a table.
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { shots: { type: 'string' }, tag: { type: 'string' } },
@@ -59,6 +60,27 @@ try {
     out.push(
       `${mode.name}: axe ${bad.join(' ') || 'ok'}${overflow ? ' OVERFLOW' : ''}${spacing ? ` | 1.4.12 ${spacing}` : ''}`,
     )
+    await ctx.close()
+  }
+  // The printed view, where the page has one: axe on it, and the same words as the text view (one document).
+  const printed = printWidthIn(await readFile(file, 'utf8'))
+  if (printed) {
+    const ctx = await browser.newContext({ viewport: { width: Math.max(printed, MODES[0].width), height: 900 } })
+    const page = await ctx.newPage()
+    await page.goto(pathToFileURL(file).href)
+    const r = await new AxeBuilder({ page }).analyze()
+    const bad = r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious').map((v) => v.id)
+    const words = (): Promise<string> =>
+      page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('section[data-page], header.masthead')]
+          .map((s) => s.innerText)
+          .join('')
+          .replace(/\s+/g, ''),
+      )
+    const shown = await words()
+    await page.check('#view-text')
+    const same = shown === (await words())
+    out.push(`printed: axe ${bad.join(' ') || 'ok'} | text ${same ? 'same' : 'DIFFERS from the text view'}`)
     await ctx.close()
   }
 } finally {

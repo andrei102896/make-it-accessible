@@ -7,6 +7,8 @@ export type TableTools = {
   linked: (t: TextValue) => string
   price: (path: string, p: PriceValue) => string
   flagged: (path: string, exact?: boolean) => string
+  // The printed view's placement (placed.ts): the table as a frame, each cell's text in it.
+  place: (path: string) => string
   withWhole: <T>(prices: readonly PriceValue[], render: () => T) => T
   keyPage: number
   lastHeading: string | null
@@ -32,6 +34,9 @@ const isPriceList = (b: Table): boolean =>
       !more.length,
   )
 
+// A cell's text in its own placed element only in the printed view; elsewhere the cell is as before.
+const placedIn = (where: string, html: string): string => (where ? `<span${where}>${html}</span>` : html)
+
 export function renderTable(path: string, b: Table, tools: TableTools): string {
   const { text, linked, price, flagged } = tools
   const prices = b.rows.flatMap((row) => row.flatMap((cell) => cell.prices ?? []))
@@ -41,9 +46,9 @@ export function renderTable(path: string, b: Table, tools: TableTools): string {
         const at = `${path}.rows[${String(r)}]`
         const own = (row[1]?.prices ?? []).map((p, i) => price(`${at}[1].prices[${String(i)}]`, p)).join(' ')
         const head = row[0]?.text ? text(row[0].text) : ''
-        return `<li${flagged(at)}><p class="name">${head}</p><p class="prices"><span role="text">${own}</span></p></li>`
+        return `<li${flagged(at)}><p class="name"${tools.place(`${at}[0]`)}>${head}</p><p class="prices"><span role="text">${own}</span></p></li>`
       })
-      return `<ul class="products menu" role="list"${flagged(path, true)}>${rows.join('')}</ul>`
+      return `<ul class="products menu" role="list"${flagged(path, true)}${tools.place(path)}>${rows.join('')}</ul>`
     })
   return tools.withWhole(prices, () => {
     const id = `${path.replace(/[^a-z0-9]/gi, '-')}-p${String(tools.keyPage)}`
@@ -52,7 +57,7 @@ export function renderTable(path: string, b: Table, tools: TableTools): string {
       const cells = row.map((cell, c) => {
         const at = `${path}.rows[${String(r)}][${String(c)}]`
         const content = [
-          cell.text ? linked(cell.text) : '',
+          cell.text ? placedIn(tools.place(at), linked(cell.text)) : '',
           ...(cell.prices ?? []).map((p, i) => price(`${at}.prices[${String(i)}]`, p)),
         ]
           .filter(Boolean)
@@ -76,6 +81,6 @@ export function renderTable(path: string, b: Table, tools: TableTools): string {
     // Without a caption, the table is named by the heading it sits under, so two tables never share a name.
     const named = b.caption ? id : tools.lastHeading
     const name = named ? `aria-labelledby="${named}"` : `aria-label="${tools.tableLabel}"`
-    return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}><table ${name}>${caption}${thead}<tbody>${rows.slice(split).join('')}</tbody></table></div>`
+    return `<div class="table" role="region" tabindex="0" ${name}${flagged(path, true)}${tools.place(path)}><table ${name}>${caption}${thead}<tbody>${rows.slice(split).join('')}</tbody></table></div>`
   })
 }

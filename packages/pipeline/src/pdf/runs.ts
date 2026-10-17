@@ -19,6 +19,9 @@ const TOUCHING_GAP = 0.02
 const NEAR_GAP = 0.3
 const MIN_CENTS_RATIO = 0.3
 
+// A word set on its side: its box far taller than wide (Michael's vertical tagline, Carew's credit along the edge).
+export const turned = (r: Run): boolean => r.str.length >= 4 && r.box.h > r.box.w * 1.5
+
 export function findDuplicates(runs: readonly Run[]): string[] {
   const duplicates: string[] = []
   runs.forEach((r, i) => {

@@ -99,21 +99,26 @@ export type Drawn = {
   masked: boolean
   filtered: boolean
   bound: Box | null
+  range: [number, number]
 }
 // A raster picture placed on the page: its box in page points and the visible part its clip paths leave.
 export type Placed = { box: Box; clip: Box | null }
-type Node = { name: string; tag: string; children: Node[] }
+// `range`: the element's place in the SVG text, so a later pass can cut it out (pdf/backdrop.ts).
+type Node = { name: string; tag: string; children: Node[]; range: [number, number] }
 
 // The document's elements as a tree (pdftocairo writes no text content that matters here).
 function treeOf(svg: string): Node {
-  const root: Node = { name: '#root', tag: '', children: [] }
+  const root: Node = { name: '#root', tag: '', children: [], range: [0, svg.length] }
   const stack: Node[] = [root]
-  for (const [tag, close, name = ''] of svg.matchAll(/<(\/?)([A-Za-z][\w:-]*)\b[^>]*>/g)) {
+  for (const match of svg.matchAll(/<(\/?)([A-Za-z][\w:-]*)\b[^>]*>/g)) {
+    const [tag, close, name = ''] = match
+    const end = match.index + tag.length
     if (close) {
-      if (stack.length > 1) stack.pop()
+      const open = stack.length > 1 ? stack.pop() : undefined
+      if (open) open.range[1] = end
       continue
     }
-    const node: Node = { name, tag, children: [] }
+    const node: Node = { name, tag, children: [], range: [match.index, end] }
     stack.at(-1)?.children.push(node)
     if (!tag.endsWith('/>')) stack.push(node)
   }
@@ -177,7 +182,15 @@ const ref = (value: string | null): string =>
 // The page size in points, every path or rect it draws and every raster picture it places, each through the
 // transforms and clips above it. pdftocairo defines placed content in <defs> (`source-N` groups and images) and
 // draws it with <use>: it counts where it is used, never where it is defined (Claudio's art at the foot, not the top).
-export function drawnElements(svg: string): { width: number; height: number; drawn: Drawn[]; placed: Placed[] } {
+// A glyph drawn from the text layer: the point it is drawn at (its baseline start) and its place in the SVG text.
+export type Glyph = { at: Point; range: [number, number] }
+export function drawnElements(svg: string): {
+  width: number
+  height: number
+  drawn: Drawn[]
+  placed: Placed[]
+  glyphs: Glyph[]
+} {
   const width = Number(/<svg[^>]*\swidth="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
   const height = Number(/<svg[^>]*\sheight="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
   const root = treeOf(svg)
@@ -190,6 +203,7 @@ export function drawnElements(svg: string): { width: number; height: number; dra
   index(root)
   const drawn: Drawn[] = []
   const placed: Placed[] = []
+  const glyphs: Glyph[] = []
   const clipOf = (id: string, m: Matrix): Clip | null => {
     const subpaths = (byId.get(id)?.children ?? []).flatMap((c) => {
       const d = c.name === 'rect' ? rectPath(c.tag) : (attr(c.tag, 'd') ?? '')
@@ -246,6 +260,7 @@ export function drawnElements(svg: string): { width: number; height: number; dra
         masked: hidden || !shown,
         filtered: filter,
         bound: own && visible ? intersect(own, visible.box) : own,
+        range: n.range,
       })
       return
     }
@@ -257,13 +272,14 @@ export function drawnElements(svg: string): { width: number; height: number; dra
     if (n.name === 'use') {
       const target = ref(attr(n.tag, 'xlink:href') ?? attr(n.tag, 'href'))
       const node = byId.get(target)
-      if (!node || using.has(target) || target.startsWith('glyph') || target.startsWith('compositing-group')) return
       const at = multiply(here, [1, 0, 0, 1, Number(attr(n.tag, 'x') ?? 0), Number(attr(n.tag, 'y') ?? 0)])
+      if (target.startsWith('glyph')) glyphs.push({ at: [at[4], at[5]], range: n.range })
+      if (!node || using.has(target) || target.startsWith('glyph') || target.startsWith('compositing-group')) return
       walk(node, at, visible, new Set([...using, target]), hidden, filter)
       return
     }
     for (const c of n.children) walk(c, here, visible, using, hidden, filter)
   }
   walk(root, IDENTITY, null, new Set())
-  return { width, height, drawn, placed }
+  return { width, height, drawn, placed, glyphs }
 }

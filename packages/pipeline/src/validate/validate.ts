@@ -15,6 +15,9 @@ export type Validation = {
   doubleCited: string[]
 }
 
+// The paths a page marks for review: its errors and review findings (the printed view leaves them as printed).
+export const flaggedPaths = (v: Validation): string[] => [...v.errors, ...v.review].map((f) => f.path)
+
 type Range = [number, number]
 
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')

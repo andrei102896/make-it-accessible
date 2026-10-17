@@ -8,6 +8,7 @@ import { type Strings, UI } from './strings.ts'
 import { brandCss, headingClasses } from './brand.ts'
 import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
+import { GUTTER_PX, printCss, printWidth, viewSwitch } from './print.ts'
 import { css } from './style.ts'
 
 export type { HtmlDocument, HtmlPage } from './types.ts'
@@ -41,6 +42,7 @@ export function renderDocument(doc: HtmlDocument): string {
   const looks = new Map(segments.flatMap((l) => [...l.lines.looks]))
   const rules = looks.size ? [] : (brand?.rules ?? [])
   if (titleKey) classes.set(titleKey, `${classes.get(titleKey) ?? ''} masthead-title`.trim())
+  const print = printWidth(doc.pages)
   const rendered = doc.pages.map((p, index) =>
     renderPage(p, {
       ui,
@@ -56,6 +58,7 @@ export function renderDocument(doc: HtmlDocument): string {
       inlinePrices: brand?.profile.pricesInline ?? false,
       smallCaps,
       titleWords,
+      printPx: print === null ? null : print - GUTTER_PX,
     }),
   )
   const parts = doc.title.split(' · ')
@@ -94,20 +97,23 @@ export function renderDocument(doc: HtmlDocument): string {
     nav && (chips || doc.pages.length > 1)
       ? `\n<p class="back"><a href="#contents">${chips ? ui.sections : ui.contents} <span aria-hidden="true">↑</span></a></p>`
       : ''
+  // The printed view: page 1's masthead shares its page's grid cell, under the contents and the legend.
+  const [lead, ...rest] = rendered.map((r) => r.html + back)
+  const opened = `${withLogo(rendered[0]?.masthead ?? '', logo)}${nav}${key}\n${lead ?? ''}`
+  const pages = print === null ? [opened, ...rest] : [`<div class="lead">${opened}</div>`, ...rest]
   return `<!doctype html>
 <html lang="${esc(doc.lang)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print)}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
-<main id="main">
+<main id="main">${print === null ? '' : `\n${viewSwitch(ui)}`}
 <div class="band${printed ? ' sr-only' : ''}"><h1>${title}</h1>${printed ? '' : validity}</div>${printed ? validity : ''}
-${withLogo(rendered[0]?.masthead ?? '', logo)}${nav}${key}
-${rendered.map((r) => r.html + back).join('\n')}
+${pages.join('\n')}
 </main>
 </body>
 </html>

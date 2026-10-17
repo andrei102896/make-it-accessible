@@ -63,21 +63,21 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
-  const { boxes, rules, art, placed } = await extractVectors(pdf, pdfPage)
+  const { boxes, rules, art, placed } = parseVectors(await pageSvg(pdf, pdfPage))
   const shown = new Set(hidden)
   const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())
   const pictures = picturesOf(art, placed, words, width, height)
   return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures }
 }
 
-// The page's drawn frames, panels and rules, read from pdftocairo's SVG (0.1–0.8 s a page).
-async function extractVectors(pdf: string, pdfPage: number): Promise<ReturnType<typeof parseVectors>> {
+// The page as pdftocairo draws it in SVG (0.1–0.8 s a page): the vector layer and the printed view's backdrop.
+export async function pageSvg(pdf: string, pdfPage: number): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'mia-vectors-'))
   try {
     const page = String(pdfPage)
     const file = join(dir, 'page.svg')
     await poppler('pdftocairo', ['-q', '-svg', '-f', page, '-l', page, pdf, file], { maxBuffer: MAX_BUFFER })
-    return parseVectors(await readFile(file, 'utf8'))
+    return await readFile(file, 'utf8')
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

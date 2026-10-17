@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
@@ -8,12 +8,15 @@ import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import { pictureIn } from '@make-it-accessible/pipeline/pdf/art'
-import { clearEdges, cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
+import { parseGrid } from '@make-it-accessible/pipeline/pdf/backdrop'
+import { cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
 import { extractPage, renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
-import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { writeBackdrops } from './backdrop.ts'
 import { costUsd } from './cost.ts'
+import { fitPlaced } from './fit.ts'
 import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
 
@@ -80,7 +83,8 @@ export async function processPage(
   return { keyPage, pdfPage, dir, structure: result.page, extraction, validation, usd }
 }
 
-// Renders one accessible HTML document from processed pages, with image crops; returns its path.
+// Renders one accessible HTML document from processed pages, with image crops; returns its path. `printed` adds
+// the printed view (menus); stage 0's scored pages stay without it, so a rescore does not change.
 export async function buildHtml(
   pdfPath: string,
   docDir: string,
@@ -88,8 +92,10 @@ export async function buildHtml(
   fallbackTitle: string,
   title?: string,
   briefModel?: ModelOptions,
+  printed = false,
 ): Promise<string> {
   const pages: HtmlPage[] = []
+  if (printed) await writeBackdrops(pdfPath, results)
   const look = await documentLook(pdfPath, docDir, results, briefModel)
   const named = logoAt(look.brief?.logo ?? null, results)
   let logo: { src: string; share: number } | null = null
@@ -154,16 +160,9 @@ export async function buildHtml(
     const shown =
       mark && !pictures.some((p) => intersection(toPts(p), mark) >= Math.min(area(toPts(p)), area(mark)) / 2)
     if (mark && shown) {
-      const centre = (w: Box): boolean =>
-        w.x + w.w / 2 > mark.x * k &&
-        w.x + w.w / 2 < (mark.x + mark.w) * k &&
-        w.y + w.h / 2 > mark.y * k &&
-        w.y + w.h / 2 < (mark.y + mark.h) * k
-      // Words centred inside are the logo's own ("fresh simple pure"); the rest at its edges move them in.
-      const cut = clearEdges(
-        toPx(mark),
-        painted.filter((p) => !centre(p.box)).map((p) => p.box),
-      )
+      // The whole artwork, never cut to clear a neighbour's word (Michael's oval lost its edge). ponytail: a word
+      // reaching into the box shows a sliver; crop from the text-free backdrop (printed view) to drop it.
+      const cut = toPx(mark)
       const file = await renderCrop(
         pdfPath,
         r.pdfPage,
@@ -173,32 +172,50 @@ export async function buildHtml(
       )
       logo = { src: file.slice(docDir.length + 1), share: cut.w / k / r.extraction.width }
     }
-    const flagged = [...r.validation.errors, ...r.validation.review].map((f) => f.path)
+    const flagged = flaggedPaths(r.validation)
     pages.push({
       keyPage: r.keyPage,
       structure: r.structure,
       extraction: r.extraction,
       flagged,
       imageSrc: (p) => sources.get(p),
+      backdrop: printed ? await backdropOf(r.dir, docDir) : null,
     })
   }
   const brand = await documentBrand(pdfPath, docDir, pages, look.background, look.theme?.band?.bg ?? null)
   const htmlPath = join(docDir, 'index.html')
-  await writeFile(
-    htmlPath,
-    renderDocument({
-      lang: results[0]?.structure.lang ?? 'en',
-      title: title ?? look.title ?? fallbackTitle,
-      pages,
-      theme: look.theme,
-      kind: look.brief?.type ?? null,
-      headings: look.headings,
-      validity: look.brief?.validity ?? null,
-      brand,
-      logo,
-    }),
-  )
+  const write = (): Promise<void> =>
+    writeFile(
+      htmlPath,
+      renderDocument({
+        lang: results[0]?.structure.lang ?? 'en',
+        title: title ?? look.title ?? fallbackTitle,
+        pages,
+        theme: look.theme,
+        kind: look.brief?.type ?? null,
+        headings: look.headings,
+        validity: look.brief?.validity ?? null,
+        brand,
+        logo,
+      }),
+    )
+  await write()
+  const failing = printed ? await fitPlaced(htmlPath) : []
+  // A page whose placed text overflows or collides shows the text view; the other pages keep the printed view.
+  if (failing.length) {
+    for (const m of failing) console.info(`${docDir} p${String(m.page)}: text view, ${m.why}`)
+    for (const p of pages) if (failing.some((m) => m.page === p.keyPage)) p.backdrop = null
+    await write()
+    const still = await fitPlaced(htmlPath)
+    for (const m of still) console.error(`${docDir} p${String(m.page)}: still misplaced after the fallback, ${m.why}`)
+  }
   return htmlPath
+}
+
+// The page's backdrop when it rendered (backdrop.ts); a page without one keeps its document in the text view.
+async function backdropOf(dir: string, docDir: string): Promise<NonNullable<HtmlPage['backdrop']> | null> {
+  const json = await readFile(join(dir, 'backdrop.json'), 'utf8').catch(() => null)
+  return json === null ? null : { src: join(dir, 'backdrop.jpg').slice(docDir.length + 1), grid: parseGrid(json) }
 }
 
 // The brief's logo (a page among those it saw, a box as fractions of it) on the page and in the points it names.

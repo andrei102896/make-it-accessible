@@ -52,8 +52,8 @@ async function rebuild(s: Source): Promise<string> {
       usd: 0,
     })
   }
-  const html = await readFile(await buildHtml(pdf, out, results, 'doc', s.title), 'utf8')
-  const parts = html.split(/src="(p\d+\/img-\w+\.jpg)"/)
+  const html = await readFile(await buildHtml(pdf, out, results, 'doc', s.title, undefined, true), 'utf8')
+  const parts = html.split(/src="(p\d+\/(?:img-\w+|backdrop)\.jpg)"/)
   for (let i = 1; i < parts.length; i += 2)
     parts[i] = `src="data:image/jpeg;base64,${(await readFile(join(out, parts[i] ?? ''))).toString('base64')}"`
   const page = join(out, 'page.html')

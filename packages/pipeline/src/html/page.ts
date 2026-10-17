@@ -3,13 +3,15 @@ import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency } from '../text/money.ts'
-import { headedLists, inkedHtml, inkSegments, visibleText } from './source.ts'
+import { inkedHtml, inkSegments, visibleText } from './source.ts'
+import { listNotes } from './notes.ts'
 import { unionOf } from './profile.ts'
-import { dietTag, emphasizeMoney, esc, isAddOn, isBadge, linkify, noteTargets, trailingCodes } from './inline.ts'
+import { dietTag, emphasizeMoney, esc, isAddOn, isBadge, linkify, trailingCodes } from './inline.ts'
 import { assemble } from './layout.ts'
 import { listedHeadings } from './nav.ts'
 import { renderTable } from './table.ts'
 import { vectorClass } from './boxes.ts'
+import { placer } from './placed.ts'
 import type { Context, HtmlPage, Rendered } from './types.ts'
 
 // A lone picture keeps its printed size class (share of the page width); pictures printed together are tiles.
@@ -18,10 +20,9 @@ const LARGE_FIGURE = 0.6
 // A separator the print puts after a price or its label ("ea," "20,") belongs to neither: it stands between the prices.
 const SEPARATOR = /[,;]$/
 
-export function renderPage(
-  page: HtmlPage,
-  { ui, lang, index, long, legend, running, classes, layout, kind, inks, inlinePrices, smallCaps, titleWords }: Context,
-): Rendered {
+export function renderPage(page: HtmlPage, ctx: Context): Rendered {
+  const { ui, lang, index, long, legend, running, classes } = ctx
+  const { layout, kind, inks, inlinePrices, smallCaps, titleWords, printPx } = ctx
   const e = page.extraction
   const runs = e.runs
   const toc: Rendered['toc'] = []
@@ -38,15 +39,28 @@ export function renderPage(
   // Plain text for a label reused outside its element (the contents list); inked text, with the runs printed in a
   // brand colour wrapped, for the element itself.
   const plain = (t: TextValue): string => ('seen' in t ? `<span data-seen>${esc(t.seen)}</span>` : esc(raw(t)))
-  const inked = (t: TextValue, shown: string, each: (s: string) => string = esc): string =>
-    'seen' in t ? plain(t) : inks.size ? inkedHtml(inkSegments(t, e, shown), inks, each) : each(shown)
-  const text = (t: TextValue): string => inked(t, raw(t))
+  // With `path` in the printed view, the text placed line by line (placed.ts); `tail` ends it (diet codes).
+  const inked = (t: TextValue, shown: string, each: (s: string) => string = esc, path?: string, tail = ''): string =>
+    (path === undefined
+      ? null
+      : pl.lined(
+          path,
+          t,
+          shown,
+          (s) => (inks.size ? inkedHtml(s, inks, each) : each(s.map((x) => x.text).join(''))),
+          tail,
+        )) ??
+    ('seen' in t ? plain(t) : inks.size ? inkedHtml(inkSegments(t, e, shown), inks, each) : each(shown)) + tail
+  const text = (t: TextValue, path?: string): string => inked(t, raw(t), esc, path)
   const rawName = (t: TextValue): string => visibleText(t, e, smallCaps.has('name'))
   // The narrowest element carrying a finding is marked, so a reviewer (and the scorer) sees what was flagged.
   const flagged = (path: string, exact = false): string =>
     page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
       ? ' data-review'
       : ''
+  const pl = placer(page, printPx)
+  const place = pl.place
+  const attrs = (path: string): string => flagged(path) + place(path)
 
   const hidden = new Set(e.hidden)
   const onPage = runs.filter((r) => !hidden.has(r.id))
@@ -78,17 +92,22 @@ export function renderPage(
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
     const printedLabel = p.qualifier ? raw(p.qualifier) : ''
     const label = p.qualifier ? printedLabel.replace(SEPARATOR, '') : p.role === 'previous' ? ui.previous : ''
+    const apart = pl.apart(path)
+    // A label the model read elsewhere (a column head) is not printed beside the amount: read, not shown there.
+    const seen = p.qualifier !== undefined && 'seen' in p.qualifier
+    const own = (part: string): string =>
+      apart ? place(`${path}.${part}`) : part === 'qualifier' && seen ? pl.free : ''
     const qualifier = label
-      ? `<span class="qualifier">${p.qualifier ? inked(p.qualifier, label) : esc(label)}</span>`
+      ? `<span class="qualifier"${own('qualifier')}>${p.qualifier ? inked(p.qualifier, label) : esc(label)}</span>`
       : ''
     // The label sits where it is printed: "Bowl 8" before the amount, "3.5 ea" after it.
     const labelBox = p.qualifier && 'src' in p.qualifier ? unionOf(visibleRuns(p.qualifier)) : null
     const amountBox = unionOf(words)
     const after = labelBox !== null && amountBox !== null && labelBox.x > amountBox.x
     const sep = SEPARATOR.exec(after ? printedLabel : printed)?.[0] ?? ''
-    const amountHtml = `<span class="amount">${esc(shown)}</span>`
+    const amountHtml = `<span class="amount"${own('amount')}>${esc(shown)}</span>`
     const parts = (after ? [amountHtml, qualifier] : [qualifier, amountHtml]).filter(Boolean).join(' ')
-    return `<span class="price${inkOf(words)}" data-role="${p.role}"${data}${flagged(path)}>${parts}</span>${sep}`
+    return `<span class="price${inkOf(words)}" data-role="${p.role}"${data}${attrs(path)}>${parts}</span>${sep}`
   }
 
   const { width: pageWidth } = fitScale(e.width, e.height)
@@ -113,29 +132,10 @@ export function renderPage(
             : figure === 'alone'
               ? 'fig-m'
               : ''
-    return `<img src="${esc(src)}" alt="${esc(alt)}"${size ? ` class="${size}"` : ''}${flagged(path)}>`
+    return `<img src="${esc(src)}" alt="${esc(alt)}"${size ? ` class="${size}"` : ''}${attrs(path)}>`
   }
 
-  // A note printed right under a menu-style list describes the items it names, or the whole list when it names none.
-  // A note naming the heading it sits under describes every list since that heading, outside any box.
-  const notes = new Map<string, { id: string; items: number[] | null; headed: boolean }>()
-  const describedBy = new Map<string, string>()
-  page.structure.blocks.forEach((b, i) => {
-    const next = page.structure.blocks[i + 1]
-    // Small print at the foot of the page (the tail) is never the list's note.
-    if (b.kind !== 'products' || b.items.some((it) => it.image) || next?.kind !== 'paragraph' || layout.tail.has(i + 1))
-      return
-    const id = `note-${String(e.pdfPage)}-${String(i + 1)}`
-    const lists = headedLists(page.structure.blocks, i + 1, raw)
-    lists?.forEach((l) => describedBy.set(`blocks[${String(l)}]`, id))
-    const items = lists
-      ? null
-      : noteTargets(
-          raw(next.text),
-          b.items.map((it) => raw(it.name)),
-        )
-    notes.set(`blocks[${String(i)}]`, { id, items, headed: lists !== null })
-  })
+  const { notes, describedBy } = listNotes(page.structure.blocks, layout.tail, e.pdfPage, raw)
 
   // A top-level block's layout classes: set centred or right as printed (align.ts), its printed rules (lines.ts).
   const classAt = (path: string): string => {
@@ -161,23 +161,29 @@ export function renderPage(
         const own = [classes.get(`${String(index)}:${path}`), classAt(path)].filter(Boolean).join(' ')
         const cls = own ? ` class="${own}"` : ''
         // Rules either side of a heading are flex items: its words stay one item.
-        const shown = own.includes('rule-through') ? `<span>${text(b.text)}</span>` : text(b.text)
-        return `<h${level} id="${id}"${cls}${flagged(path)}>${shown}</h${level}>`
+        const shown = own.includes('rule-through') ? `<span>${text(b.text, path)}</span>` : text(b.text, path)
+        return `<h${level} id="${id}"${cls}${attrs(path)}>${shown}</h${level}>`
       }
       case 'paragraph': {
         const words = raw(b.text)
         if (!words) return ''
-        const body = inked(b.text, words, linkify)
-        return `<p${classAt(path) ? ` class="${classAt(path)}"` : ''}${flagged(path)}>${body}</p>`
+        const body = inked(b.text, words, linkify, path)
+        return `<p${classAt(path) ? ` class="${classAt(path)}"` : ''}${attrs(path)}>${body}</p>`
       }
       case 'list':
-        return `<ul${classAt(path) ? ` class="${classAt(path)}"` : ''}${flagged(path, true)}>${b.items.map((t, i) => `<li${flagged(`${path}.items[${i}]`)}>${inked(t, raw(t), linkify)}</li>`).join('')}</ul>`
+        return `<ul${classAt(path) ? ` class="${classAt(path)}"` : ''}${flagged(path, true)}>${b.items
+          .map((t, i) => {
+            const own = inked(t, raw(t), linkify, `${path}.items[${i}]`)
+            return `<li${attrs(`${path}.items[${i}]`)}>${own}</li>`
+          })
+          .join('')}</ul>`
       case 'table':
         return renderTable(path, b, {
           text,
           linked: (t) => inked(t, raw(t), linkify),
           price,
           flagged,
+          place,
           withWhole,
           keyPage: page.keyPage,
           lastHeading,
@@ -215,13 +221,10 @@ export function renderPage(
     }
   }
 
-  const name = (
-    path: string,
-    item: Item,
-    codes: readonly string[] = [],
-    shown = inked(item.name, rawName(item.name)),
-  ): string =>
-    `<p class="name"${flagged(`${path}.name`)}>${shown}${codes.map((c) => ` ${dietTag(c, legend)}`).join('')}</p>`
+  const name = (path: string, item: Item, codes: readonly string[] = [], words = rawName(item.name)): string => {
+    const shown = inked(item.name, words, esc, `${path}.name`, codes.map((c) => ` ${dietTag(c, legend)}`).join(''))
+    return `<p class="name"${attrs(`${path}.name`)}>${shown}</p>`
+  }
   // role="text" makes VoiceOver read a price with its previous price as one phrase, not one stop per line.
   // A price cited twice for one dish (once with its description as qualifier) is shown once.
   const prices = (path: string, item: Item): string => {
@@ -233,7 +236,7 @@ export function renderPage(
       : ''
   }
   const unit = (path: string, item: Item): string =>
-    item.unit ? `<p class="unit"${flagged(`${path}.unit`)}>${text(item.unit)}</p>` : ''
+    item.unit ? ((own) => `<p class="unit"${attrs(`${path}.unit`)}>${own}</p>`)(text(item.unit, `${path}.unit`)) : ''
 
   // A dish: name and price on one line, the description below; the legend's codes move next to the name. Where
   // the print runs the description on from the name (`leadFirst`), the lead description comes before the price.
@@ -248,14 +251,13 @@ export function renderPage(
       codes.push(...found)
       if (!rest) return ''
       const addon = isAddOn(rest)
-      const body = inked(d.text, rest, addon ? (s) => emphasizeMoney(linkify(s)) : linkify)
+      const body = inked(d.text, rest, addon ? (s) => emphasizeMoney(linkify(s)) : linkify, at)
       if (!addon && lead < 0) lead = i
-      return `<p class="${addon ? 'addon' : lead === i ? 'desc lead' : 'desc'}"${flagged(at)}>${body}</p>`
+      return `<p class="${addon ? 'addon' : lead === i ? 'desc lead' : 'desc'}"${attrs(at)}>${body}</p>`
     })
-    const shown = inked(item.name, own.rest)
     const first = leadFirst && lead >= 0 ? (details[lead] ?? '') : ''
     const rest = first ? details.filter((_, i) => i !== lead) : details
-    return `<li${flagged(path, true)}>${name(path, item, codes, shown)}${first}${prices(path, item)}${unit(path, item)}${rest.join('')}</li>`
+    return `<li${flagged(path, true)}>${name(path, item, codes, own.rest)}${first}${prices(path, item)}${unit(path, item)}${rest.join('')}</li>`
   }
 
   // A card: picture, name, offer, then the rest; each part sits on a row shared with the cards beside it
@@ -265,7 +267,7 @@ export function renderPage(
     const details = item.details.map((d, i) => {
       const at = `${path}.details[${i}]`
       if (offered && d.kind === 'paragraph' && !('seen' in d.text) && isBadge(raw(d.text)))
-        return `<p class="tag"${flagged(at)}>${text(d.text)}</p>`
+        return ((own) => `<p class="tag"${attrs(at)}>${own}</p>`)(text(d.text, at))
       return block(at, d)
     })
     const more = details.join('') ? `<div class="more">${details.join('')}</div>` : ''
@@ -318,6 +320,10 @@ export function renderPage(
   const body = assemble(parts, layout)
   const marker = long ? '' : ' class="sr-only"'
   const framed = layout.boxes.pageFrame ? ` class="box ${vectorClass(layout.boxes.pageFrame)}"` : ''
-  const html = `<section aria-labelledby="${id}"${framed} data-page="${page.keyPage}">\n<h2 id="${id}"${marker}>${ui.page} ${e.pdfPage}</h2>\n${body.join('\n')}\n</section>`
+  const printed = page.backdrop ? ` style="--ar:${String(e.width)}/${String(e.height)}"` : ''
+  const backdrop = page.backdrop
+    ? `\n<img class="backdrop" src="${esc(page.backdrop.src)}" alt="" loading="lazy" decoding="async">`
+    : ''
+  const html = `<section aria-labelledby="${id}"${framed} data-page="${page.keyPage}"${printed}>\n<h2 id="${id}"${marker}>${ui.page} ${e.pdfPage}</h2>${backdrop}\n${body.join('\n')}\n</section>`
   return { html, toc, masthead: header }
 }

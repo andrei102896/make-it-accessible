@@ -40,7 +40,7 @@ for (let page = from; page <= Math.min(to, total); page++) {
 if (results.length) {
   const briefModel = { model: values['brief-model'], effort: 'low' }
   if (!PRICES[briefModel.model]) throw new Error(`unknown model ${briefModel.model}`)
-  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title, briefModel)
+  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title, briefModel, true)
   const axe = await axeReport(htmlPath)
   const keyboard = await keyboardReport(htmlPath)
   const usd = results.reduce((sum, r) => sum + r.usd, 0)

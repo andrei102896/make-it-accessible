@@ -1,12 +1,45 @@
+import { z } from 'zod'
 import { iou } from '../pdf/geometry.ts'
 import { fitScale } from '../pdf/raster.ts'
-import { joinRuns } from '../pdf/runs.ts'
+import { joinRuns, turned } from '../pdf/runs.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
 
 // Every run a text cites (none for text read from the image), hidden ones included: geometry wants every box.
 export const citedRuns = (e: Extraction, t: TextValue): Run[] =>
   'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
+
+const Cited = z.array(z.tuple([z.number(), z.number()]))
+const under = (inner: string, outer: string): boolean => inner.startsWith(`${outer}.`) || inner.startsWith(`${outer}[`)
+// Whether a validator finding sits on `path`, inside it or around it (the text there is in doubt).
+export const flaggedAt = (path: string, flagged: readonly string[]): boolean =>
+  flagged.some((f) => f === path || under(path, f) || under(f, path))
+// The shown words any text of the page cites (names, prices, notes alike): those our own text stands in for.
+// Text with a word set on its side, or a finding on it, is left printed (the print shows it right).
+export function placedRuns(page: PageStructure, e: Extraction, flagged: readonly string[] = []): Run[] {
+  const cited = new Set<number>()
+  const visit = (value: unknown, path: string): void => {
+    if (Array.isArray(value))
+      value.forEach((v, i) => {
+        visit(v, `${path}[${String(i)}]`)
+      })
+    else if (typeof value === 'object' && value !== null)
+      for (const [key, v] of Object.entries(value)) {
+        const src = key === 'src' ? Cited.safeParse(v) : null
+        if (!src?.success) {
+          visit(v, path ? `${path}.${key}` : key)
+          continue
+        }
+        // ponytail: judged per cited text; a price whose label alone is turned loses its amount's spot too.
+        const turnedText = src.data.flatMap(([from, to]) => e.runs.slice(from, to + 1)).some(turned)
+        if (!turnedText && !flaggedAt(path, flagged))
+          for (const [from, to] of src.data) for (let i = from; i <= to; i++) cited.add(i)
+      }
+  }
+  visit(page, '')
+  const hidden = new Set(e.hidden)
+  return e.runs.filter((r, i) => cited.has(i) && !hidden.has(r.id))
+}
 
 // The words a text cites, without those the page does not show; a line-end hyphen before a capital joins
 // ("MARILLEN-" + "PALATSCHINKEN"), before a small letter it stays a word break the model may clean.
@@ -152,39 +185,97 @@ export function headedLists(blocks: readonly Block[], note: number, raw: (t: Tex
 }
 
 export type Segment = { text: string; color: string | null }
-// The shown text's characters matched to the cited runs' characters (whitespace and case aside), each taking its
-// run's colour. When the letters differ (the model's text stands in for a broken layer), one segment, coloured only
-// when every run agrees.
-export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
-  if ('seen' in t) return [{ text: shown, color: null }]
+// Each shown character's run, matched to the cited runs' characters (whitespace and case aside): null for
+// whitespace, and null for the whole text when the letters differ (the model's text stands in for a broken layer).
+export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | null)[] | null {
+  if ('seen' in t) return null
   const hidden = new Set(e.hidden)
   const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
-  const chars = runs.flatMap((r) =>
-    Array.from(r.str.replace(/\s+/g, '')).map((ch) => ({ ch: ch.toLowerCase(), color: r.color ?? null })),
-  )
-  const letters = Array.from(shown)
-  const colors: (string | null)[] = []
+  const chars = runs.flatMap((r) => Array.from(r.str.replace(/\s+/g, '')).map((ch) => ({ ch: ch.toLowerCase(), r })))
   let at = 0
-  for (const ch of letters) {
+  const out: (Run | null)[] = []
+  for (const ch of Array.from(shown)) {
     if (/\s/.test(ch)) {
-      colors.push(colors.at(-1) ?? null)
+      out.push(null)
       continue
     }
     const c = chars[at++]
-    if (c?.ch !== ch.toLowerCase()) {
-      const all = new Set(runs.map((r) => r.color ?? null))
-      return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null }]
-    }
-    colors.push(c.color)
+    if (c?.ch !== ch.toLowerCase()) return null
+    out.push(c.r)
   }
+  return out
+}
+
+// The shown text's characters each with its run's colour (whitespace takes the one before). When the letters
+// differ, one segment, coloured only when every run agrees.
+export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
+  if ('seen' in t) return [{ text: shown, color: null }]
+  const letters = Array.from(shown)
+  const owners = shownRuns(t, e, shown)
+  if (!owners) {
+    const hidden = new Set(e.hidden)
+    const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
+    const all = new Set(runs.map((r) => r.color ?? null))
+    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null }]
+  }
+  return segmentsOf(letters, owners)
+}
+
+function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[]): Segment[] {
   const out: Segment[] = []
+  let color: string | null = null
   letters.forEach((ch, i) => {
-    const color = colors[i] ?? null
+    const owner = owners[i]
+    if (owner) color = owner.color ?? null
+    else if (i === 0) color = null
     const last = out.at(-1)
     if (last && last.color === color) last.text += ch
     else out.push({ text: ch, color })
   })
   return out
+}
+
+// The shown text cut at its printed line breaks: each line's characters with their runs, and the whitespace
+// between lines as it is shown (none where a hyphenated word was joined), so the pieces make up `shown` exactly.
+// Null when the text does not follow its runs or prints on one line.
+export type LinePart = { text: string; runs: Run[]; segments: Segment[] } | { gap: string }
+export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[] | null {
+  const owners = shownRuns(t, e, shown)
+  if (!owners) return null
+  const letters = Array.from(shown)
+  const key = (r: Run): string => `${String(r.flow)}:${String(r.line)}`
+  const parts: LinePart[] = []
+  let line: { start: number; end: number; key: string } | null = null
+  const close = (): void => {
+    if (!line) return
+    const own = owners.slice(line.start, line.end)
+    const runs = [...new Set(own.filter((r): r is Run => r !== null))]
+    parts.push({
+      text: letters.slice(line.start, line.end).join(''),
+      runs,
+      segments: segmentsOf(letters.slice(line.start, line.end), own),
+    })
+  }
+  let gap = ''
+  letters.forEach((ch, i) => {
+    const owner = owners[i]
+    if (!owner) {
+      gap += ch
+      return
+    }
+    if (line && line.key === key(owner)) {
+      line.end = i + 1
+      gap = ''
+      return
+    }
+    close()
+    if (gap || line) parts.push({ gap })
+    gap = ''
+    line = { start: i, end: i + 1, key: key(owner) }
+  })
+  close()
+  if (gap) parts.push({ gap })
+  return parts.filter((p) => 'runs' in p).length > 1 ? parts : null
 }
 
 // The segments as HTML: runs printed in a brand ink wrapped in its class, the rest joined so `each` (escape or

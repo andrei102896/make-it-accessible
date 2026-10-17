@@ -1,3 +1,4 @@
+import type { Grid } from '../pdf/backdrop.ts'
 import type { Extraction } from '../pdf/types.ts'
 import type { DocumentType, HeadingClass } from '../model/brief.ts'
 import type { PageStructure } from '../model/schema.ts'
@@ -15,6 +16,8 @@ export type HtmlPage = {
   extraction: Extraction
   flagged: readonly string[]
   imageSrc: (path: string) => string | undefined
+  // The printed page without the words we place (pdf/backdrop.ts): the printed view stands on it.
+  backdrop?: { src: string; grid: Grid } | null
 }
 // `kind`, `headings` and `validity` come from the document brief; without one the page is laid out from its blocks.
 export type HtmlDocument = {
@@ -50,4 +53,6 @@ export type Context = {
   smallCaps: ReadonlySet<Role>
   // The document title's words (nav.ts titleWordsOf): a page heading that names the document is no section chip.
   titleWords: readonly string[]
+  // The printed view's narrowest page width in CSS px (print.ts printWidth), null without one.
+  printPx: number | null
 }

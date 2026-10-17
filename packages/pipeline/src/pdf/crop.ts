@@ -160,17 +160,3 @@ export function growToPicture(box: Box, words: readonly CropWord[], img: Pixels)
   const bottom = reach(Math.ceil(box.y + box.h), 1) + 1
   return { ...box, y: Math.min(box.y, top), h: Math.max(box.y + box.h, bottom) - Math.min(box.y, top) }
 }
-
-// A logo's box cleared of the words beside it: a word sticking out past one edge moves that edge in to it, so the
-// artwork stays whole (Michael's "Raw" at the oval's corner cut its arc away under the product crop rule).
-export function clearEdges(box: Box, foreign: readonly Box[]): Box {
-  let [x0, y0, x1, y1] = [box.x, box.y, box.x + box.w, box.y + box.h]
-  for (const w of foreign) {
-    if (intersection({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, w) === 0) continue
-    if (w.x + w.w > x1) x1 = Math.min(x1, w.x)
-    else if (w.x < x0) x0 = Math.max(x0, w.x + w.w)
-    else if (w.y + w.h > y1) y1 = Math.min(y1, w.y)
-    else if (w.y < y0) y0 = Math.max(y0, w.y + w.h)
-  }
-  return { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) }
-}

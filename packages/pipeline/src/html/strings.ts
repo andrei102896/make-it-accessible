@@ -7,6 +7,9 @@ export const UI = {
     table: 'Tabelle',
     contents: 'Inhalt',
     sections: 'Bereiche',
+    view: 'Seitenansicht',
+    printed: 'Wie gedruckt',
+    textOnly: 'Nur Text',
   },
   en: {
     skip: 'Skip to content',
@@ -15,6 +18,9 @@ export const UI = {
     table: 'Table',
     contents: 'Contents',
     sections: 'Sections',
+    view: 'Page view',
+    printed: 'As printed',
+    textOnly: 'Text only',
   },
 }
 export type Strings = (typeof UI)['de']

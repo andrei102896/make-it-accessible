@@ -6,7 +6,7 @@ import type { Box, Picture, Run } from './types.ts'
 // drawing glued everything near it into one picture: Kenny & Ziggy's curtain, 973 parts). Roles: html/pictures.ts.
 
 // A small path that words cover this much is those words drawn (outlines, small caps, highlighted prices).
-const COVERED = 0.35
+export const COVERED = 0.35
 const SMALL = 0.05
 // A shape over this share of the page is a fill of its own.
 const BIG = 0.25
