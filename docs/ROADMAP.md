@@ -2,7 +2,33 @@
 
 Single place for progress. Updated in the same change as the work (AGENTS.md "Docs upkeep"). Status: `[x]` done (date), `[~]` in progress, `[ ]` to do. Estimates are working days, not calendar promises; robustness wins over dates.
 
-**Where we are (2026-10-16):** M0 done (GO). M1 paused at A4 since 2026-10-14 for a demand test (`outreach/`, PROGRESS "Status"); brand fidelity and ornaments shipped meanwhile. Target set on 2026-10-16: independent restaurants with PDF menus, US first, $29 / £25 a month per venue with updates included. M1–M2 resume, or the segment changes, at the demand-test thresholds.
+**Where we are (2026-10-17):** M0 done (GO). M1 paused at A4 since 2026-10-14 for a demand test (`outreach/`, PROGRESS "Status"). Target set on 2026-10-16: independent restaurants with PDF menus, New York and Florida first, $29 / £25 a month per venue with updates included. Current work: menus right the first time (below), measured on menus never seen; the demand test runs beside it. M1–M2 resume, or the segment changes, at the demand-test thresholds.
+
+## Now — Menus right the first time · loop per held-out batch
+Why (Andrei, 2026-10-16): every PDF is a scenario to learn from; a fix that only repairs one menu automates nothing. The loop: a batch of menus never processed, run once → first-time-right rate (AI reviewer, `check:page`, validator) → failures grouped into patterns by how many menus they reach → each pattern fixed where the PDF layer or form lives, with a fixture from the menu that showed it → the next batch, different menus, measures again. Andrei's eye stays the final judge (`docs/reviews/`).
+- [x] Layout round on the 19 tuned menus (`docs/LAYOUT.md`, 2026-10-16): chips without scroll, centred masthead, sections in printed columns and side bands, AI reviewer (`pnpm review:page`), inline brand colours, lists as printed, two-column price tables as menu rows, 28-family font library with lookalikes and small caps, frames and panels from the vector layer, alignment as printed, rules and dotted lines from the vector layer
+- [x] Andrei's desktop review of the 19 pages, every remark recorded (`docs/reviews/2026-10-16-andrei-desktop.md`, 24 remarks)
+- [x] Held-out batch 1 (2026-10-16, `docs/reviews/2026-10-16-heldout-1.md`): 0 of 9 right the first time; patterns by reach
+- [x] Step 1, content and robustness (2026-10-16): lost ligatures filled where the gap shows them, sizes and prices per unit as printed, secondary grey on light panels, copy-protected PDFs refused by name, page titles and sentences out of the section chips
+- [ ] Step 2, the artwork layer at ingestion (8 of 9): logos, banners, seals and line art drawn as vector paths cropped from the render as figures; pictures the SVG shows but pdftohtml does not report · ~1.5 d
+- [ ] Step 3, lettering (7 of 9): display and script faces added to the library by measured need; lettering drawn as artwork kept as a picture with its words as alt · ~1 d
+- [ ] Step 4, page colour and background art (6 of 9): a coloured page, banners, curved panels (Boater's cream wave), background illustrations shown faintly behind their section (Noah's p2) · ~1 d
+- [ ] Step 5, arrangement (6 of 9): dense multi-column sheets kept in columns, a cover beside its content, free arrangements · ~1.5 d
+- [ ] Types of their own: landscape pages (Almond), flattened designs whose page is one image with text over it (Bud & Alley's), the newspaper page (Prohibition p2) · to assess
+- [ ] Open from Andrei's review: Sarge's (to review together), Rucola's logo over its frame and small-caps headings, Moosewood's side notes (legend, dressings), Ferrara's two-column list of short items
+- [ ] Dietary codes: legend as a key, codes beside the name, icon words (Moosewood fish) · 0.4 d
+- [ ] Approved pages locked as regression tests: per document, the layout facts Andrei approved (boxes, rules, columns, alignment, masthead) checked on every change · 1 d
+- [ ] Held-out batch 2: 10 new NY/FL menus, run once, after steps 2–5; batch report page instead of loose files (`docs/WORKFLOW.md` step 2)
+
+## Demand test (`outreach/`, local)
+- [x] 56 cold emails, 14–15 Oct (UK pubs and restaurants, US agencies and restaurants); one real reply (Kendells), answered with the price on 16 Oct
+- [x] 19 NY/FL previews published at andreiprojects.com/preview (`previews/EXPIRY.csv`), refreshed after every engine change
+- [ ] Follow-ups to the first 56: first 10 on 19 Oct, the other 46 on 20–21 Oct (drafts only; Andrei sends)
+- [ ] Kendells follow-up if no answer by 21 Oct
+- [ ] mail-tester.com run on the sending address (until then "0 replies" is not interpretable)
+- [ ] Wave of 20 NY/FL restaurants, each email linking its reviewed page, once Andrei passes the layout checkpoint
+- [ ] Previews deleted by 15 Nov (`pnpm preview:expire`)
+- [ ] Decision at the thresholds in `outreach/emails.md`: continue, change segment, or stop
 
 ## M0 — Stage 0 quality gate · done 2026-10-12
 - [x] Pipeline, scorer, keys for 5 documents, prompt frozen (2026-10-12)
@@ -51,7 +77,7 @@ Phase B, fixes on dev:
 - [ ] Scorer reads the masthead (`header.masthead`, outside `section[data-page]`) as part of the first page before any brand-rendered page is keyed
 - [ ] Scorer follows the validator on currency-less prices (`score/prices.ts` judge, `metrics.ts` mustFlag) before any US key is written; and on the forms the validator shows as printed since 2026-10-16: sizes (`readMoney("$65/80/90")` is null today, `moneyInText("3.99/4.99/5.99")` reads three prices) and a price per unit ("$30/dz" reads as 3000)
 - [ ] A qualifier equal to the dish's description is not shown; a dish whose only picture is a tiny logo renders as a row
-- [~] Layout fidelity / brand v2 (`docs/LAYOUT.md`, plan 2026-10-16; slices 1–4 done the same day: chips, masthead, columns, AI reviewer): header/content/footer segments, title scale, columns by list bands, measured price placement, frames and panels, font library and small caps, chips without scroll, inline brand colours, dietary codes, AI reviewer · ~5.5 d
+- [x] Layout fidelity / brand v2 (`docs/LAYOUT.md`, 2026-10-16): slices 1–7 done (chips, masthead, columns, AI reviewer, inline colours and list shapes, fonts and small caps, frames, panels, alignment and rules from the vector layer); what remains moved to "Now — Menus right the first time"
 - [ ] Output follow-ups: add-on prices as price elements (key and scorer role first), QR codes as links, labelled multi-prices, unit-price line, sticky side contents, brief on 2 pages, smaller inlined images on long documents
 - [ ] B2 Layout: detection per document, panel-ordered inventory with full-width cross-gutter bands, model order + page assignment, cover order, folios, two printed pages, TrimBox, area credits · 4–5 d
 - [ ] B3 Review load: bare digits next to a currency word, image text, uncovered repeats, post-hoc "uncertain" downgrade · 2 d
