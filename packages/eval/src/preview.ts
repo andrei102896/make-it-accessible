@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto'
+import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { z } from 'zod'
 
 // A preview is a converted page a prospect gets a private link to: unlisted, noindex, deleted after PREVIEW_DAYS
@@ -35,6 +37,30 @@ export function expiryRow(file: string, business: string, today: Date): ExpiryRo
 export function withNoindex(html: string): string {
   if (/<meta name="robots"/.test(html)) return html
   return html.replace(/<meta name="viewport"[^>]*>/, (m) => `${m}\n<meta name="robots" content="noindex, nofollow">`)
+}
+
+// A preview's pictures that stay files beside it (the printed view's backdrops: a phone never shows them, so the
+// page must not carry them inline): its folder is the file's name without `.html`, each backdrop named by page.
+export const assetsDir = (file: string): string => file.replace(/\.html$/, '')
+export function withAssets(html: string, file: string): { html: string; assets: { from: string; to: string }[] } {
+  const assets: { from: string; to: string }[] = []
+  const out = html.replace(/src="(p(\d+)\/backdrop\.jpg)"/g, (_, from: string, page: string) => {
+    const to = `${assetsDir(file)}/p${page}.jpg`
+    assets.push({ from, to })
+    return `src="${to}"`
+  })
+  return { html: out, assets }
+}
+
+// Writes a rendered page (its pictures relative to `pageDir`) as the preview `file` in `dir`, its assets beside it.
+export async function writePreview(html: string, pageDir: string, dir: string, file: string): Promise<void> {
+  const page = withAssets(withNoindex(html), file)
+  await rm(join(dir, assetsDir(file)), { recursive: true, force: true })
+  for (const a of page.assets) {
+    await mkdir(dirname(join(dir, a.to)), { recursive: true })
+    await copyFile(join(pageDir, a.from), join(dir, a.to))
+  }
+  await writeFile(join(dir, file), page.html)
 }
 
 export function parseExpiry(csv: string): ExpiryRow[] {

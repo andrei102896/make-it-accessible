@@ -1,6 +1,6 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { parseExpiry, withNoindex } from './preview.ts'
+import { parseExpiry, writePreview } from './preview.ts'
 import { PREVIEWS_DIR } from './paths.ts'
 import { loadSources, REBUILT_DIR } from './sources.ts'
 
@@ -18,9 +18,9 @@ for (const r of rows) {
     console.info(`${r.business}: no source, kept as is`)
     continue
   }
-  const html = withNoindex(await readFile(join(REBUILT_DIR, s.slug, 'page.html'), 'utf8'))
-  await writeFile(join(PREVIEWS_DIR, r.file), html)
-  if (copy) await writeFile(join(copy, r.file), html)
+  const html = await readFile(join(REBUILT_DIR, s.slug, 'page.html'), 'utf8')
+  await writePreview(html, join(REBUILT_DIR, s.slug), PREVIEWS_DIR, r.file)
+  if (copy) await writePreview(html, join(REBUILT_DIR, s.slug), copy, r.file)
   done++
 }
 console.info(`${String(done)} of ${String(rows.length)} previews refreshed${copy ? ` and copied to ${copy}` : ''}.`)

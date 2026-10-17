@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { expired, expiryRow, formatExpiry, parseExpiry, previewFile, withNoindex } from './preview.ts'
+import { expired, expiryRow, formatExpiry, parseExpiry, previewFile, withAssets, withNoindex } from './preview.ts'
 
 test('a preview file name is the slug with a random suffix; its row expires after 30 days', () => {
   const file = previewFile("Bud & Alley's")
@@ -30,4 +30,18 @@ test('the expiry list round-trips, keeps commas in names, and names the rows pas
     ['a-1a2b3c.html'],
   )
   assert.throws(() => parseExpiry('file,business\nx,y'))
+})
+
+test("a preview's backdrops become files in a folder named like the page; its crops stay inline", () => {
+  const html =
+    '<img class="backdrop" src="p01/backdrop.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="p12/backdrop.jpg">'
+  const out = withAssets(html, 'gigi-a1b2c3.html')
+  assert.equal(
+    out.html,
+    '<img class="backdrop" src="gigi-a1b2c3/p01.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="gigi-a1b2c3/p12.jpg">',
+  )
+  assert.deepEqual(out.assets, [
+    { from: 'p01/backdrop.jpg', to: 'gigi-a1b2c3/p01.jpg' },
+    { from: 'p12/backdrop.jpg', to: 'gigi-a1b2c3/p12.jpg' },
+  ])
 })
