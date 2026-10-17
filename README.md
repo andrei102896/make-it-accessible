@@ -54,6 +54,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/crop.ts                 picture crops: word extents in their text colour, own words kept whole, other offers cut at the edge, boxes grown back over a cut-off badge
   pdf/pixels.ts               PPM page renders as pixels
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
+  pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
@@ -188,6 +189,8 @@ out/                          run outputs (local only)
 - **Prices shown as printed are bounded forms** (`text/money.ts` printedAsIs): sizes need a sign or cents and must rise ("$12/2", a count cut short, is no price), a price per unit needs a sign or cents, so a date ("10/16/2026") or a measure ("1/2 lb") stays an error; sizes with no size label go to review. Do not remove.
 - **A copy-protected PDF is refused by name in `extractPage`**, the one call every run path makes (Hogfish: pdftohtml stops with no message). Do not move it to `pageCount`, which only `adhoc` calls.
 - **A page title is no section chip** (`nav.ts` listedHeadings): a sentence, or the one highest heading of a page that names the document with no list of its own, hands the chips to the next level; a menu page with no list (a cover) lists none. A heading that names the place beside its sibling sections stays a section (Sarge's "SARGE'S NOSHES, FRANKS, & APPETIZERS").
+
+- **Placed content counts where it is used, never where it is defined** (`svg.test.ts`). pdftocairo defines placed content in `<defs>` (`source-N` groups, images) and draws it with `<use transform>` under clips; walking `<defs>` in place put false boxes at the page's top-left on 6 documents (black panels on Sarge's, Kenny & Ziggy's, Lexington, Stone House, BILLA; red ones on Osteria's wine page) and missed real ones (Osteria's red double rules, Mezzaluna's blue rules under headings, Bannatyne's purple frame behind its photos). A plain rectangle larger than a rectangular clip is the clip (Canva-made PDFs paint a page-sized fill clipped to a bar); any other shape cut by a clip, or under a mask, has an unknown visible part and is no box or rule. Do not remove.
 
 ## Dead ends
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.

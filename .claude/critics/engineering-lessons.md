@@ -51,3 +51,6 @@
 - Measure what a junk filter drops across the whole saved set, not only the cases it targets: "heads a section" dropped 13 headings, 5 of them real sections (held-out step 1, 2026-10-16).
 - Grep before claiming "every entry point": the guard goes in the function every caller shares (`extractPage`, not `pageCount`; Hogfish, 2026-10-16).
 - A geometric acceptance window fires on ordinary data too (6% of word gaps sit in the ligature window): the fill set is the real guard. (Gigi, 2026-10-16)
+- pdftocairo draws placed content from `<defs>` (`source-N` groups) through `<use>` with its own transform and clip; walking `<defs>` in place misplaces it (Claudio's art at y 36 instead of 832; false black panels on 6 documents). A browser bounding box ignores clip paths. (2026-10-17)
+- A clipped shape shows its clip only when it is a plain rectangle under a rectangular clip; anything else cut by a clip or a mask has an unknown visible part (Osteria's award badges, Bannatyne's frame lines). (2026-10-17)
+- Remove page-sized fills (bleed, filter canvases) before any proximity grouping: one 950×1469 rect glued 58 parts on Sarge's. (pictures plan, 2026-10-17)

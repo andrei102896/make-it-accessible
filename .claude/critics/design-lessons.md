@@ -42,3 +42,5 @@
 - A rule right under a heading belongs to the heading and centres it as printed; moving it to the next block changes a look the owner has seen (Kendells, 2026-10-16).
 - A page title above real sections must hand the chips to its children; a section can hold only paragraphs (Gargiulo "Speciale"), so "heads a list" marks covers, never single headings. (held-out step 1, 2026-10-16)
 - Widening what shows "as printed" widens what is accepted as a price: dates and portion sizes ("1/2 lb") need explicit guards, and sizes with no label read as bare numbers. (Gigi, La Segunda, 2026-10-16)
+- Correctness is always the original PDF beside what we reproduced (Andrei, 2026-10-17): every engine change is judged on three-way comparisons (PDF, before, after) of each page it touches.
+- A page-sized drawing swallows everything near it when grouping: take out backgrounds before grouping (Kenny & Ziggy's curtain, 973 parts); small vector shapes with no words over them can be prices drawn as paths, never decoration (La Segunda "1.99/2.49/2.99"). (2026-10-17)

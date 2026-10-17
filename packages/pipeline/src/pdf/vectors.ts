@@ -1,11 +1,10 @@
 import { contrast, fromHex } from '../html/color.ts'
+import { attr, boxOf, colourOf, drawnElements, type Matrix, type Point, type Subpath } from './svg.ts'
 import type { Box, Rule, Vector } from './types.ts'
 
 // The PDF's drawn geometry as pdftocairo writes it to SVG: frames (stroked rectangles, or filled rings), panels
 // (filled rectangles) and rules (straight lines), in PDF points. Text (glyph <use>s) and pictures are not read here.
 
-type Matrix = [number, number, number, number, number, number]
-const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
 // A frame or panel smaller than this (points) is a glyph or a bullet, not a box round text.
 const MIN_W = 24
 const MIN_H = 12
@@ -26,86 +25,6 @@ const LEAN = 0.02
 const THIN = 3
 const TWIN = 4
 
-const multiply = (m: Matrix, n: Matrix): Matrix => [
-  m[0] * n[0] + m[2] * n[1],
-  m[1] * n[0] + m[3] * n[1],
-  m[0] * n[2] + m[2] * n[3],
-  m[1] * n[2] + m[3] * n[3],
-  m[0] * n[4] + m[2] * n[5] + m[4],
-  m[1] * n[4] + m[3] * n[5] + m[5],
-]
-
-function transformOf(value: string | null): Matrix {
-  if (!value) return IDENTITY
-  const nums = (s: string): number[] =>
-    s
-      .split(/[\s,]+/)
-      .filter(Boolean)
-      .map(Number)
-  let m = IDENTITY
-  for (const [, fn, args = ''] of value.matchAll(/(matrix|translate|scale)\(([^)]*)\)/g)) {
-    const [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0] = nums(args)
-    const n: Matrix =
-      fn === 'matrix' ? [a, b, c, d, e, f] : fn === 'translate' ? [1, 0, 0, 1, a, b] : [a, 0, 0, b === 0 ? a : b, 0, 0]
-    m = multiply(m, n)
-  }
-  return m
-}
-
-const attr = (tag: string, name: string): string | null =>
-  new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(tag)?.[1] ?? null
-
-// "rgb(66.6%, 11.7%, 18%)" as #aa1e2e; null for none or anything else.
-function colourOf(value: string | null): string | null {
-  const m = /rgb\(\s*([\d.]+)%\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/.exec(value ?? '')
-  if (!m) return null
-  return `#${[m[1], m[2], m[3]]
-    .map((v) =>
-      Math.round((Number(v) * 255) / 100)
-        .toString(16)
-        .padStart(2, '0'),
-    )
-    .join('')}`
-}
-
-type Point = [number, number]
-type Subpath = { points: Point[]; curved: boolean }
-
-// The path's subpaths in page points: segment end points only (a corner's control points never leave its box).
-function subpathsOf(d: string, m: Matrix): Subpath[] {
-  const out: Subpath[] = []
-  const tokens = d.match(/[MLCZ]|-?\d*\.?\d+(?:e-?\d+)?/gi) ?? []
-  let command = ''
-  let numbers: number[] = []
-  const map = ([x, y]: Point): Point => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]
-  const flush = (): void => {
-    const current = out.at(-1)
-    if (command === 'M') out.push({ points: [], curved: false })
-    const target = out.at(-1) ?? current
-    if (!target) return
-    const step = command === 'C' ? 6 : 2
-    for (let i = 0; i + step <= numbers.length; i += step)
-      target.points.push(map([numbers[i + step - 2] ?? 0, numbers[i + step - 1] ?? 0]))
-    if (command === 'C') target.curved = true
-  }
-  for (const t of tokens) {
-    if (/^[A-Za-z]$/.test(t)) {
-      if (command) flush()
-      command = t.toUpperCase()
-      numbers = []
-    } else numbers.push(Number(t))
-  }
-  if (command) flush()
-  return out.filter((s) => s.points.length >= 2)
-}
-
-const boxOf = (points: readonly Point[]): Box => {
-  const xs = points.map((p) => p[0])
-  const ys = points.map((p) => p[1])
-  const x = Math.min(...xs)
-  const y = Math.min(...ys)
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
-}
 // Every point lies on an edge of the box: a rectangle, closed or open (a notch for a heading), corners rounded or not.
 const rectLike = (points: readonly Point[], b: Box): boolean =>
   b.w > 0 &&
@@ -193,32 +112,13 @@ const centreLine = (b: Box): Box =>
   b.w >= b.h ? { x: b.x, y: b.y + b.h / 2, w: b.w, h: 0 } : { x: b.x + b.w / 2, y: b.y, w: 0, h: b.h }
 
 export function parseVectors(svg: string): { boxes: Vector[]; rules: Rule[] } {
-  const width = Number(/<svg[^>]*\swidth="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
-  const height = Number(/<svg[^>]*\sheight="([\d.]+)pt"/.exec(svg)?.[1] ?? 0)
-  // Definitions that never draw on their own go (glyphs, clips, masks, filters, pictures); compositing groups stay:
-  // blend modes put drawn content there (Sarge's red border), shown through a filter that cancels their offset.
-  const body = svg
-    .replace(/<g id="glyph-[^"]*">[\s\S]*?<\/g>/g, '')
-    .replace(/<(clipPath|mask|filter|pattern)\b[\s\S]*?<\/\1>/g, '')
-    .replace(/<image\b[^>]*>/g, '')
-  const stack: Matrix[] = [IDENTITY]
+  const { width, height, drawn } = drawnElements(svg)
   const found: Vector[] = []
   const rules: Rule[] = []
   const onPage = (r: Rule): boolean =>
     r.box.x >= 0 && r.box.y >= 0 && r.box.x + r.box.w <= width && r.box.y + r.box.h <= height
-  for (const [tag, close, name = ''] of body.matchAll(/<(\/?)(g|path|rect)\b[^>]*>/g)) {
-    const top = stack.at(-1) ?? IDENTITY
-    if (name === 'g') {
-      const own = attr(tag, 'id')?.startsWith('compositing-group') ? IDENTITY : transformOf(attr(tag, 'transform'))
-      if (close) stack.pop()
-      else if (!tag.endsWith('/>')) stack.push(multiply(top, own))
-      continue
-    }
-    const m = multiply(top, transformOf(attr(tag, 'transform')))
-    const num = (a: string): number => Number(attr(tag, a) ?? 0)
-    const [x, y, x1, y1] = [num('x'), num('y'), num('x') + num('width'), num('y') + num('height')].map(String)
-    const d = name === 'rect' ? `M ${x} ${y} L ${x1} ${y} L ${x1} ${y1} L ${x} ${y1} Z` : (attr(tag, 'd') ?? '')
-    const subpaths = subpathsOf(d, m)
+  // A masked shape's visible part is unknown: it is no box and no rule (Osteria's red fill under its awards).
+  for (const { tag, subpaths, m } of drawn.filter((d) => !d.masked)) {
     // A stroke drawn under a non-uniform matrix is as wide as its larger axis (Carmine's frames).
     const v = classify(tag, subpaths, Math.max(Math.abs(m[0]), Math.abs(m[3])))
     const box = v ? clip(v.box, width, height) : null
