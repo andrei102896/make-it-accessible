@@ -8,6 +8,7 @@ import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
 import type { Box, Extraction, PageImage, Run } from './types.ts'
+import { picturesOf } from './art.ts'
 import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
@@ -62,8 +63,11 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
-  const { boxes, rules } = await extractVectors(pdf, pdfPage)
-  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules }
+  const { boxes, rules, art, placed } = await extractVectors(pdf, pdfPage)
+  const shown = new Set(hidden)
+  const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())
+  const pictures = picturesOf(art, placed, words, width, height)
+  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures }
 }
 
 // The page's drawn frames, panels and rules, read from pdftocairo's SVG (0.1–0.8 s a page).

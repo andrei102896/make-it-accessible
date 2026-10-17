@@ -54,3 +54,5 @@
 - pdftocairo draws placed content from `<defs>` (`source-N` groups) through `<use>` with its own transform and clip; walking `<defs>` in place misplaces it (Claudio's art at y 36 instead of 832; false black panels on 6 documents). A browser bounding box ignores clip paths. (2026-10-17)
 - A clipped shape shows its clip only when it is a plain rectangle under a rectangular clip; anything else cut by a clip or a mask has an unknown visible part (Osteria's award badges, Bannatyne's frame lines). (2026-10-17)
 - Remove page-sized fills (bleed, filter canvases) before any proximity grouping: one 950×1469 rect glued 58 parts on Sarge's. (pictures plan, 2026-10-17)
+- A model's box around a small target is loose: match candidates by their share inside it and keep the best-fitting one or union, never IoU alone (Moosewood logo fully inside, IoU 0.26; Carew's four photos vs one). (2026-10-17)
+- A shape whose visible part is unknown still has a known bound; a flag added to drop one artefact must be tested on that artefact's shape (half the filtered drawings were real art). (2026-10-17)

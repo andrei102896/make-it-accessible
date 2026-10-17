@@ -3,6 +3,9 @@ import type { Box } from './types.ts'
 // pdftocairo's SVG of a page, read without a browser: transforms, colours, path geometry in PDF points, and one walk
 // over the elements that draw (glyphs, clips, masks, filters and pictures left out).
 
+// A paint at least this opaque shows; below it, pdftocairo's page-sized fill-opacity="0" canvases and faint tints.
+export const OPAQUE = 0.5
+
 export type Matrix = [number, number, number, number, number, number]
 export const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
 
@@ -86,9 +89,17 @@ export const boxOf = (points: readonly Point[]): Box => {
   const y = Math.min(...ys)
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
 }
-// A drawn path or rect with its subpaths in page points; `clip` is the box its clip paths leave visible, if any;
-// `masked` when a mask decides what of it shows (its visible shape is unknown).
-export type Drawn = { tag: string; subpaths: Subpath[]; m: Matrix; clip: Box | null; masked: boolean }
+// A drawn path or rect in page points: `clip` is the box its clips leave visible, `bound` its own box within that;
+// `masked` when its visible shape is unknown (a mask, or a shaped clip), `filtered` under a filter.
+export type Drawn = {
+  tag: string
+  subpaths: Subpath[]
+  m: Matrix
+  clip: Box | null
+  masked: boolean
+  filtered: boolean
+  bound: Box | null
+}
 // A raster picture placed on the page: its box in page points and the visible part its clip paths leave.
 export type Placed = { box: Box; clip: Box | null }
 type Node = { name: string; tag: string; children: Node[] }
@@ -197,13 +208,21 @@ export function drawnElements(svg: string): { width: number; height: number; dra
     const box = intersect(a.box, b.box)
     return box ? { box, shaped: a.shaped || b.shaped } : null
   }
-  const walk = (n: Node, m: Matrix, clip: Clip | null, using: ReadonlySet<string>, masked = false): void => {
+  const walk = (
+    n: Node,
+    m: Matrix,
+    clip: Clip | null,
+    using: ReadonlySet<string>,
+    masked = false,
+    filtered = false,
+  ): void => {
     const id = attr(n.tag, 'id') ?? ''
     if (n.name === 'defs') {
       // Compositing groups draw in place: blend modes put content there (Sarge's red border), shown through a filter
       // that cancels their offset.
       for (const c of n.children)
-        if (c.name === 'g' && attr(c.tag, 'id')?.startsWith('compositing-group')) walk(c, m, clip, using, masked)
+        if (c.name === 'g' && attr(c.tag, 'id')?.startsWith('compositing-group'))
+          walk(c, m, clip, using, masked, filtered)
       return
     }
     if (['clipPath', 'mask', 'filter', 'pattern', 'symbol'].includes(n.name) || id.startsWith('glyph')) return
@@ -212,10 +231,22 @@ export function drawnElements(svg: string): { width: number; height: number; dra
     const clipId = ref(attr(n.tag, 'clip-path'))
     const visible = clipId ? narrow(clip, clipOf(clipId, here)) : clip
     const hidden = masked || attr(n.tag, 'mask') !== null
+    const filter = filtered || (n.name === 'g' && attr(n.tag, 'filter') !== null)
     if (n.name === 'path' || n.name === 'rect') {
       const d = n.name === 'rect' ? rectPath(n.tag) : (attr(n.tag, 'd') ?? '')
-      const shown = visiblePart(subpathsOf(d, here), visible)
-      drawn.push({ tag: n.tag, subpaths: shown ?? [], m: here, clip: visible?.box ?? null, masked: hidden || !shown })
+      const raw = subpathsOf(d, here)
+      const shown = visiblePart(raw, visible)
+      const all = raw.flatMap((sp) => sp.points)
+      const own = all.length ? boxOf(all) : null
+      drawn.push({
+        tag: n.tag,
+        subpaths: shown ?? [],
+        m: here,
+        clip: visible?.box ?? null,
+        masked: hidden || !shown,
+        filtered: filter,
+        bound: own && visible ? intersect(own, visible.box) : own,
+      })
       return
     }
     if (n.name === 'image') {
@@ -228,10 +259,10 @@ export function drawnElements(svg: string): { width: number; height: number; dra
       const node = byId.get(target)
       if (!node || using.has(target) || target.startsWith('glyph') || target.startsWith('compositing-group')) return
       const at = multiply(here, [1, 0, 0, 1, Number(attr(n.tag, 'x') ?? 0), Number(attr(n.tag, 'y') ?? 0)])
-      walk(node, at, visible, new Set([...using, target]), hidden)
+      walk(node, at, visible, new Set([...using, target]), hidden, filter)
       return
     }
-    for (const c of n.children) walk(c, here, visible, using, hidden)
+    for (const c of n.children) walk(c, here, visible, using, hidden, filter)
   }
   walk(root, IDENTITY, null, new Set())
   return { width, height, drawn, placed }

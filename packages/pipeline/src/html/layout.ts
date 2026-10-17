@@ -83,7 +83,8 @@ const sizeOf = (b: Block, e: Extraction): number => {
   return t ? median(cited(e, t).flatMap((r) => (r.font ? [r.font.size] : []))) : 0
 }
 
-export function segmentsOf(page: Page, first: boolean, body: number, title: string): Segments {
+// `logo`: the name is printed as artwork the brief found (pdf/art.ts), shown first in the masthead.
+export function segmentsOf(page: Page, first: boolean, body: number, title: string, logo = false): Segments {
   const { structure, extraction: e } = page
   const blocks = structure.blocks
   const header = new Set<number>()
@@ -104,7 +105,7 @@ export function segmentsOf(page: Page, first: boolean, body: number, title: stri
       // Pastabilities' logo; a heading over a list opened the first section above). Once the header holds the name
       // (title or logo), a big heading is a section (Moosewood's 32 pt script "shared").
       const short = words.split(/\s+/).filter(Boolean).length <= TAGLINE_WORDS
-      const namedAlready = titleAt !== null || [...header].some((h) => blocks[h]?.kind === 'figure')
+      const namedAlready = logo || titleAt !== null || [...header].some((h) => blocks[h]?.kind === 'figure')
       // A heading owns the lists up to the next heading: with one, it is a section (Carmine's "DEVILED CRABS").
       const owns = blocks.slice(i + 1).findIndex((x) => x.kind === 'heading')
       const ownsList = blocks
@@ -118,6 +119,7 @@ export function segmentsOf(page: Page, first: boolean, body: number, title: stri
   }
   // Lines alone make no header: without a logo or the name among them, they are the page's first content.
   const anchored =
+    logo ||
     titleAt !== null ||
     [...header].some((h) => {
       const b = blocks[h]
@@ -143,8 +145,8 @@ export function segmentsOf(page: Page, first: boolean, body: number, title: stri
   const x0 = Math.min(...boxes.map((b) => b.x))
   const x1 = Math.max(...boxes.map((b) => b.x + b.w))
   const centered = boxes.length > 0 && Math.abs((x0 + x1) / 2 / e.width - 0.5) < CENTRED
-  const logo = [...header].map((i) => blocks[i]).find((b) => b?.kind === 'figure')
-  const logoBox = logo ? boxOf(logo, e) : null
+  const figure = [...header].map((i) => blocks[i]).find((b) => b?.kind === 'figure')
+  const logoBox = figure ? boxOf(figure, e) : null
   return { header, tail, title: titleAt, centered, logoShare: logoBox ? logoBox.w / e.width : null }
 }
 
@@ -270,8 +272,8 @@ export function bandsOf(
   return bands
 }
 
-export function layoutOf(page: Page, first: boolean, body: number, title: string): Layout {
-  const segments = segmentsOf(page, first, body, title)
+export function layoutOf(page: Page, first: boolean, body: number, title: string, logo = false): Layout {
+  const segments = segmentsOf(page, first, body, title, logo)
   const shapes = shapesOf(page)
   const bands = splitBands(page, bandsOf(page, segments.header, segments.tail, shapes))
   const boxes = boxesOf(page, new Set([...segments.header, ...segments.tail]))

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Rgb } from '../html/color.ts'
-import { cropPicture, fillToImage, growToPicture, inkBox } from './crop.ts'
+import { clearEdges, cropPicture, fillToImage, growToPicture, inkBox } from './crop.ts'
 import type { Pixels } from './pixels.ts'
 import type { Box } from './types.ts'
 
@@ -63,4 +63,11 @@ test("a figure fills the image the PDF placed it in: the logo's arc the model's 
   const word = { x: 40, y: 30, w: 160, h: 10 }
   const kept = fillToImage({ x: 60, y: 60, w: 120, h: 100 }, limit, [{ box: word, own: false }], img)
   assert.deepEqual(kept, { x: 40, y: 40, w: 160, h: 140 })
+})
+
+test("a logo keeps its whole artwork: a word sticking out past an edge moves only that edge (Michael's oval)", () => {
+  const oval = { x: 28, y: 51, w: 529, h: 662 }
+  const raw = { x: 539, y: 95, w: 85, h: 36 }
+  const caviar = { x: 526, y: 651, w: 72, h: 22 }
+  assert.deepEqual(clearEdges(oval, [raw, caviar]), { x: 28, y: 51, w: 498, h: 662 })
 })

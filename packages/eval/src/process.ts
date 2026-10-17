@@ -7,10 +7,11 @@ import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
-import { cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
+import { pictureIn } from '@make-it-accessible/pipeline/pdf/art'
+import { clearEdges, cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
 import { extractPage, renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
-import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
+import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { costUsd } from './cost.ts'
 import { documentBrand } from './brand.ts'
@@ -89,12 +90,20 @@ export async function buildHtml(
   briefModel?: ModelOptions,
 ): Promise<string> {
   const pages: HtmlPage[] = []
+  const look = await documentLook(pdfPath, docDir, results, briefModel)
+  const named = logoAt(look.brief?.logo ?? null, results)
+  let logo: { src: string; share: number } | null = null
   for (const r of results) {
     const size = fitScale(r.extraction.width, r.extraction.height)
     const k = size.width / r.extraction.width
+    const drawn = r.extraction.pictures ?? []
+    const toPts = (b: Box): Box => ({ x: b.x / k, y: b.y / k, w: b.w / k, h: b.h / k })
+    const toPx = (b: Box): Box => ({ x: b.x * k, y: b.y * k, w: b.w * k, h: b.h * k })
     const boxes = imageBoxes(r.structure)
+    const mark =
+      named?.pdfPage === r.pdfPage ? pictureIn(named.box, drawn, r.extraction.width, r.extraction.height) : null
     // Crops are judged on the page as the model saw it, words by their painted extent in their own colour.
-    const img = boxes.length ? await renderPixels(pdfPath, r.pdfPage, 72 * k) : null
+    const img = boxes.length || mark ? await renderPixels(pdfPath, r.pdfPage, 72 * k) : null
     const hidden = new Set(r.extraction.hidden)
     const painted = img
       ? r.extraction.runs.flatMap((run, i) => {
@@ -125,8 +134,10 @@ export async function buildHtml(
         : null
       const bounded =
         limit && intersection(model, limit) >= area(model) * IMAGE_FIT && area(limit) <= area(model) * IMAGE_MAX
-      const start = bounded && img ? fillToImage(model, limit, words, img) : model
-      const crop = cropPicture(img ? growToPicture(start, words, img) : start, words)
+      // A figure takes the exact box of the pictures it names in the vector layer (pdf/art.ts); the model's is loose.
+      const exact = boxes[i]?.figure ? pictureIn(toPts(model), drawn, r.extraction.width, r.extraction.height) : null
+      const start = exact ? toPx(exact) : bounded && img ? fillToImage(model, limit, words, img) : model
+      const crop = cropPicture(img && !exact ? growToPicture(start, words, img) : start, words)
       // A figure (a logo, a photo on its own) is shown large: rendered at twice the model's scale.
       const scale = boxes[i]?.figure ? FIGURE_SCALE : 1
       const file = await renderCrop(
@@ -138,6 +149,30 @@ export async function buildHtml(
       )
       sources.set(path, file.slice(docDir.length + 1))
     }
+    // The name printed as artwork the model gave no figure for leads the masthead, cropped at the figure scale,
+    // unless a model figure already shows it (Sarge's photo).
+    const shown =
+      mark && !pictures.some((p) => intersection(toPts(p), mark) >= Math.min(area(toPts(p)), area(mark)) / 2)
+    if (mark && shown) {
+      const centre = (w: Box): boolean =>
+        w.x + w.w / 2 > mark.x * k &&
+        w.x + w.w / 2 < (mark.x + mark.w) * k &&
+        w.y + w.h / 2 > mark.y * k &&
+        w.y + w.h / 2 < (mark.y + mark.h) * k
+      // Words centred inside are the logo's own ("fresh simple pure"); the rest at its edges move them in.
+      const cut = clearEdges(
+        toPx(mark),
+        painted.filter((p) => !centre(p.box)).map((p) => p.box),
+      )
+      const file = await renderCrop(
+        pdfPath,
+        r.pdfPage,
+        { width: size.width * FIGURE_SCALE, height: size.height * FIGURE_SCALE },
+        [cut.x, cut.y, cut.w, cut.h].map((v) => v * FIGURE_SCALE),
+        join(r.dir, 'img-logo'),
+      )
+      logo = { src: file.slice(docDir.length + 1), share: cut.w / k / r.extraction.width }
+    }
     const flagged = [...r.validation.errors, ...r.validation.review].map((f) => f.path)
     pages.push({
       keyPage: r.keyPage,
@@ -147,7 +182,6 @@ export async function buildHtml(
       imageSrc: (p) => sources.get(p),
     })
   }
-  const look = await documentLook(pdfPath, docDir, results, briefModel)
   const brand = await documentBrand(pdfPath, docDir, pages, look.background, look.theme?.band?.bg ?? null)
   const htmlPath = join(docDir, 'index.html')
   await writeFile(
@@ -161,7 +195,20 @@ export async function buildHtml(
       headings: look.headings,
       validity: look.brief?.validity ?? null,
       brand,
+      logo,
     }),
   )
   return htmlPath
+}
+
+// The brief's logo (a page among those it saw, a box as fractions of it) on the page and in the points it names.
+function logoAt(
+  logo: { page: number; box: readonly [number, number, number, number] } | null,
+  results: readonly PageResult[],
+): { pdfPage: number; box: Box } | null {
+  const page = [...results].sort((a, b) => a.keyPage - b.keyPage)[(logo?.page ?? 0) - 1]
+  if (!logo || !page) return null
+  const [x, y, w, h] = logo.box
+  const { width, height } = page.extraction
+  return { pdfPage: page.pdfPage, box: { x: x * width, y: y * height, w: w * width, h: h * height } }
 }

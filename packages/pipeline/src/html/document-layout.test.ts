@@ -95,3 +95,31 @@ test('without a brand nothing is segmented: no masthead, no small print, the ban
   assert.doesNotMatch(html, /masthead|small-print/)
   assert.match(html, /<div class="band"><h1>/)
 })
+
+test("an artwork logo leads the masthead, once; a big heading that is not the name stays its section (Claudio's)", () => {
+  const raw = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'heading', level: 1, text: { src: [[2, 3]] } },
+        { kind: 'products', items: [{ name: { src: [[4, 4]] }, prices: [{ src: [[5, 5]] }] }] },
+      ],
+      dropped: [],
+    }),
+  )
+  const big = { ...extraction, runs: extraction.runs.map((r, i) => (i < 4 ? { ...r, box: { ...r.box, h: 40 } } : r)) }
+  const html = renderDocument({
+    lang: 'en',
+    title: "Claudio's",
+    pages: [{ ...page, structure: raw, extraction: big }],
+    brand: { ...brand, profile: { ...profile, headings: new Map([['0:blocks[0]', 0]]) } },
+    logo: { src: 'p01/img-logo.jpg', share: 0.3 },
+  })
+  // The band's h1 names the place for screen readers; the picture is not read again.
+  assert.match(
+    html,
+    /<header class="masthead centered">\n<div class="logo"><img src="p01\/img-logo.jpg" alt="" class="logo"><\/div>\n<\/header>/,
+  )
+  assert.match(html, /<div class="band sr-only"><h1>/)
+  assert.match(html, /<section[^>]*>[\s\S]*SMALL PLATES/)
+})

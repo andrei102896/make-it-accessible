@@ -1,5 +1,16 @@
 import { contrast, fromHex } from '../html/color.ts'
-import { attr, boxOf, colourOf, drawnElements, type Matrix, type Point, type Subpath } from './svg.ts'
+import {
+  attr,
+  boxOf,
+  colourOf,
+  drawnElements,
+  OPAQUE,
+  type Drawn,
+  type Matrix,
+  type Placed,
+  type Point,
+  type Subpath,
+} from './svg.ts'
 import type { Box, Rule, Vector } from './types.ts'
 
 // The PDF's drawn geometry as pdftocairo writes it to SVG: frames (stroked rectangles, or filled rings), panels
@@ -10,7 +21,6 @@ const MIN_W = 24
 const MIN_H = 12
 // A point within this distance (points) of the box's edge lies on it; Rucola's cut corners sit 1 pt inside.
 const EDGE = 1.5
-const OPAQUE = 0.5
 // Two frames this close on every side (points) are one double rule (Rucola, Jack's, Osteria).
 const DOUBLE = 6
 // A panel covering this share of the page is its paper, not a box.
@@ -111,21 +121,36 @@ function rulesOf(tag: string, subpaths: Subpath[], m: Matrix): Rule[] {
 const centreLine = (b: Box): Box =>
   b.w >= b.h ? { x: b.x, y: b.y + b.h / 2, w: b.w, h: 0 } : { x: b.x + b.w / 2, y: b.y, w: 0, h: b.h }
 
-export function parseVectors(svg: string): { boxes: Vector[]; rules: Rule[] } {
-  const { width, height, drawn } = drawnElements(svg)
+// Frames, panels and rules; `art` is every other drawn shape and `placed` every raster picture (pdf/art.ts).
+export function parseVectors(svg: string): {
+  boxes: Vector[]
+  rules: Rule[]
+  art: Drawn[]
+  placed: Placed[]
+  width: number
+  height: number
+} {
+  const { width, height, drawn, placed } = drawnElements(svg)
   const found: Vector[] = []
   const rules: Rule[] = []
+  const art: Drawn[] = []
   const onPage = (r: Rule): boolean =>
     r.box.x >= 0 && r.box.y >= 0 && r.box.x + r.box.w <= width && r.box.y + r.box.h <= height
   // A masked shape's visible part is unknown: it is no box and no rule (Osteria's red fill under its awards).
-  for (const { tag, subpaths, m } of drawn.filter((d) => !d.masked)) {
+  for (const d of drawn.filter((x) => !x.masked)) {
+    const { tag, subpaths, m } = d
     // A stroke drawn under a non-uniform matrix is as wide as its larger axis (Carmine's frames).
     const v = classify(tag, subpaths, Math.max(Math.abs(m[0]), Math.abs(m[3])))
     const box = v ? clip(v.box, width, height) : null
-    if (v && box && !(v.kind === 'panel' && box.w * box.h >= width * height * PAPER)) found.push({ ...v, box })
-    rules.push(...rulesOf(tag, subpaths, m).filter(onPage))
+    // A panel as large as the page is its paper or its colour: a picture's matter (pdf/art.ts), never a box.
+    const kept = v && box && !(v.kind === 'panel' && box.w * box.h >= width * height * PAPER) ? { ...v, box } : null
+    if (kept) found.push(kept)
+    const lines = rulesOf(tag, subpaths, m).filter(onPage)
+    rules.push(...lines)
+    if (!kept && !lines.length) art.push(d)
   }
-  return { boxes: mergeDoubles(found), rules: mergeRules(rules) }
+  art.push(...drawn.filter((d) => d.masked))
+  return { boxes: mergeDoubles(found), rules: mergeRules(rules), art, placed, width, height }
 }
 
 // The same line drawn twice is one rule; two parallel lines over the same span a few points apart are a double.

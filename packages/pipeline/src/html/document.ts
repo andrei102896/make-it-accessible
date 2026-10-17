@@ -25,7 +25,10 @@ export function renderDocument(doc: HtmlDocument): string {
   const classes = doc.brand ? headingClasses(doc.brand) : new Map<string, string>()
   // Header and tail segments exist only with a brand: a page without one renders as before.
   const brand = doc.brand
-  const segments = doc.pages.map((p, i) => (brand ? layoutOf(p, i === 0, brand.profile.body, doc.title) : NO_LAYOUT))
+  const logo = brand ? (doc.logo ?? null) : null
+  const segments = doc.pages.map((p, i) =>
+    brand ? layoutOf(p, i === 0, brand.profile.body, doc.title, i === 0 && logo !== null) : NO_LAYOUT,
+  )
   const columns = Math.max(0, ...segments.flatMap((l) => l.bands.map((b) => b.columns.length)))
   const titleKey = segments[0]?.title !== null && segments[0] ? `0:blocks[${String(segments[0].title)}]` : null
   const titleWords = titleWordsOf(doc.title)
@@ -80,7 +83,8 @@ export function renderDocument(doc: HtmlDocument): string {
       opening?.kind === 'heading' &&
       same(doc.title) === same(visibleText(opening.text, first.extraction))) ||
       titleKey !== null ||
-      logoNamed)
+      logoNamed ||
+      logo !== null)
   // The legend once more before the first dish; the printed one stays where the PDF has it.
   const key = legendLine(legend)
   // With section chips (not pinned on a phone) or a contents list on several pages, every printed page ends with
@@ -96,16 +100,28 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
 <main id="main">
 <div class="band${printed ? ' sr-only' : ''}"><h1>${title}</h1>${printed ? '' : validity}</div>${printed ? validity : ''}
-${rendered[0]?.masthead ?? ''}${nav}${key}
+${withLogo(rendered[0]?.masthead ?? '', logo)}${nav}${key}
 ${rendered.map((r) => r.html + back).join('\n')}
 </main>
 </body>
 </html>
 `
+}
+
+// The name as printed artwork leads the masthead (logo, name, lines); the band's h1 names the place for screen
+// readers, so the picture is not read again.
+function withLogo(masthead: string, logo: HtmlDocument['logo']): string {
+  if (!logo) return masthead
+  const img = `<div class="logo"><img src="${esc(logo.src)}" alt="" class="logo"></div>`
+  // The name the model read from that artwork is the picture's own words: shown once, as the picture (Nick & Toni's).
+  const unread = masthead.replace(/<h\d [^>]*masthead-title[^>]*><span data-seen>[^<]*<\/span><\/h\d>\n?/, '')
+  return unread
+    ? unread.replace(/^(<header class="masthead[^"]*">)\n/, `$1\n${img}\n`)
+    : `<header class="masthead centered">\n${img}\n</header>`
 }

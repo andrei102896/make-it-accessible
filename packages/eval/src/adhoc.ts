@@ -18,7 +18,7 @@ const { values, positionals } = parseArgs({
     model: { type: 'string', default: 'claude-sonnet-5-5' },
     effort: { type: 'string', default: 'medium' },
     title: { type: 'string' },
-    'brief-model': { type: 'string', default: 'claude-haiku-4-5' },
+    'brief-model': { type: 'string', default: 'claude-sonnet-5-5' },
   },
 })
 const [pdfPath] = positionals

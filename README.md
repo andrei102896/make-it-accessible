@@ -55,6 +55,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/pixels.ts               PPM page renders as pixels
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
+  pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
   pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
@@ -191,6 +192,8 @@ out/                          run outputs (local only)
 - **A page title is no section chip** (`nav.ts` listedHeadings): a sentence, or the one highest heading of a page that names the document with no list of its own, hands the chips to the next level; a menu page with no list (a cover) lists none. A heading that names the place beside its sibling sections stays a section (Sarge's "SARGE'S NOSHES, FRANKS, & APPETIZERS").
 
 - **Placed content counts where it is used, never where it is defined** (`svg.test.ts`). pdftocairo defines placed content in `<defs>` (`source-N` groups, images) and draws it with `<use transform>` under clips; walking `<defs>` in place put false boxes at the page's top-left on 6 documents (black panels on Sarge's, Kenny & Ziggy's, Lexington, Stone House, BILLA; red ones on Osteria's wine page) and missed real ones (Osteria's red double rules, Mezzaluna's blue rules under headings, Bannatyne's purple frame behind its photos). A plain rectangle larger than a rectangular clip is the clip (Canva-made PDFs paint a page-sized fill clipped to a bar); any other shape cut by a clip, or under a mask, has an unknown visible part and is no box or rule. Do not remove.
+
+- **The logo comes from the brief, its box from the vector layer** (`art.test.ts`, `document-layout.test.ts`). Position alone picks the wrong picture (La Segunda's mid-spread logo, FIG's footer, Bernini's bust for its wordmark); the brief (Sonnet: Haiku chose the bust and missed FIG) names page and box, `pictureIn` snaps to the picture or union that fits it best. An artwork logo leads the masthead with `alt=""` (the band's h1 names the place) and a big heading that is not the name stays its section. A figure the model gave is not repeated (Sarge's). Figures take the exact picture box; a logo crop moves only the edge a neighbouring word sticks past (Michael's oval kept whole). Rasters never join: photos edge to edge are separate pictures (Carew). Do not remove.
 
 ## Dead ends
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.

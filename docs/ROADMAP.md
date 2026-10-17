@@ -10,7 +10,7 @@ Why (Andrei, 2026-10-16): every PDF is a scenario to learn from; a fix that only
 - [x] Andrei's desktop review of the 19 pages, every remark recorded (`docs/reviews/2026-10-16-andrei-desktop.md`, 24 remarks)
 - [x] Held-out batch 1 (2026-10-16, `docs/reviews/2026-10-16-heldout-1.md`): 0 of 9 right the first time; patterns by reach
 - [x] Step 1, content and robustness (2026-10-16): lost ligatures filled where the gap shows them, sizes and prices per unit as printed, secondary grey on light panels, copy-protected PDFs refused by name, page titles and sentences out of the section chips
-- [ ] Step 2, the artwork layer at ingestion (8 of 9): logos, banners, seals and line art drawn as vector paths cropped from the render as figures; pictures the SVG shows but pdftohtml does not report · ~1.5 d
+- [~] Step 2, the artwork layer at ingestion (8 of 9): SVG read where content is drawn (2026-10-17); pictures from the vector layer and the logo from the brief, in the masthead on 7 more menus, figures snapped to exact pictures (2026-10-17); next: backgrounds as panels from the render's colour, text drawn as art to review
 - [ ] Step 3, lettering (7 of 9): display and script faces added to the library by measured need; lettering drawn as artwork kept as a picture with its words as alt · ~1 d
 - [ ] Step 4, page colour and background art (6 of 9): a coloured page, banners, curved panels (Boater's cream wave), background illustrations shown faintly behind their section (Noah's p2) · ~1 d
 - [ ] Step 5, arrangement (6 of 9): dense multi-column sheets kept in columns, a cover beside its content, free arrangements · ~1.5 d

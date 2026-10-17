@@ -41,6 +41,17 @@ const Rule = z
     double: z.boolean(),
   })
   .strict()
+// A picture the page draws (pdf/art.ts): a raster image, a group of vector drawings, or a large fill and its colour.
+const Picture = z
+  .object({
+    box: Box,
+    kind: z.enum(['raster', 'vector', 'fill']),
+    color: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/)
+      .nullable(),
+  })
+  .strict()
 const Extraction = z.object({
   pdfPage: z.number().int().positive(),
   width: z.number().positive(),
@@ -53,6 +64,7 @@ const Extraction = z.object({
   // Frames and panels from the vector layer; runs extracted before they were read have none.
   vectors: z.array(Vector).optional(),
   rules: z.array(Rule).optional(),
+  pictures: z.array(Picture).optional(),
 })
 
 export type Box = z.infer<typeof Box>
@@ -61,6 +73,7 @@ export type RunFont = z.infer<typeof Font>
 export type PageImage = z.infer<typeof PageImage>
 export type Vector = z.infer<typeof Vector>
 export type Rule = z.infer<typeof Rule>
+export type Picture = z.infer<typeof Picture>
 export type Extraction = z.infer<typeof Extraction>
 export type PixelSize = { width: number; height: number }
 

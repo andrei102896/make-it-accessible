@@ -26,6 +26,8 @@ export type HtmlDocument = {
   headings?: HeadingClass | null
   validity?: string | null
   brand?: Brand | null
+  // The name printed as artwork the model gave no figure for (pdf/art.ts pictureIn): its crop and share of the width.
+  logo?: { src: string; share: number } | null
 }
 // `masthead`: the first page's header, placed before the navigation.
 export type Rendered = { html: string; toc: TocEntry[]; masthead: string }
