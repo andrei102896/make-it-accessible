@@ -44,3 +44,7 @@
 - Widening what shows "as printed" widens what is accepted as a price: dates and portion sizes ("1/2 lb") need explicit guards, and sizes with no label read as bare numbers. (Gigi, La Segunda, 2026-10-16)
 - Correctness is always the original PDF beside what we reproduced (Andrei, 2026-10-17): every engine change is judged on three-way comparisons (PDF, before, after) of each page it touches.
 - A page-sized drawing swallows everything near it when grouping: take out backgrounds before grouping (Kenny & Ziggy's curtain, 973 parts); small vector shapes with no words over them can be prices drawn as paths, never decoration (La Segunda "1.99/2.49/2.99"). (2026-10-17)
+- A halo is not the brand: on a flat backdrop the ink keeps its hue and moves in lightness; a halo only where the backdrop varies under the word (Mezzaluna's blue prices with a black glow, printed view, 2026-10-17).
+- Placed text that collides is misinformation: overlaps and overflow are gated at build time and the page falls back to the text view (Carmine's 4.49 beside the wrong dish, 2026-10-17).
+- Backdrop cleaning removes the glyphs we place again, never the fills around them: strips and boxes behind text are its own contrast (Boater's cream strips, Gigi's white box, 2026-10-17).
+- A leaf whose words sit apart on the page is placed line by line, never as one box over the space between them (Carmine's "FAMOUS DEVILED CRABS" over "BREAD", 2026-10-17).

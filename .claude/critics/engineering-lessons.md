@@ -56,3 +56,8 @@
 - Remove page-sized fills (bleed, filter canvases) before any proximity grouping: one 950×1469 rect glued 58 parts on Sarge's. (pictures plan, 2026-10-17)
 - A model's box around a small target is loose: match candidates by their share inside it and keep the best-fitting one or union, never IoU alone (Moosewood logo fully inside, IoU 0.26; Carew's four photos vs one). (2026-10-17)
 - A shape whose visible part is unknown still has a known bound; a flag added to drop one artefact must be tested on that artefact's shape (half the filtered drawings were real art). (2026-10-17)
+- pdf.js's converted fonts are not the PDF's fonts: fsType is zeroed or synthesised (vendor "*21*") and the name table rebuilt, so permissions and licence text come only from the raw program (Brandon Grotesque, Avenir Next read "installable", 2026-10-17).
+- A multi-letter ToUnicode ("Th", "er") maps its first letter to the ligature glyph in pdf.js's Unicode cmap: a font's coverage is built from single-codepoint entries only (Cormorant T → Th, SignPainter e → er, 2026-10-17).
+- Custom properties inherit: a placement that omits default values leaks its parent's into a nested placed element; the nested one writes every property, or the parent writes none (per-line spans, 2026-10-17).
+- A self-matching wait loop never ends: `ps | grep "[x]pattern"` also matches the shell running the loop when the pattern names the loop's own arguments (rerender wait, 2026-10-17).
+- Chromium can stall rasterising soft masks and filters at a large scale (BILLA p6: over a minute at 1⅓× and 2×, under a second at 1 px/pt): every browser render has a deadline and a fallback (2026-10-17).
