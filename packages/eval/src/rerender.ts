@@ -53,7 +53,8 @@ async function rebuild(s: Source): Promise<string> {
     })
   }
   const html = await readFile(await buildHtml(pdf, out, results, 'doc', s.title, undefined, true), 'utf8')
-  const parts = html.split(/src="(p\d+\/(?:img-\w+|backdrop)\.jpg)"/)
+  // Crops ride inline; the printed view's backdrops stay files beside the page (preview.ts withAssets).
+  const parts = html.split(/src="(p\d+\/img-\w+\.jpg)"/)
   for (let i = 1; i < parts.length; i += 2)
     parts[i] = `src="data:image/jpeg;base64,${(await readFile(join(out, parts[i] ?? ''))).toString('base64')}"`
   const page = join(out, 'page.html')
