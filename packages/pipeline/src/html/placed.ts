@@ -3,7 +3,7 @@ import type { Grid } from '../pdf/backdrop.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { turned } from '../pdf/runs.ts'
 import type { Box, Extraction, Run } from '../pdf/types.ts'
-import { fromHex, grayOf, hex, luminance, readableOn } from './color.ts'
+import { contrast, fromHex, hex, luminance, readableOn, type Rgb } from './color.ts'
 import { unionOf } from './profile.ts'
 import { flaggedAt, inkSegments, lineParts, type Segment } from './source.ts'
 import type { HtmlPage } from './types.ts'
@@ -24,39 +24,59 @@ const FLAT = 0.08
 const BOX_TO_SIZE = 0.8
 
 type Align = 'left' | 'center' | 'right'
+type Shadow = Grid['shadows'][string]
+type Stroke = Grid['strokes'][string]
 type Spot = {
   box: Box
   size: number | null
   lines: number
   align: Align
   color: string | null
+  // The ink's printed opacity, and the copy of the words printed under it as their shadow (pdf/backdrop.ts).
+  alpha: number
+  shadow: Shadow | null
+  stroke: Stroke | null
   weight: number
   italic: boolean
 }
+type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn'>
+const NOTHING_DRAWN: Drawn = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [] }
 
-// The page's leaves by the path page.ts gives them, each with what the print shows of it; `inks`: each word's
-// colour as drawn (pdf/backdrop.ts inksOf), over the text layer's; `frames` gets each table's printed box.
+// The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
+// colour as drawn and the words drawn inside a picture (pdf/backdrop.ts); `frames` gets each table's printed box.
 export function spotsOf(
   blocks: readonly Block[],
   e: Extraction,
-  inks: Readonly<Record<string, string>> = {},
+  drawn: Drawn = NOTHING_DRAWN,
   frames = new Map<string, Box>(),
 ): Map<string, Spot> {
+  const pictured = new Set(drawn.undrawn)
   const hidden = new Set(e.hidden)
   const out = new Map<string, Spot>()
   const words = (t: TextValue | PriceValue | undefined): Run[] =>
     !t || 'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
-  // Text with a word set on its side has no spot: it stays printed in the backdrop, ours is read (source.ts).
+  // Text with a word set on its side, or printed inside a picture, has no spot: the print shows it, ours is read.
   const put = (path: string, runs: readonly Run[]): void => {
-    if (runs.some(turned)) return
+    if (runs.some((r) => turned(r) || pictured.has(r.id))) return
     const box = unionOf(runs)
-    if (box) out.set(path, spotOf(box, runs, inks))
+    if (box) out.set(path, spotOf(box, runs, drawn))
   }
   const { width, height } = fitScale(e.width, e.height)
   const picture = (path: string, [x, y, w, h]: readonly number[]): void => {
     const [kx, ky] = [e.width / width, e.height / height]
     const box = { x: (x ?? 0) * kx, y: (y ?? 0) * ky, w: (w ?? 0) * kx, h: (h ?? 0) * ky }
-    out.set(path, { box, size: null, lines: 1, align: 'left', color: null, weight: 400, italic: false })
+    out.set(path, {
+      box,
+      size: null,
+      lines: 1,
+      align: 'left',
+      color: null,
+      alpha: 1,
+      shadow: null,
+      stroke: null,
+      weight: 400,
+      italic: false,
+    })
   }
   const block = (path: string, b: Block): void => {
     if (b.kind === 'heading' || b.kind === 'paragraph') put(path, words(b.text))
@@ -112,7 +132,7 @@ export function spotsOf(
 
 // What most of the words show (by letters): the leaf's size, colour and face. One line is centred on its printed
 // box, so a lookalike face's different width spreads to both sides; lines share the edge the print aligns.
-function spotOf(box: Box, runs: readonly Run[], inks: Readonly<Record<string, string>>): Spot {
+function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
   const most = <T>(value: (r: Run) => T): T | null => {
     const tally = new Map<T, number>()
     for (const r of runs) tally.set(value(r), (tally.get(value(r)) ?? 0) + r.str.length)
@@ -135,7 +155,10 @@ function spotOf(box: Box, runs: readonly Run[], inks: Readonly<Record<string, st
     size,
     lines: lines.length,
     align,
-    color: most((r) => inks[r.id] ?? r.color ?? null),
+    color: most((r) => drawn.inks[r.id] ?? r.color ?? null),
+    alpha: most((r) => drawn.alpha[r.id] ?? 1) ?? 1,
+    shadow: runs.map((r) => drawn.shadows[r.id]).find((x) => x !== undefined) ?? null,
+    stroke: runs.map((r) => drawn.strokes[r.id]).find((x) => x !== undefined) ?? null,
     weight: most((r) => r.font?.weight ?? 400) ?? 400,
     italic: most((r) => r.font?.italic ?? false) ?? false,
   }
@@ -153,31 +176,68 @@ export function placement(spot: Spot, pageWidth: number, grid: Grid | null, pxPe
   props.push(`--fw:${String(spot.weight)}`, `--fi:${spot.italic ? 'italic' : 'normal'}`)
   if (spot.color) {
     const large = size * pxPerPt >= LARGE_PX || (spot.weight >= 700 && size * pxPerPt >= LARGE_BOLD_PX)
-    const { color, halo } = inkOn(spot.color, box, grid, large ? READABLE_LARGE : READABLE)
-    props.push(`--c:${color}`, `--halo:${halo ?? 'transparent'}`)
+    const { color, shadow } = inkOn(spot, grid, large ? READABLE_LARGE : READABLE, u)
+    props.push(`--c:${color}`, `--ts:${shadow}`)
+    // The printed outline is centred on the letter's edge with its inner half under the fill, as `paint-order:
+    // stroke fill` draws ours: the same width shows the same.
+    if (spot.stroke) props.push(`--st:calc(${u(spot.stroke.width)} * 1cqw) ${spot.stroke.color}`)
   }
   return ` style="${props.join(';')}"`
 }
 
-// The printed ink where it reads on the backdrop under its box. On a flat backdrop a failing ink keeps its hue and
-// moves in lightness; where the backdrop varies (a photo, a pattern), the ink stays and gets a halo.
-function inkOn(color: string, box: Box, grid: Grid | null, target: number): { color: string; halo: string | null } {
+// The printed ink where it reads on the backdrop under its box, blended at its printed opacity over the backdrop's
+// colour there. Its printed shadow is drawn as printed and carries the contrast when it reaches the target; else on
+// a flat backdrop the ink moves in lightness, keeping its hue; else a halo in the backdrop's own hue moved to the
+// target, dense at the letters (one wide blur covers a thin stroke's edge only a fifth of the way).
+function inkOn(
+  spot: Spot,
+  grid: Grid | null,
+  target: number,
+  u: (v: number) => string,
+): { color: string; shadow: string } {
+  const printed = spot.shadow
+    ? `calc(${u(spot.shadow.dx)} * 1cqw) calc(${u(spot.shadow.dy)} * 1cqw) 0 ${spot.shadow.color}`
+    : 'none'
+  const raw = spot.color ?? '#000000'
+  const { box } = spot
   const cells: number[] = []
-  const [c0, c1] = grid ? [Math.floor(box.x / grid.cell), Math.floor((box.x + box.w) / grid.cell)] : [0, -1]
-  const [r0, r1] = grid ? [Math.floor(box.y / grid.cell), Math.floor((box.y + box.h) / grid.cell)] : [0, -1]
-  if (grid)
+  if (grid) {
+    const [c0, c1] = [Math.floor(box.x / grid.cell), Math.floor((box.x + box.w) / grid.cell)]
+    const [r0, r1] = [Math.floor(box.y / grid.cell), Math.floor((box.y + box.h) / grid.cell)]
     for (let r = Math.max(0, r0); r <= Math.min(grid.rows - 1, r1); r++)
       for (let c = Math.max(0, c0); c <= Math.min(grid.cols - 1, c1); c++) cells.push(r * grid.cols + c)
-  if (!grid || !cells.length) return { color, halo: null }
+  }
+  if (!grid || !cells.length) return { color: raw, shadow: printed }
+  const ground = average(cells.map((i) => fromHex(grid.mean[i] ?? '#ffffff')))
+  const ink = blend(fromHex(raw), ground, spot.alpha)
   const lo = Math.min(...cells.map((i) => grid.min[i] ?? 0))
   const hi = Math.max(...cells.map((i) => grid.max[i] ?? 1))
-  const ink = luminance(fromHex(color))
-  const ratio = (l: number): number => (Math.max(ink, l) + 0.05) / (Math.min(ink, l) + 0.05)
-  if (Math.min(ratio(lo), ratio(hi)) >= target) return { color, halo: null }
-  const moved = hi - lo <= FLAT ? readableOn(fromHex(color), grayOf((lo + hi) / 2), target) : null
-  if (moved) return { color: hex(moved), halo: null }
-  return { color, halo: ink < MID ? '#fff' : '#000' }
+  const l = luminance(ink)
+  const ratio = (v: number): number => (Math.max(l, v) + 0.05) / (Math.min(l, v) + 0.05)
+  // A printed outline or shadow round the letters is their edge: it carries their contrast when it stands out from
+  // the ink or from the ground (WCAG 1.4.3 counts an outline as the text's boundary; La Segunda's red round yellow).
+  const edge = spot.stroke?.color ?? spot.shadow?.color
+  if (edge && Math.max(contrast(ink, fromHex(edge)), contrast(fromHex(edge), ground)) >= target)
+    return { color: hex(ink), shadow: printed }
+  if (Math.min(ratio(lo), ratio(hi)) >= target) return { color: hex(ink), shadow: printed }
+  // readableOn darkens on a ground lighter than MID and lightens on a darker one: only where that keeps the ink's
+  // side of its ground (Gigi's white title stays light, never turned dark on its olive band).
+  const sameSide = l < luminance(ground) === luminance(ground) > MID
+  const moved = hi - lo <= FLAT && sameSide ? readableOn(ink, ground, target) : null
+  if (moved) return { color: hex(moved), shadow: printed }
+  const glow = hex(readableOn(ground, ink, target) ?? (l < MID ? [255, 255, 255] : [0, 0, 0]))
+  const halo = `0 0 .04em ${glow}, 0 0 .08em ${glow}, 0 0 .3em ${glow}`
+  return { color: hex(ink), shadow: spot.shadow ? `${printed}, ${halo}` : halo }
 }
+const average = (cs: readonly Rgb[]): Rgb => {
+  const of = (k: 0 | 1 | 2): number => cs.reduce((s, c) => s + c[k], 0) / Math.max(1, cs.length)
+  return [of(0), of(1), of(2)]
+}
+const blend = (c: Rgb, under: Rgb, alpha: number): Rgb => [
+  c[0] * alpha + under[0] * (1 - alpha),
+  c[1] * alpha + under[1] * (1 - alpha),
+  c[2] * alpha + under[2] * (1 - alpha),
+]
 
 export type Placer = {
   // The attributes that place a leaf: its spot, ` data-pl` when its lines are placed instead, ` data-free` when it
@@ -201,7 +261,8 @@ export function placer(page: HtmlPage, printPx: number | null): Placer {
   const e = page.extraction
   const backdrop = page.backdrop ?? null
   const frames = new Map<string, Box>()
-  const spots = backdrop ? spotsOf(page.structure.blocks, e, backdrop.grid.inks, frames) : null
+  const spots = backdrop ? spotsOf(page.structure.blocks, e, backdrop.grid, frames) : null
+  const drawn: Drawn = backdrop?.grid ?? NOTHING_DRAWN
   const pxPerPt = (printPx ?? e.width) / e.width
   const split = new Set<string>()
   return {
@@ -239,7 +300,7 @@ export function placer(page: HtmlPage, printPx: number | null): Placer {
         .map((p) => {
           if (!('runs' in p)) return p.gap
           const box = unionOf(p.runs)
-          const spot = box ? spotOf(box, p.runs, backdrop?.grid.inks ?? {}) : null
+          const spot = box ? spotOf(box, p.runs, drawn) : null
           const style = spot ? placement(spot, e.width, backdrop?.grid ?? null, pxPerPt) : ''
           return `<span class="pl"${style}>${html(p.segments)}${p === last ? tail : ''}</span>`
         })

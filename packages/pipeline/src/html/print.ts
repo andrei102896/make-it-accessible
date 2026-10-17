@@ -73,7 +73,7 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; list-style: none; max-width: none;
   font-size: calc(var(--fs, var(--h)) * var(--z, 1) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw);
   white-space: var(--ws, normal); text-align: var(--ta, left); color: var(--c, inherit); font-weight: var(--fw, 400); font-style: var(--fi, normal);
-  text-shadow: 0 0 .12em var(--halo, transparent), 0 0 .25em var(--halo, transparent); }
+  text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }

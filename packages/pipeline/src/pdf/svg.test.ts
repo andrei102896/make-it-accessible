@@ -56,3 +56,13 @@ test('a shape other than a plain rectangle cut by a clip shows an unknown part (
   const [frame] = drawnElements(page(defs, body)).drawn
   assert.equal(frame?.masked, true)
 })
+
+test('a glyph under a mask holding one plain rect draws at its opacity (Gigi’s title, white at 84 %)', () => {
+  const defs =
+    '<g id="glyph-0-1"><path d="M 0 0 L 5 0 L 5 -7 Z"/></g><mask id="mask-1"><g filter="url(#f)"><rect x="0" y="0" width="600" height="800" fill="rgb(0%, 0%, 0%)" fill-opacity="0.8379"/></g></mask><g id="source-14"><g fill="rgb(100%, 100%, 100%)"><use xlink:href="#glyph-0-1" x="10" y="60"/></g></g>'
+  const body = '<g mask="url(#mask-1)"><use xlink:href="#source-14" transform="matrix(1, 0, 0, 1, 41, 36)"/></g>'
+  const [glyph] = drawnElements(page(defs, body)).glyphs
+  assert.ok(glyph)
+  assert.equal(glyph.alpha, 0.8379)
+  assert.deepEqual(glyph.at, [51, 96])
+})

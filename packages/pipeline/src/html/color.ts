@@ -6,13 +6,6 @@ const channel = (v: number): number => {
 }
 export const luminance = ([r, g, b]: Rgb): number => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 
-// The grey of a relative luminance (sRGB).
-export function grayOf(l: number): Rgb {
-  const v = l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055
-  const c = Math.round(Math.min(1, Math.max(0, v)) * 255)
-  return [c, c, c]
-}
-
 // WCAG 2 contrast ratio.
 export function contrast(a: Rgb, b: Rgb): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)

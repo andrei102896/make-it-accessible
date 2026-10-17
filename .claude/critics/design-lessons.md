@@ -48,3 +48,6 @@
 - Placed text that collides is misinformation: overlaps and overflow are gated at build time and the page falls back to the text view (Carmine's 4.49 beside the wrong dish, 2026-10-17).
 - Backdrop cleaning removes the glyphs we place again, never the fills around them: strips and boxes behind text are its own contrast (Boater's cream strips, Gigi's white box, 2026-10-17).
 - A leaf whose words sit apart on the page is placed line by line, never as one box over the space between them (Carmine's "FAMOUS DEVILED CRABS" over "BREAD", 2026-10-17).
+- A PDF's shadow or outline is its own contrast aid: reproduce it (a dark copy of the words, an outline, a shadow kept in the backdrop) before computing a halo (Bannatyne raster shadow, Kenny & Ziggy's #231f20 copies, La Segunda extrusion, 2026-10-17).
+- Halo contrast is judged on the rendered pixels: one wide blur on thin strokes covers about 15–20 % (Crimsons, 2026-10-17).
+- Tracking, weight and class come from the PDF's widths and font descriptor for every font, not only the ones we may embed (Boater's Brandon, Lexington Brush Script, 2026-10-17).

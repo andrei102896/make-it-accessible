@@ -61,3 +61,7 @@
 - Custom properties inherit: a placement that omits default values leaks its parent's into a nested placed element; the nested one writes every property, or the parent writes none (per-line spans, 2026-10-17).
 - A self-matching wait loop never ends: `ps | grep "[x]pattern"` also matches the shell running the loop when the pattern names the loop's own arguments (rerender wait, 2026-10-17).
 - Chromium can stall rasterising soft masks and filters at a large scale (BILLA p6: over a minute at 1⅓× and 2×, under a second at 1 px/pt): every browser render has a deadline and a fallback (2026-10-17).
+- pdf.js maps every encoding code of a simple font through `toFontChar`, unused ones to an appended .notdef (the last glyph): coverage comes from code points pdf.js's own cmap lists, not from ToUnicode (Gigi Century Gothic g11 of 12, Stone House Lindsey g26 of 27, 2026-10-17).
+- "Every match satisfies P" is true when nothing matches: a permission join needs at least one match (12 of 177 pdf.js fonts had no raw program by name, 2026-10-17).
+- A typeface class read from a font name misses commercial scripts with no genre word (FeelingPassionate, LindseySignature): gate on a measured property instead (2026-10-17).
+- A text layer can lie over a picture of its words: a word with no glyph drawn where it stands is printed inside an image (Stone House's cover, one raster under invisible text, 2026-10-17).

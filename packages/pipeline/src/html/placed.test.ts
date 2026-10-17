@@ -38,17 +38,22 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 1,
+  version: 2,
   cell: 8,
   cols: 75,
   rows: 100,
   min: Array.from({ length: 7500 }, () => 1),
   max: Array.from({ length: 7500 }, () => 1),
+  mean: Array.from({ length: 7500 }, () => '#ffffff'),
   inks: { '1:0': '#fff100' },
+  alpha: {},
+  shadows: {},
+  strokes: {},
+  undrawn: [],
 }
 
 test('each leaf takes its printed box, size, face and drawn ink, moved to read on a flat backdrop; text read from a picture has no spot', () => {
-  const spots = spotsOf(structure.blocks, extraction, white.inks)
+  const spots = spotsOf(structure.blocks, extraction, white)
   assert.deepEqual(
     [...spots.keys()],
     ['blocks[0]', 'blocks[2].items[0].name', 'blocks[2].items[0].prices[0]', 'blocks[2].items[0].prices[0].amount'],
@@ -57,11 +62,11 @@ test('each leaf takes its printed box, size, face and drawn ink, moved to read o
   assert.ok(title)
   assert.equal(
     placement(title, extraction.width, white, 2),
-    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--c:#a69600;--halo:transparent"',
+    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--c:#a69600;--ts:none"',
   )
   const name = spots.get('blocks[2].items[0].name')
   assert.ok(name)
-  assert.match(placement(name, extraction.width, white, 2), /--halo:transparent/)
+  assert.match(placement(name, extraction.width, white, 2), /--ts:none/)
 })
 
 test('a page with a backdrop renders both views from one document; without one, nothing of the printed view', () => {
@@ -98,9 +103,12 @@ test('the printed view needs a width that shows the body text at 12 px, never a 
 
 test('on a varying backdrop (a photo) a failing ink keeps its colour and gets a halo of the opposite lightness', () => {
   const photo: Grid = { ...white, min: white.min.map(() => 0.1), max: white.max.map(() => 0.9) }
-  const name = spotsOf(structure.blocks, extraction, photo.inks).get('blocks[2].items[0].name')
+  const name = spotsOf(structure.blocks, extraction, photo).get('blocks[2].items[0].name')
   assert.ok(name)
-  assert.match(placement(name, extraction.width, photo, 2), /--c:#222222;--halo:#fff/)
+  assert.match(
+    placement(name, extraction.width, photo, 2),
+    /--c:#222222;--ts:0 0 \.04em #ffffff, 0 0 \.08em #ffffff, 0 0 \.3em #ffffff/,
+  )
 })
 
 test('a title printed as two lines in two faces is placed line by line, each with its own size and ink (Bannatyne)', () => {
@@ -157,4 +165,34 @@ test('a leaf the validator doubts is read, not placed: the backdrop keeps its pr
   const page = { keyPage: 1, structure, extraction, flagged: ['blocks[0]'], imageSrc: () => undefined }
   const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
   assert.match(html, /<h3 [^>]*data-review data-free>/)
+})
+
+test("words printed inside a picture under an invisible text layer are not drawn again (Stone House's cover)", () => {
+  const cover: Grid = { ...white, undrawn: ['1:0'] }
+  const page = { keyPage: 1, structure, extraction, flagged: [], imageSrc: () => undefined }
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: cover } }] })
+  assert.match(html, /<h3 [^>]*data-free>/)
+  assert.ok(spotsOf(structure.blocks, extraction, cover).has('blocks[2].items[0].name'))
+})
+
+test('an ink printed at an opacity is blended over its ground; a printed shadow that carries the contrast replaces the halo', () => {
+  const olive: Grid = {
+    ...white,
+    mean: white.mean.map(() => '#aa9f62'),
+    min: white.min.map(() => 0.3),
+    max: white.max.map(() => 0.38),
+    inks: { '1:0': '#ffffff' },
+    alpha: { '1:0': 0.84 },
+    shadows: {},
+  }
+  const title = spotsOf(structure.blocks, extraction, olive).get('blocks[0]')
+  assert.ok(title)
+  assert.match(placement(title, extraction.width, olive, 2), /--c:#f1f0e6;--ts:0 0 \.04em #[0-9a-f]{6}/)
+  const shadowed: Grid = { ...olive, alpha: {}, shadows: { '1:0': { color: '#231f20', dx: 0, dy: 2 } } }
+  const lifted = spotsOf(structure.blocks, extraction, shadowed).get('blocks[0]')
+  assert.ok(lifted)
+  assert.match(
+    placement(lifted, extraction.width, shadowed, 2),
+    /--ts:calc\(0 \* 1cqw\) calc\(0\.333 \* 1cqw\) 0 #231f20"/,
+  )
 })

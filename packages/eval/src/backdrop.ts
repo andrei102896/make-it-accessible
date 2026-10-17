@@ -2,7 +2,7 @@ import { rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
 import { placedRuns } from '@make-it-accessible/pipeline/html/source'
-import { backdropSvg, CELL, inksOf, luminanceGrid } from '@make-it-accessible/pipeline/pdf/backdrop'
+import { backdropSvg, CELL, luminanceGrid, printedOf } from '@make-it-accessible/pipeline/pdf/backdrop'
 import { pageSvg } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
@@ -13,7 +13,7 @@ import type { PageResult } from './process.ts'
 const SCALES = [(2 * 96) / 72, 96 / 72]
 const TIMEOUT_MS = 60_000
 const QUALITY = 0.8
-const VERSION = 1
+const VERSION = 2
 
 // Each page's backdrop for the printed view: pNN/backdrop.jpg, and pNN/backdrop.json with its light range per cell.
 // A page that renders at no scale in time gets none, and its document keeps the text view only.
@@ -53,7 +53,7 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
       await writeFile(join(r.dir, 'backdrop.jpg'), Buffer.from(drawn.jpeg.slice(drawn.jpeg.indexOf(',') + 1), 'base64'))
       await writeFile(
         join(r.dir, 'backdrop.json'),
-        JSON.stringify({ version: VERSION, cell: CELL, ...grid, inks: inksOf(page, words) }),
+        JSON.stringify({ version: VERSION, cell: CELL, ...grid, ...printedOf(page, words) }),
       )
     }
   } finally {

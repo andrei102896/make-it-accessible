@@ -183,7 +183,8 @@ const ref = (value: string | null): string =>
 // transforms and clips above it. pdftocairo defines placed content in <defs> (`source-N` groups and images) and
 // draws it with <use>: it counts where it is used, never where it is defined (Claudio's art at the foot, not the top).
 // A glyph drawn from the text layer: the point it is drawn at (its baseline start) and its place in the SVG text.
-export type Glyph = { at: Point; range: [number, number] }
+// `alpha`: the opacity a uniform mask gives it (Gigi's title, white at 84 % over its band); 1 under any other mask.
+export type Glyph = { at: Point; range: [number, number]; alpha: number }
 export function drawnElements(svg: string): {
   width: number
   height: number
@@ -222,6 +223,18 @@ export function drawnElements(svg: string): {
     const box = intersect(a.box, b.box)
     return box ? { box, shaped: a.shaped || b.shaped } : null
   }
+  // A mask holding one plain rect is a uniform opacity (its fill-opacity, through pdftocairo's remove-color filter).
+  const uniformAlpha = (id: string): number => {
+    const shapes: Node[] = []
+    const collect = (n: Node): void => {
+      if (n.name === 'rect' || n.name === 'path' || n.name === 'image' || n.name === 'use') shapes.push(n)
+      n.children.forEach(collect)
+    }
+    const mask = byId.get(id)
+    if (mask) collect(mask)
+    const [only] = shapes
+    return shapes.length === 1 && only?.name === 'rect' ? Number(attr(only.tag, 'fill-opacity') ?? 1) : 1
+  }
   const walk = (
     n: Node,
     m: Matrix,
@@ -229,6 +242,7 @@ export function drawnElements(svg: string): {
     using: ReadonlySet<string>,
     masked = false,
     filtered = false,
+    alpha = 1,
   ): void => {
     const id = attr(n.tag, 'id') ?? ''
     if (n.name === 'defs') {
@@ -236,7 +250,7 @@ export function drawnElements(svg: string): {
       // that cancels their offset.
       for (const c of n.children)
         if (c.name === 'g' && attr(c.tag, 'id')?.startsWith('compositing-group'))
-          walk(c, m, clip, using, masked, filtered)
+          walk(c, m, clip, using, masked, filtered, alpha)
       return
     }
     if (['clipPath', 'mask', 'filter', 'pattern', 'symbol'].includes(n.name) || id.startsWith('glyph')) return
@@ -244,7 +258,9 @@ export function drawnElements(svg: string): {
     const here = multiply(m, own)
     const clipId = ref(attr(n.tag, 'clip-path'))
     const visible = clipId ? narrow(clip, clipOf(clipId, here)) : clip
-    const hidden = masked || attr(n.tag, 'mask') !== null
+    const maskId = ref(attr(n.tag, 'mask'))
+    const hidden = masked || maskId !== ''
+    const fade = maskId ? alpha * uniformAlpha(maskId) : alpha
     const filter = filtered || (n.name === 'g' && attr(n.tag, 'filter') !== null)
     if (n.name === 'path' || n.name === 'rect') {
       const d = n.name === 'rect' ? rectPath(n.tag) : (attr(n.tag, 'd') ?? '')
@@ -273,12 +289,12 @@ export function drawnElements(svg: string): {
       const target = ref(attr(n.tag, 'xlink:href') ?? attr(n.tag, 'href'))
       const node = byId.get(target)
       const at = multiply(here, [1, 0, 0, 1, Number(attr(n.tag, 'x') ?? 0), Number(attr(n.tag, 'y') ?? 0)])
-      if (target.startsWith('glyph')) glyphs.push({ at: [at[4], at[5]], range: n.range })
+      if (target.startsWith('glyph')) glyphs.push({ at: [at[4], at[5]], range: n.range, alpha: fade })
       if (!node || using.has(target) || target.startsWith('glyph') || target.startsWith('compositing-group')) return
-      walk(node, at, visible, new Set([...using, target]), hidden, filter)
+      walk(node, at, visible, new Set([...using, target]), hidden, filter, fade)
       return
     }
-    for (const c of n.children) walk(c, here, visible, using, hidden, filter)
+    for (const c of n.children) walk(c, here, visible, using, hidden, filter, fade)
   }
   walk(root, IDENTITY, null, new Set())
   return { width, height, drawn, placed, glyphs }
