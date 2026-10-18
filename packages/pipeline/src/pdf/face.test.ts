@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { lineAt, printedFace, textLines } from './face.ts'
+import { classOf, lineAt, printedFace, textLines } from './face.ts'
 import { parseExtraction } from './types.ts'
 
 test('a printed face: subset prefix dropped, weight from the name before <b>, italic from name or <i>', () => {
@@ -80,4 +80,9 @@ test('a saved extraction without fonts still parses', () => {
     duplicates: [],
   }
   assert.equal(parseExtraction(JSON.stringify(saved)).runs[0]?.font, undefined)
+})
+
+test("a brush script embedded as Type 1C is a script face: kept as printed when no face stands in (Claudio's Haystack)", () => {
+  assert.equal(classOf('haystack'), 'script')
+  assert.equal(classOf('haystackregular'), 'script')
 })
