@@ -164,7 +164,7 @@ async function ownFacesKept(tab: Page): Promise<{ index: number; why: string }[]
     const lines = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')].map((el) => {
       const shown = el.cloneNode(true)
       if (shown instanceof HTMLElement)
-        for (const hidden of shown.querySelectorAll('.sr-only, [data-free]')) hidden.remove()
+        for (const hidden of shown.querySelectorAll('.sr-only, [data-free], .icon')) hidden.remove()
       const text = shown.textContent ?? ''
       return {
         ff: el.style.getPropertyValue('--ff'),

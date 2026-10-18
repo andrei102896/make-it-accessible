@@ -43,12 +43,13 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           .filter((w) => tilted.has(w.id) || (w.font && keptAsPrinted(w.font, w.id in own.faces, library)))
           .map((w) => w.id),
       )
+      // An icon's words (pdf/icons.ts) have no glyphs to take out: the drawing stays in the backdrop.
       const words = placedRuns(
         r.structure,
         r.extraction,
         flaggedPaths(r.validation),
         (w) => turned(w) || kept.has(w.id),
-      )
+      ).filter((w) => !w.icon)
       const svg = backdropSvg(
         page,
         words.map((w) => w.box),

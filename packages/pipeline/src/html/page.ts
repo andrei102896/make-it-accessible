@@ -41,16 +41,12 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
   const plain = (t: TextValue): string => ('seen' in t ? `<span data-seen>${esc(t.seen)}</span>` : esc(raw(t)))
   // With `path` in the printed view, the text placed line by line (placed.ts); `tail` ends it (diet codes).
   const inked = (t: TextValue, shown: string, each: (s: string) => string = esc, path?: string, tail = ''): string =>
-    (path === undefined
-      ? null
-      : pl.lined(
-          path,
-          t,
-          shown,
-          (s) => (inks.size ? inkedHtml(s, inks, each) : each(s.map((x) => x.text).join(''))),
-          tail,
-        )) ??
-    ('seen' in t ? plain(t) : inks.size ? inkedHtml(inkSegments(t, e, shown), inks, each) : each(shown)) + tail
+    (path === undefined ? null : pl.lined(path, t, shown, (s) => inkedHtml(s, inks, each), tail)) ??
+    ('seen' in t ? plain(t) : inkedHtml(inkSegments(t, e, shown), inks, each)) + tail
+  // An icon's tag is an inline block, its own stop for VoiceOver: the line reads as one text (never over a link,
+  // which role="text" would flatten).
+  const asOne = (html: string): string =>
+    html.includes('class="diet icon"') && !html.includes('<a ') ? ' role="text"' : ''
   const text = (t: TextValue, path?: string): string => inked(t, raw(t), esc, path)
   const rawName = (t: TextValue): string => visibleText(t, e, smallCaps.has('name'))
   // The narrowest element carrying a finding is marked, so a reviewer (and the scorer) sees what was flagged.
@@ -223,7 +219,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
 
   const name = (path: string, item: Item, codes: readonly string[] = [], words = rawName(item.name)): string => {
     const shown = inked(item.name, words, esc, `${path}.name`, codes.map((c) => ` ${dietTag(c, legend)}`).join(''))
-    return `<p class="name"${attrs(`${path}.name`)}>${shown}</p>`
+    return `<p class="name"${attrs(`${path}.name`)}${asOne(shown)}>${shown}</p>`
   }
   // role="text" makes VoiceOver read a price with its previous price as one phrase, not one stop per line.
   // A price cited twice for one dish (once with its description as qualifier) is shown once.
@@ -253,7 +249,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
       const addon = isAddOn(rest)
       const body = inked(d.text, rest, addon ? (s) => emphasizeMoney(linkify(s)) : linkify, at)
       if (!addon && lead < 0) lead = i
-      return `<p class="${addon ? 'addon' : lead === i ? 'desc lead' : 'desc'}"${attrs(at)}>${body}</p>`
+      return `<p class="${addon ? 'addon' : lead === i ? 'desc lead' : 'desc'}"${attrs(at)}${asOne(body)}>${body}</p>`
     })
     const first = leadFirst && lead >= 0 ? (details[lead] ?? '') : ''
     const rest = first ? details.filter((_, i) => i !== lead) : details

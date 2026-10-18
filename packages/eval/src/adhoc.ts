@@ -6,6 +6,7 @@ import { OUT_DIR } from './paths.ts'
 import { PRICES } from './cost.ts'
 import { missingDetails } from './details.ts'
 import { BriefFile } from './look.ts'
+import { documentLegend } from './legend.ts'
 import { buildHtml, processPage, type PageResult } from './process.ts'
 import { axeReport } from './score/axe.ts'
 import { keyboardReport } from './score/keyboard.ts'
@@ -33,8 +34,9 @@ const docDir = join(OUT_DIR, `${new Date().toISOString().replace(/[:.]/g, '-')}-
 await mkdir(docDir, { recursive: true })
 
 const results: PageResult[] = []
+const legend = await documentLegend(pdfPath)
 for (let page = from; page <= Math.min(to, total); page++) {
-  const result = await processPage(pdfPath, page, page, docDir, options, `p${String(page)}`)
+  const result = await processPage(pdfPath, page, page, docDir, options, `p${String(page)}`, legend)
   if (result) results.push(result)
 }
 if (results.length) {

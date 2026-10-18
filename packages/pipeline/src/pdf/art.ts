@@ -76,13 +76,14 @@ const paints = (tag: string): boolean =>
       attr(tag, 'stroke') !== 'none' &&
       Number(attr(tag, 'stroke-opacity') ?? 1) >= OPAQUE))
 
-export function picturesOf(
+// What the page shows of its drawings: fills of their own, the small vector pieces (ungrouped), and the rasters.
+function shownArt(
   art: readonly Drawn[],
   placed: readonly Placed[],
   words: readonly Run[],
   width: number,
   height: number,
-): Picture[] {
+): { fills: Picture[]; pieces: Box[]; rasters: Box[] } {
   const page: Box = { x: 0, y: 0, w: width, h: height }
   const shown = (b: Box, clip: Box | null): Box | null => {
     const v = cut(b, clip ?? page)
@@ -119,6 +120,34 @@ export function picturesOf(
     const b = shown(p.box, p.clip)
     return b ? [b] : []
   })
+  return { fills, pieces, rasters }
+}
+
+// The page's drawings one by one, before neighbours are grouped: icons printed side by side stay apart
+// (pdf/icons.ts). `words` are the page's text runs alone: a drawing under an icon's words would count as covered.
+export function piecesOf(
+  art: readonly Drawn[],
+  placed: readonly Placed[],
+  words: readonly Run[],
+  width: number,
+  height: number,
+): Picture[] {
+  const { pieces, rasters } = shownArt(art, placed, words, width, height)
+  return [
+    ...rasters.map((box): Picture => ({ box, kind: 'raster', color: null })),
+    ...pieces.map((box): Picture => ({ box, kind: 'vector', color: null })),
+  ]
+}
+
+export function picturesOf(
+  art: readonly Drawn[],
+  placed: readonly Placed[],
+  words: readonly Run[],
+  width: number,
+  height: number,
+): Picture[] {
+  const { fills, pieces, rasters } = shownArt(art, placed, words, width, height)
+  const page: Box = { x: 0, y: 0, w: width, h: height }
   return [
     // Each raster stands alone: photos printed edge to edge are separate pictures (Carew's rooms), and a figure
     // over several (2nd Ave's mosaic strips) takes them together in pictureIn.

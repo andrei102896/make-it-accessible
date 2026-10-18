@@ -191,7 +191,8 @@ export function headedLists(blocks: readonly Block[], note: number, raw: (t: Tex
   return null
 }
 
-export type Segment = { text: string; color: string | null }
+// `icon`: the width of the icon these letters name (hundredths of the page width), null for printed letters.
+export type Segment = { text: string; color: string | null; icon: number | null }
 // Each shown character's run, matched to the cited runs' characters (whitespace and case aside): null for
 // whitespace, and null for the whole text when the letters differ (the model's text stands in for a broken layer).
 export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | null)[] | null {
@@ -216,28 +217,33 @@ export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | nu
 // The shown text's characters each with its run's colour (whitespace takes the one before). When the letters
 // differ, one segment, coloured only when every run agrees.
 export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
-  if ('seen' in t) return [{ text: shown, color: null }]
+  if ('seen' in t) return [{ text: shown, color: null, icon: null }]
   const letters = Array.from(shown)
   const owners = shownRuns(t, e, shown)
   if (!owners) {
     const hidden = new Set(e.hidden)
     const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
     const all = new Set(runs.map((r) => r.color ?? null))
-    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null }]
+    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null, icon: null }]
   }
-  return segmentsOf(letters, owners)
+  return segmentsOf(letters, owners, e.width)
 }
 
-function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[]): Segment[] {
+function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[], pageWidth: number): Segment[] {
   const out: Segment[] = []
   let color: string | null = null
+  let icon: number | null = null
   letters.forEach((ch, i) => {
     const owner = owners[i]
-    if (owner) color = owner.color ?? null
-    else if (i === 0) color = null
+    if (owner) {
+      color = owner.color ?? null
+      icon = owner.icon ? Math.round((owner.box.w / pageWidth) * 100_000) / 1000 : null
+    } else if (i === 0) color = null
+    // A space after an icon's words is not the tag's: the tag ends with its last word.
+    else if (!owners.slice(i + 1).find((o) => o)?.icon) icon = null
     const last = out.at(-1)
-    if (last && last.color === color) last.text += ch
-    else out.push({ text: ch, color })
+    if (last && last.color === color && last.icon === icon) last.text += ch
+    else out.push({ text: ch, color, icon })
   })
   return out
 }
@@ -260,7 +266,7 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
     parts.push({
       text: letters.slice(line.start, line.end).join(''),
       runs,
-      segments: segmentsOf(letters.slice(line.start, line.end), own),
+      segments: segmentsOf(letters.slice(line.start, line.end), own, e.width),
     })
   }
   let gap = ''
@@ -285,8 +291,8 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
   return parts.filter((p) => 'runs' in p).length > 1 ? parts : null
 }
 
-// The segments as HTML: runs printed in a brand ink wrapped in its class, the rest joined so `each` (escape or
-// link) sees whole words.
+// The segments as HTML: brand-ink runs wrapped in their class, an icon's words in the legend tag (the printed view
+// gives the tag the drawing's width `--iw` and reads its inner span), the rest joined so `each` sees whole words.
 export function inkedHtml(
   segments: readonly Segment[],
   inks: ReadonlySet<string>,
@@ -296,10 +302,15 @@ export function inkedHtml(
   for (const s of segments) {
     const color = s.color !== null && inks.has(s.color) ? s.color : null
     const last = groups.at(-1)
-    if (last && last.color === color) last.text += s.text
-    else groups.push({ text: s.text, color })
+    if (last && last.color === color && last.icon === s.icon) last.text += s.text
+    else groups.push({ text: s.text, color, icon: s.icon })
   }
   return groups
-    .map((g) => (g.color ? `<span class="ink-${g.color.slice(1)}">${each(g.text)}</span>` : each(g.text)))
+    .map((g) => {
+      const inner = g.color ? `<span class="ink-${g.color.slice(1)}">${each(g.text)}</span>` : each(g.text)
+      return g.icon === null
+        ? inner
+        : `<span class="diet icon" style="--iw:${String(g.icon)}"><span>${inner}</span></span>`
+    })
     .join('')
 }

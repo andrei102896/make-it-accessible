@@ -54,6 +54,7 @@ p { margin: .5rem 0; }
   font-size: .875rem; font-weight: 600; line-height: 1.4; color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0 0 1rem; font-size: 1rem; color: var(--muted); }
 .legend .diet { margin: 0 .25rem 0 0; }
+.diet.icon { margin-left: 0; }
 .priced { border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; margin: 0 0 1.5rem; }
 .priced .products { margin-bottom: .5rem; }
 .note { font-weight: 600; margin-bottom: 0; }

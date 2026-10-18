@@ -19,6 +19,8 @@ const Run = z.object({
   font: Font.optional(),
   // Its letters include a dropped ligature's, from the PDF's replacement text (pdf/ligatures.ts).
   restored: z.literal(true).optional(),
+  // A word of an icon's legend label, standing for the icon drawn at its box (pdf/icons.ts): no glyphs of its own.
+  icon: z.literal(true).optional(),
 })
 const PageImage = z.object({ id: z.string(), box: Box })
 // A box the PDF draws round text (pdf/vectors.ts): a frame (stroke, or a filled ring) or a panel (a fill).
@@ -69,6 +71,8 @@ const Extraction = z.object({
   vectors: z.array(Vector).optional(),
   rules: z.array(Rule).optional(),
   pictures: z.array(Picture).optional(),
+  // Small drawings standing on a text line (pdf/icons.ts); runs extracted before they were read have none.
+  icons: z.array(Picture.pick({ box: true, kind: true })).optional(),
 })
 
 export type Box = z.infer<typeof Box>

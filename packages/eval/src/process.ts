@@ -20,6 +20,7 @@ import { fitPlaced } from './fit.ts'
 import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
 import { FONTS_DIR } from './paths.ts'
+import { withIcons, type LegendEntry } from '@make-it-accessible/pipeline/pdf/icons'
 import { extractWhole } from './wholewords.ts'
 import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 
@@ -52,10 +53,11 @@ export async function processPage(
   docDir: string,
   options: ModelOptions,
   label: string,
+  legend: readonly LegendEntry[] = [],
 ): Promise<PageResult | null> {
   const dir = pageDir(docDir, keyPage)
   await mkdir(dir, { recursive: true })
-  const extraction = await extractWhole(pdfPath, pdfPage)
+  const extraction = withIcons(await extractWhole(pdfPath, pdfPage), legend)
   const size = fitScale(extraction.width, extraction.height)
   const image = await renderPage(pdfPath, pdfPage, size, join(dir, 'model'))
   await writeFile(join(dir, 'extraction.json'), JSON.stringify(extraction))

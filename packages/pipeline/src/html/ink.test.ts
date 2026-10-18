@@ -70,21 +70,27 @@ test('colours map onto the shown text letter by letter, whitespace and case asid
   const desc = structure.blocks[1]?.kind === 'products' ? structure.blocks[1].items[0]?.details[0] : undefined
   if (desc?.kind !== 'paragraph') throw new Error('fixture')
   assert.deepEqual(inkSegments(desc.text, extraction, "chauncey's greens, lemon"), [
-    { text: "chauncey's ", color: '#c00000' },
-    { text: 'greens, lemon', color: '#000000' },
+    { text: "chauncey's ", color: '#c00000', icon: null },
+    { text: 'greens, lemon', color: '#000000', icon: null },
   ])
   const name = structure.blocks[1]?.kind === 'products' ? structure.blocks[1].items[0]?.name : undefined
   if (!name) throw new Error('fixture')
   // The model's text stands in for the split small caps; every letter still finds its run.
-  assert.deepEqual(inkSegments(name, extraction, 'Curried Mussels'), [{ text: 'Curried Mussels', color: '#000000' }])
+  assert.deepEqual(inkSegments(name, extraction, 'Curried Mussels'), [
+    { text: 'Curried Mussels', color: '#000000', icon: null },
+  ])
   // Letters that differ (a repaired word) give one segment, coloured only when every run agrees.
-  assert.deepEqual(inkSegments(desc.text, extraction, 'Chauncy greens'), [{ text: 'Chauncy greens', color: null }])
-  assert.deepEqual(inkSegments({ src: [[7, 7]] }, extraction, 'Chauncy'), [{ text: 'Chauncy', color: '#c00000' }])
+  assert.deepEqual(inkSegments(desc.text, extraction, 'Chauncy greens'), [
+    { text: 'Chauncy greens', color: null, icon: null },
+  ])
+  assert.deepEqual(inkSegments({ src: [[7, 7]] }, extraction, 'Chauncy'), [
+    { text: 'Chauncy', color: '#c00000', icon: null },
+  ])
   const html = inkedHtml(
     [
-      { text: 'a ', color: '#000000' },
-      { text: 'b', color: '#111111' },
-      { text: ' c', color: '#c00000' },
+      { text: 'a ', color: '#000000', icon: null },
+      { text: 'b', color: '#111111', icon: null },
+      { text: ' c', color: '#c00000', icon: null },
     ],
     new Set(['#c00000']),
     (s) => `[${s}]`,

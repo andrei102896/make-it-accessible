@@ -1,5 +1,5 @@
 import { groupParagraphs } from '../pdf/paragraphs.ts'
-import type { Extraction, PixelSize } from '../pdf/types.ts'
+import type { Extraction, PixelSize, Run } from '../pdf/types.ts'
 
 export const SYSTEM_PROMPT = `You convert one page of a designed PDF (retail leaflet, catalog or brochure) into an accessible structure that a screen-reader user will read instead of the page.
 
@@ -41,10 +41,19 @@ export function inventory(e: Extraction, size: PixelSize): string {
   const hidden = new Set(e.hidden)
   const paragraphs = groupParagraphs(e.runs.filter((r) => !hidden.has(r.id))).map(
     (p, n) =>
-      `P${n} ${box(p.box)}: ${p.lines.map((line) => line.map((r) => `${runIndex(r.id)}=${r.str}`).join(' ')).join(' / ')}`,
+      `P${n} ${box(p.box)}: ${p.lines
+        .map((line) =>
+          inOrder(line)
+            .map((r) => `${runIndex(r.id)}=${r.str}`)
+            .join(' '),
+        )
+        .join(' / ')}`,
   )
   const hints = e.images.map((i) => `${i.id} ${box(i.box)}`)
   return `Image size: ${size.width}x${size.height} px.\n\nText inventory:\n${paragraphs.join('\n')}\n\nImage hints (raster bounds, often larger than the visible picture):\n${hints.join('\n') || 'none'}`
 }
 
 export const runIndex = (id: string): number => Number(id.split(':')[1])
+// Icon words are appended to the page's runs (pdf/icons.ts): their line is read left to right; other lines as read.
+const inOrder = (line: readonly Run[]): Run[] =>
+  line.some((r) => r.icon) ? [...line].sort((a, b) => a.box.x - b.box.x) : [...line]

@@ -81,6 +81,9 @@ ${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: none; }
 ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
+${on} ${page} ${leaf} .icon { display: inline-block; width: calc(var(--iw) * 1cqw); height: 1px; border: 0; padding: 0;
+  margin: 0; vertical-align: baseline; font-size: inherit; line-height: inherit; }
+${on} ${page} ${leaf} .icon > span { ${SR_ONLY} }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }
 ${inks.map((c) => `${on} ${page} ${leaf} .ink-${c.slice(1)} { color: var(--ink-${c.slice(1)}, inherit); }\n`).join('')}}
 `

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { pictureIn, picturesOf } from './art.ts'
+import { pictureIn, piecesOf, picturesOf } from './art.ts'
 import type { Run } from './types.ts'
 import { parseVectors } from './vectors.ts'
 
@@ -84,4 +84,16 @@ test("of several pictures in a model's box, the one or the union that fits it be
     color: null,
   }))
   assert.deepEqual(pictureIn({ x: 45, y: 95, w: 110, h: 130 }, strips, 600, 800), { x: 50, y: 100, w: 100, h: 120 })
+})
+
+test('piecesOf keeps neighbouring drawings apart where picturesOf groups them (two icons before one dish)', () => {
+  const { art, placed, width, height } = parseVectors(page(rect(100, 50, 10, 13) + rect(114, 50, 13, 13)))
+  assert.equal(picturesOf(art, placed, [], width, height).length, 1)
+  assert.deepEqual(
+    piecesOf(art, placed, [], width, height).map((p) => [p.kind, p.box.x, p.box.w]),
+    [
+      ['vector', 100, 10],
+      ['vector', 114, 13],
+    ],
+  )
 })

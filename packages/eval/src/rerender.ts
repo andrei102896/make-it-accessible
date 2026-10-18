@@ -5,6 +5,8 @@ import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { buildHtml, type PageResult } from './process.ts'
 import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
+import { withIcons } from '@make-it-accessible/pipeline/pdf/icons'
+import { documentLegend } from './legend.ts'
 import { extractWhole } from './wholewords.ts'
 
 // pnpm rerender <slug>... | --all: renders a saved run again, no model call, in out/rebuilt/<slug>; fonts, colours,
@@ -25,18 +27,22 @@ async function rebuild(s: Source): Promise<string> {
   await rm(out, { recursive: true, force: true })
   await cp(s.run, out, { recursive: true })
   const pdf = sourcePdf(s)
+  const legend = await documentLegend(pdf)
   const results: PageResult[] = []
   for (const d of (await readdir(out)).filter((x) => /^p\d+$/.test(x)).sort()) {
     const dir = join(out, d)
     const extraction = parseExtraction(await readFile(join(dir, 'extraction.json'), 'utf8'))
-    const fresh = await extractWhole(pdf, extraction.pdfPage)
+    const fresh = withIcons(await extractWhole(pdf, extraction.pdfPage), legend)
     if (fresh.runs.length !== extraction.runs.length)
-      throw new Error(`${s.slug} ${d}: the PDF's runs differ from the run's`)
+      throw new Error(
+        `${s.slug} ${d}: the PDF gives ${String(fresh.runs.length)} runs, the saved run has ${String(extraction.runs.length)} (icon words appended since?)`,
+      )
     extraction.hidden = fresh.hidden
     extraction.lost = fresh.lost
     extraction.vectors = fresh.vectors
     extraction.rules = fresh.rules
     extraction.pictures = fresh.pictures
+    extraction.icons = fresh.icons
     extraction.runs.forEach((r, i) => {
       const f = fresh.runs[i]
       if (f?.color) r.color = f.color

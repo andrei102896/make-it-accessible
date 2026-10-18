@@ -59,3 +59,6 @@
 - A line's ink is that of its unmarked words when the marked ones carry their own: a longer coloured part must not recolour the rest (Almond's "Micky's Ramen", Gigi's "(C) (Serves…)", 2026-10-18).
 - Measure a risk that already ships before letting it defer new work (spans inside Almond's descriptions already raise the VoiceOver question, 2026-10-18).
 - A gap in the text layer is seen, not only heard: the backdrop loses the glyph too, so check the printed view as well as the screen reader (Gigi "Pance a", 2026-10-18).
+- An icon printed inside a condition ("( [icon] available)") belongs where it is printed: moved after the name as a tag it changes the claim (Howies, 2026-10-18).
+- The placed view must show every condition line the text view has: an unplaced "( available)" left a gap beside the first dish (Howies, 2026-10-18).
+- A prospect email leads with the owner's gain, never with guilt or statistics about disabled customers, and never repeats what the first email already said (Howies reply, 2026-10-18).

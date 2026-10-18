@@ -83,3 +83,9 @@
 - pdf.js `getTextContent` NFKC-normalises ligatures (U+FB00–04, FB06) unless `disableNormalization`; the operator list keeps them. Before calling text "unknowable from the PDF", read its marked-content /ActualText: pdf.js drops it, Poppler puts it at the page's edge (Apple Pages exports: Gigi, Noah's, 2026-10-18).
 - Changing a run's `str` reaches every matcher pairing runs with another source by text (`itemOf`); a fallback added there must be limited to the runs that need it, then measured on the whole set (an unlimited one moved 298 own faces on 22 documents, 2026-10-18).
 - Read pdfinfo's Creator and Producer before naming a producer in code or docs ("Word export" was Apple Pages, 2026-10-18).
+- A synthetic run with no glyph reaches every matcher keyed by run id or glyph box (undrawn, copiesOf, own faces, fit's coverage check): mark it and exclude it at each (icon runs, 2026-10-18).
+- Append to an index-cited array; never insert and renumber: saved citations and the rerender count check depend on the indices (icon runs, 2026-10-18).
+- A regex built from one sample sentence is run over every body it will see before it ships: optional groups next to literal spaces silently require the space (outreach thing-regex, 24 of 60 missed, 2026-10-18).
+- A gitignored file that is the only copy is rewritten atomically with a backup beside it (targets.csv, 2026-10-18).
+- A fixed-width inline block inside a placed line wraps its own text and grows: hidden words go in an absolutely positioned child, the block keeps only the width and one em of height (icon tags, 2026-10-18).
+- pdftotext splits one printed line per column: words of a line are grouped by vertical overlap, not by its flow and line numbers (Howies' legend, 2026-10-18).
