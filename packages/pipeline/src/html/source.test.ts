@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parsePage } from '../model/schema.ts'
+import { parsePage, type TextValue } from '../model/schema.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
-import { inkedHtml, inkSegments, placedRuns } from './source.ts'
+import { inkedHtml, inkSegments, placedRuns, visibleText } from './source.ts'
 
 test('the placed words are every shown word a text cites, prices and nested names too; dropped ones are not', () => {
   const runs = ['MENU', 'ghost', 'Soup', '$9', 'p.2'].map((str, i) => ({
@@ -120,4 +120,21 @@ test("an icon's words are tagged in both views, the tag carrying the drawing's w
     inkedHtml(segments, new Set(), (s) => s),
     '( <span class="diet icon" style="--iw:1.271"><span>gluten free</span></span> available)',
   )
+})
+
+test("words in a face that draws capitals for lowercase show in capitals, as printed (Howies' Lulo Clean 'dinner menu')", () => {
+  const font = { key: 'lulocleanw01', size: 30, weight: 700, italic: false }
+  const runs: Run[] = ['dinner', 'menu'].map((str, i) => ({
+    id: `1:${String(i)}`,
+    str,
+    box: { x: i * 40, y: 0, w: 38, h: 30 },
+    flow: 0,
+    line: 0,
+    font,
+  }))
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  const t: TextValue = { src: [[0, 1]], text: 'DINNER MENU' }
+  assert.equal(visibleText(t, e), 'dinner menu')
+  assert.equal(visibleText(t, e, false, new Set(['lulocleanw01:700:false'])), 'DINNER MENU')
+  assert.equal(visibleText(t, e, false, new Set(['other:400:false'])), 'dinner menu')
 })

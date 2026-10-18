@@ -7,7 +7,7 @@ import { asDrawn, inkOn } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
-  version: 6,
+  version: 7,
   cell: 8,
   cols: 1,
   rows: 1,
@@ -23,6 +23,8 @@ const blank: Grid = {
   baselines: {},
   tracking: {},
   faces: {},
+  metrics: {},
+  capsFaces: [],
   fonts: {},
 }
 
@@ -72,12 +74,12 @@ test('the printed view sets each brand ink from its line, and nothing without on
   )
 })
 
-test('a hairline or a panel edge inside a cell leaves the ground flat: the ink moves instead of taking a halo', () => {
+test('a hairline or a panel edge inside a cell leaves the ground flat: the ink stays as printed, with no halo', () => {
   const gold = { box: { x: 0, y: 0, w: 16, h: 8 }, color: '#d69f65', alpha: 1, shadow: null, stroke: null }
   const framed: Grid = { ...blank, cols: 2, min: [0.775, 1], max: [1, 1], mean: ['#fefbf9', '#ffffff'] }
   const u = (v: number): string => String(v)
   assert.equal(inkOn(gold, framed, 4.5, u).shadow, 'none')
-  assert.notEqual(inkOn(gold, framed, 4.5, u).color, '#d69f65')
+  assert.deepEqual(inkOn(gold, framed, 4.5, u), { color: '#d69f65', shadow: 'none' })
   const photo: Grid = { ...blank, cols: 2, min: [0.05, 0.9], max: [0.3, 1], mean: ['#333333', '#f0f0f0'] }
   assert.match(inkOn(gold, photo, 4.5, u).shadow, /0 0 \.04em/)
 })

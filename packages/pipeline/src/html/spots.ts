@@ -1,5 +1,6 @@
 import type { Block, PriceValue, TextValue } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
+import { faceKey } from '../pdf/face.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { turned } from '../pdf/runs.ts'
 import type { Box, Extraction, Run, RunFont } from '../pdf/types.ts'
@@ -27,6 +28,8 @@ export type Spot = {
   // The face most of its letters are printed in, and their printed letter spacing (ems, pdf/tracking.ts).
   font: RunFont | null
   tracking: number
+  // Its lowercase letters as a share of its letters and digits (a lookalike's size blends by it, placed.ts).
+  lowercase: number
   // The PDF's own face every word is printed in (pdf/ownfont.ts), when they share one.
   own: string | null
   // Its first line's printed baseline (pt from the page's top): fit.ts sets ours on it.
@@ -87,6 +90,7 @@ export function spotsOf(
       italic: false,
       font: null,
       tracking: 0,
+      lowercase: 0,
       own: null,
       baseline: null,
       inline: [],
@@ -198,13 +202,17 @@ export function spotOf(box: Box, all: readonly Run[], drawn: Drawn, inks: Readon
     italic: most((r) => r.font?.italic ?? false) ?? false,
     font: runs.find((r) => r.font && faceKey(r.font) === face)?.font ?? null,
     tracking: median(runs.map((r) => [drawn.tracking[r.id] ?? 0, r.str.length])),
+    lowercase: lowercaseShare(runs.map((r) => r.str).join('')),
     own:
       new Set(runs.map((r) => drawn.faces[r.id] ?? null)).size === 1 ? (drawn.faces[runs[0]?.id ?? ''] ?? null) : null,
     baseline: first.length ? median(first) : null,
     inline: inlinesOf(runs, drawn, inks, color),
   }
 }
-const faceKey = (f: RunFont): string => `${f.key}:${String(f.weight)}:${String(f.italic)}`
+const lowercaseShare = (text: string): number => {
+  const all = text.match(/[\p{L}\p{N}]/gu)?.length ?? 0
+  return all ? (text.match(/\p{Ll}/gu)?.length ?? 0) / all : 0
+}
 // The value half the letters reach, each word weighted by its letters.
 const median = (weighted: readonly [number, number][]): number => {
   const sorted = [...weighted].sort((a, b) => a[0] - b[0])

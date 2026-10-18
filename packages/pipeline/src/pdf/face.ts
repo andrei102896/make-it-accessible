@@ -1,5 +1,5 @@
 import type { HeadingClass } from '../model/brief.ts'
-import type { Box, RunFont } from './types.ts'
+import type { Box, Run, RunFont } from './types.ts'
 
 // Common families by typeface class; a font name is a stronger signal than a look at a small render.
 const FAMILIES: [HeadingClass, RegExp][] = [
@@ -93,6 +93,17 @@ export function lineAt<T extends { box: Box }>(lines: readonly T[], word: Box): 
   return lines
     .filter((c) => cx >= c.box.x && cx <= c.box.x + c.box.w && cy >= c.box.y && cy <= c.box.y + c.box.h)
     .sort((a, b) => a.box.w * a.box.h - b.box.w * b.box.h)[0]
+}
+
+// One printed face: family key, weight and style, as spots.ts and the backdrop's metrics name it.
+export const faceKey = (f: RunFont): string => `${f.key}:${String(f.weight)}:${String(f.italic)}`
+
+// The page's body size: the printed size half its letters are at or under (pt); 0 with no sized run.
+export function bodySize(runs: readonly Pick<Run, 'str' | 'font'>[]): number {
+  const sized = runs.flatMap((r) => (r.font ? [[r.font.size, r.str.length] as const] : []))
+  const half = sized.reduce((n, [, w]) => n + w, 0) / 2
+  let seen = 0
+  return [...sized].sort((a, b) => a[0] - b[0]).find(([, w]) => (seen += w) >= half)?.[0] ?? 0
 }
 
 export type Line = { box: Box; color?: string; font?: RunFont }

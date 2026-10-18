@@ -39,6 +39,8 @@ export type PageResult = {
 const IMAGE_FIT = 0.95
 const IMAGE_MAX = 2
 const FIGURE_SCALE = 2
+// A masthead logo's centre lies within this share of its page's height from the top.
+const LOGO_BAND = 0.35
 const BACKGROUND_WORDS = 3
 
 export const pageDir = (docDir: string, keyPage: number): string => join(docDir, `p${String(keyPage).padStart(2, '0')}`)
@@ -111,8 +113,13 @@ export async function buildHtml(
     const toPts = (b: Box): Box => ({ x: b.x / k, y: b.y / k, w: b.w / k, h: b.h / k })
     const toPx = (b: Box): Box => ({ x: b.x * k, y: b.y * k, w: b.w * k, h: b.h * k })
     const boxes = imageBoxes(r.structure)
+    // The brief's logo must head its page: artwork lower down is a partner's badge, not the place's (Howies' Belhaven
+    // lobster beside its lobster dish, 2026-10-18).
+    const heads = named !== null && named.box.y + named.box.h / 2 <= r.extraction.height * LOGO_BAND
     const mark =
-      named?.pdfPage === r.pdfPage ? pictureIn(named.box, drawn, r.extraction.width, r.extraction.height) : null
+      named?.pdfPage === r.pdfPage && heads
+        ? pictureIn(named.box, drawn, r.extraction.width, r.extraction.height)
+        : null
     // Crops are judged on the page as the model saw it, words by their painted extent in their own colour.
     const img = boxes.length || mark ? await renderPixels(pdfPath, r.pdfPage, 72 * k) : null
     const hidden = new Set(r.extraction.hidden)

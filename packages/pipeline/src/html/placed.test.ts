@@ -40,7 +40,7 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 6,
+  version: 7,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -56,10 +56,12 @@ const white: Grid = {
   baselines: {},
   tracking: {},
   faces: {},
+  metrics: {},
+  capsFaces: [],
   fonts: {},
 }
 
-test('each leaf takes its printed box, size, face and drawn ink, moved to read on a flat backdrop; text read from a picture has no spot', () => {
+test('each leaf takes its printed box, size, face and drawn ink, kept as printed on a flat backdrop; text read from a picture has no spot', () => {
   const spots = spotsOf(structure.blocks, extraction, white)
   assert.deepEqual(
     [...spots.keys()],
@@ -69,7 +71,7 @@ test('each leaf takes its printed box, size, face and drawn ink, moved to read o
   assert.ok(title)
   assert.equal(
     placement(title, extraction.width, white, 2, []),
-    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#a69600;--ts:none"',
+    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#fff100;--ts:none"',
   )
   const name = spots.get('blocks[2].items[0].name')
   assert.ok(name)
@@ -194,7 +196,7 @@ test('an ink printed at an opacity is blended over its ground; a printed shadow 
   }
   const title = spotsOf(structure.blocks, extraction, olive).get('blocks[0]')
   assert.ok(title)
-  assert.match(placement(title, extraction.width, olive, 2, []), /--c:#f1f0e6;--ts:0 0 \.04em #[0-9a-f]{6}/)
+  assert.match(placement(title, extraction.width, olive, 2, []), /--c:#f1f0e6;--ts:none/)
   const shadowed: Grid = { ...olive, alpha: {}, shadows: { '1:0': { color: '#231f20', dx: 0, dy: 2 } } }
   const lifted = spotsOf(structure.blocks, extraction, shadowed).get('blocks[0]')
   assert.ok(lifted)

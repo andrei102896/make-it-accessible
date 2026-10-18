@@ -112,6 +112,9 @@ nav.chips .chips-fold summary { cursor: pointer; font-weight: 600; min-height: 2
 @media (max-width: 39.99rem) {
   nav.chips:has(.chips-fold) > ul { display: none; }
   nav.chips .chips-fold { display: block; }
+  nav.chips { position: sticky; top: 0; z-index: 2; margin: 0 -1rem 1rem; padding: 0 1rem; }
+  nav.chips ul { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: .4rem; }
+  nav.chips a { min-height: 2.25rem; line-height: 1.5rem; padding: .35rem .75rem; font-size: .875rem; white-space: nowrap; }
 }
 @media (min-width: 60rem) {
   nav.chips.pinned { position: sticky; top: 0; z-index: 1; }

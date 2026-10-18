@@ -33,9 +33,12 @@ async function rebuild(s: Source): Promise<string> {
     const dir = join(out, d)
     const extraction = parseExtraction(await readFile(join(dir, 'extraction.json'), 'utf8'))
     const fresh = withIcons(await extractWhole(pdf, extraction.pdfPage), legend)
-    if (fresh.runs.length !== extraction.runs.length)
+    // The structure cites the text layer's runs by index; icon words come after them and are read afresh.
+    const base = extraction.runs.filter((r) => !r.icon)
+    const freshBase = fresh.runs.filter((r) => !r.icon)
+    if (freshBase.length !== base.length)
       throw new Error(
-        `${s.slug} ${d}: the PDF gives ${String(fresh.runs.length)} runs, the saved run has ${String(extraction.runs.length)} (icon words appended since?)`,
+        `${s.slug} ${d}: the PDF gives ${String(freshBase.length)} runs, the saved run has ${String(base.length)}`,
       )
     extraction.hidden = fresh.hidden
     extraction.lost = fresh.lost
@@ -43,13 +46,16 @@ async function rebuild(s: Source): Promise<string> {
     extraction.rules = fresh.rules
     extraction.pictures = fresh.pictures
     extraction.icons = fresh.icons
-    extraction.runs.forEach((r, i) => {
-      const f = fresh.runs[i]
+    base.forEach((r, i) => {
+      const f = freshBase[i]
       if (f?.color) r.color = f.color
       if (f?.font) r.font = f.font
       if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored })
     })
+    extraction.runs = [...base, ...fresh.runs.filter((r) => r.icon)]
     const structure = parsePage(await readFile(join(dir, 'structure.json'), 'utf8'))
+    if (citesPast(structure, base.length))
+      throw new Error(`${s.slug} ${d}: the saved structure cites icon words, which are read afresh; run adhoc again`)
     results.push({
       keyPage: extraction.pdfPage,
       pdfPage: extraction.pdfPage,
@@ -74,3 +80,14 @@ async function rebuild(s: Source): Promise<string> {
 }
 
 for (const s of chosen) await rebuild(s)
+
+// Whether any citation reaches past the text layer's runs (into icon words appended to a saved run).
+function citesPast(value: unknown, count: number): boolean {
+  if (Array.isArray(value)) return value.some((v) => citesPast(v, count))
+  if (typeof value !== 'object' || value === null) return false
+  return Object.entries(value).some(([key, v]) =>
+    key === 'src' && Array.isArray(v)
+      ? v.some((r: unknown) => Array.isArray(r) && Number(r[1]) >= count)
+      : citesPast(v, count),
+  )
+}

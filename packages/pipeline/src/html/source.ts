@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { iou } from '../pdf/geometry.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { joinRuns, turned } from '../pdf/runs.ts'
+import { faceKey } from '../pdf/face.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
 
@@ -50,8 +51,14 @@ export function placedRuns(
 
 // The words a text cites, without those the page does not show; a line-end hyphen before a capital joins
 // ("MARILLEN-" + "PALATSCHINKEN"), before a small letter it stays a word break the model may clean.
-// `modelCase`: the role is a small-caps face, whose layer case is never the printed one (profile.ts smallCaps).
-export function visibleText(t: TextValue, e: Extraction, modelCase = false): string {
+// `modelCase`: a small-caps role, whose layer case is never the printed one; `capsFaces`: faces drawing capitals
+// for lowercase (backdrop.json), whose words show in capitals, as printed.
+export function visibleText(
+  t: TextValue,
+  e: Extraction,
+  modelCase = false,
+  capsFaces: ReadonlySet<string> = new Set(),
+): string {
   if ('seen' in t) return t.seen
   const hidden = new Set(e.hidden)
   const cited = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
@@ -71,7 +78,9 @@ export function visibleText(t: TextValue, e: Extraction, modelCase = false): str
   // never for a printed case the layer reports whole ("RAW BAR").
   const recased =
     t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed) && !modelCase
-  return t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
+  const shown = t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
+  const allCaps = words.length > 0 && words.every((r) => r.font !== undefined && capsFaces.has(faceKey(r.font)))
+  return allCaps ? shown.toUpperCase() : shown
 }
 
 // Every word is all capitals, all lower case, or one capital then lower case: a case a designer could have set.

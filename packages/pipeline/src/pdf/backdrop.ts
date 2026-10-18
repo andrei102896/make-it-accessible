@@ -1,29 +1,22 @@
 import { z } from 'zod'
 import { hex, luminance } from '../html/color.ts'
-import { COVERED } from './art.ts'
-import { area, intersection, union } from './geometry.ts'
+import { copiesOf, holds, outline, zoneOf } from './copies.ts'
+import { intersection, union } from './geometry.ts'
 import type { Pixels } from './pixels.ts'
-import { attr, boxOf, colourOf, drawnElements, type Drawn, type Point } from './svg.ts'
+import { attr, colourOf, drawnElements, type Point } from './svg.ts'
 import type { Box } from './types.ts'
-import { parseVectors } from './vectors.ts'
 
 // The printed page behind our own text (the printed view): the page's SVG without the words we place back, the light
 // and colour under each spot, and how each placed word is printed (ink, opacity, its printed shadow).
 
-// A glyph or a shape this close to a placed word belongs to it, as a share of the word's height: glyph origins sit
-// on the baseline, a drop shadow drawn as paths a point or two off.
-const PAD = 0.25
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 6
+export const BACKDROP_VERSION = 7
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
 const MIN_OFFSET = 0.3
-// A shape copying placed words is at least this share of their height: a letter is; a speck of an engraving inside
-// their box is not (Boater's lobster under THE MENU; Moosewood's next line inside the tall box of "entrees").
-const MIN_COPY = 0.3
 // A word tilted by this much (rise over run of its glyph origins, ~1.7°) is set at an angle, not on the line.
 const TILT = 0.03
 // Its glyph origins lie on one straight line within this (pt): a raised letter ("1st") or a swash is no tilt.
@@ -50,6 +43,16 @@ const Shadow = z.object({ color: Hex, dx: z.number(), dy: z.number() }).strict()
 // A face id is its family and file name; its range goes into CSS: both from our own bytes, checked all the same.
 const FaceId = z.string().regex(/^pdf-[0-9a-f]+$/)
 const RANGE = /^U\+[0-9A-F]+(-[0-9A-F]+)?(, U\+[0-9A-F]+(-[0-9A-F]+)?)*$/
+// `lower`: the size scale giving the lookalike the printed x-height; `caps`: the printed cap height; a line blends
+// them by its share of lowercase letters (placed.ts). `weight`: the lookalike weight with the printed stem.
+const FaceMetrics = z
+  .object({
+    lower: z.number().positive().nullable(),
+    caps: z.number().positive().nullable(),
+    weight: z.number().int().positive(),
+  })
+  .strict()
+export type FaceMetrics = z.infer<typeof FaceMetrics>
 const Stroke = z.object({ color: Hex, width: z.number().positive() }).strict()
 // pNN/backdrop.json: per cell (row by row) the darkest and lightest relative luminance and the mean colour; per
 // placed word its drawn ink and opacity, its printed shadow, and whether it is drawn at all (printedOf).
@@ -78,6 +81,11 @@ const Grid = z
     // notice (pdf/ownfont.ts); its file is fonts/<face>.otf beside the page.
     faces: z.record(z.string(), FaceId),
     fonts: z.record(FaceId, z.object({ range: z.string().regex(RANGE), notice: z.string() }).strict()),
+    // Per printed face (pdf/face.ts faceKey) set in a lookalike: its size scales and weight (eval/facemetrics.ts).
+    metrics: z.record(z.string(), FaceMetrics),
+    // Printed faces whose lowercase glyphs are capitals (Howies' Lulo Clean): the layer's "dinner menu" prints
+    // DINNER MENU, and so does ours.
+    capsFaces: z.array(z.string()),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>
@@ -85,49 +93,19 @@ export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'und
 export const parseGrid = (json: string): Grid => Grid.parse(JSON.parse(json))
 
 type Word = { id: string; box: Box }
-const zoneOf = (b: Box): Box => {
-  const p = b.h * PAD
-  return { x: b.x - p, y: b.y - p, w: b.w + 2 * p, h: b.h + 2 * p }
-}
-const holds = (z: Box, [x, y]: Point): boolean => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h
-
-// The shapes that draw placed words again, fitted to the printed letters, not ours: an outline round them (Kenny &
-// Ziggy's lines, La Segunda's red stroke round each yellow letter, its straight I's too) or a letter-shaped fill
-// under them. A filled box behind words stays (Gigi's white strips, Boater's cream bands).
-function copiesOf(svg: string, words: readonly Box[]): Drawn[] {
-  const zones = words.map(zoneOf)
-  const redrawn = (b: Box): boolean => {
-    const near = zones.filter((z) => intersection(z, b) > 0)
-    if (!near.length) return false
-    const hull = near.reduce(union)
-    const covered = words.reduce((sum, w) => sum + intersection(w, b), 0)
-    const tallest = Math.max(...words.filter((w) => intersection(w, b) > 0).map((w) => w.h))
-    return (
-      holds(hull, [b.x, b.y]) &&
-      holds(hull, [b.x + b.w, b.y + b.h]) &&
-      covered >= area(b) * COVERED &&
-      b.h >= tallest * MIN_COPY
+// The page's SVG without the glyphs of `placed` words and the copies drawn round or under them; `unplaced` words,
+// boxes, rules and pictures stay. A glyph on an unplaced word's baseline is that word's, even inside a placed zone.
+export function backdropSvg(svg: string, placed: readonly Box[], unplaced: readonly Box[] = []): string {
+  const zones = placed.map(zoneOf)
+  const ownedBy = (boxes: readonly Box[], at: Point): boolean =>
+    boxes.some((b) =>
+      holds({ x: b.x - EDGE, y: b.y + b.h * BASELINE_FLOOR, w: b.w, h: b.h * (1 - BASELINE_FLOOR) }, at),
     )
-  }
-  return parseVectors(svg).art.filter((d) => d.bound && (outline(d) || !plainBox(d)) && redrawn(d.bound))
-}
-const outline = ({ tag }: Drawn): boolean => attr(tag, 'fill') === 'none' && attr(tag, 'stroke') !== null
-const plainBox = ({ subpaths: [only, ...more] }: Drawn): boolean => {
-  if (more.length || !only || only.curved) return false
-  const b = boxOf(only.points)
-  const on = (v: number, a: number, c: number): boolean => Math.abs(v - a) <= 0.5 || Math.abs(v - c) <= 0.5
-  return only.points.every(([x, y]) => on(x, b.x, b.x + b.w) && on(y, b.y, b.y + b.h))
-}
-
-// The page's SVG without the glyphs of `words` (the runs our text stands in for) and the copies drawn round or under
-// them; words we do not place stay printed, and so do boxes, rules and pictures.
-export function backdropSvg(svg: string, words: readonly Box[]): string {
-  const zones = words.map(zoneOf)
   const cut = [
     ...drawnElements(svg)
-      .glyphs.filter((g) => zones.some((z) => holds(z, g.at)))
+      .glyphs.filter((g) => zones.some((z) => holds(z, g.at)) && (ownedBy(placed, g.at) || !ownedBy(unplaced, g.at)))
       .map((g) => g.range),
-    ...copiesOf(svg, words).map((d) => d.range),
+    ...copiesOf(svg, placed).map((d) => d.range),
   ]
   const starts = [...new Map(cut.map((r) => [r[0], r])).values()].sort((a, b) => b[0] - a[0])
   return starts.reduce((out, [from, to]) => out.slice(0, from) + out.slice(to), svg)

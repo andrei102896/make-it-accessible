@@ -16,6 +16,10 @@ const TALL = 1.15
 const OVERLAP = 0.2
 // A printed baseline further than this share of a line from ours is no baseline of that line: it stays where it was.
 const MAX_SHIFT = 0.5
+// A one-line text in a lookalike narrower than its printed box by more than this share is spread to the box with
+// letter spacing, up to MAX_FILL em per letter (Almond's Beton names, 20 % narrow once sized to the printed face).
+const NARROW = 0.05
+const MAX_FILL = 0.25
 
 // Measures each placed text of a printed view in a browser and writes its fit (--k) into the page: the share of
 // its natural width that brings it within its printed box (every scale keeps it, all in cqw). Returns the pages
@@ -33,7 +37,7 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
     const drops = await ownFacesKept(tab)
     for (const d of drops) console.info(`${htmlPath}: ${d.why}`)
     const { fits, shifts, failing } = await tab.evaluate(
-      ({ min, minOwn, smallest, step, tall, overlap, maxShift }) => {
+      ({ min, minOwn, smallest, step, tall, overlap, maxShift, narrow, maxFill }) => {
         const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
         const firstPage = document.querySelector('section[data-page]')?.getAttribute('data-page') ?? ''
         const pageOf = (el: Element): string =>
@@ -42,22 +46,31 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
         const say = (el: Element): string => JSON.stringify(el.textContent.trim().slice(0, 40))
         const fits = placed.map((el) => {
           const page = el.closest('section, header')
-          if (el.tagName === 'IMG' || !page) return { k: 1, z: 1 }
+          if (el.tagName === 'IMG' || !page) return { k: 1, z: 1, lx: 0 }
           const style = getComputedStyle(el)
-          const floor = el.style.getPropertyValue('--ff').trim().startsWith("'pdf-") ? minOwn : min
+          const own = el.style.getPropertyValue('--ff').trim().startsWith("'pdf-")
+          const floor = own ? minOwn : min
           const printed = (Number(el.style.getPropertyValue('--h')) * page.clientWidth) / 100
           const nowrap = style.whiteSpace === 'nowrap'
           const fits = (slack = 1): boolean =>
             nowrap ? el.scrollWidth <= el.clientWidth * slack + 1 : el.offsetHeight <= printed * tall * slack + 1
           const round = (v: number): number => Math.round(v * 100) / 100
+          // A lookalike narrower than the printed box takes letter spacing up to the box (cqw per letter).
+          const hidden = [...el.querySelectorAll('.sr-only, .icon')].reduce((n, h) => n + h.textContent.length, 0)
+          const letters = el.textContent.replace(/\s/g, '').length - hidden
+          if (nowrap && !own && letters > 1 && el.scrollWidth < el.clientWidth * (1 - narrow)) {
+            const em = parseFloat(style.fontSize)
+            const gap = Math.min(maxFill * em, (el.clientWidth - el.scrollWidth) / letters)
+            return { k: 1, z: 1, lx: round((gap / page.clientWidth) * 100 * 100) / 100 }
+          }
           for (let k = 1; k >= floor; k = Math.max(floor, k - step)) {
             el.style.setProperty('--k', String(round(k)))
-            if (fits()) return { k: round(k), z: 1 }
+            if (fits()) return { k: round(k), z: 1, lx: 0 }
             if (k === floor) break
           }
           for (let z = 1 - step; z >= smallest; z -= step) {
             el.style.setProperty('--z', String(round(z)))
-            if (fits()) return { k: round(floor), z: round(z) }
+            if (fits()) return { k: round(floor), z: round(z), lx: 0 }
           }
           // At the smallest fit, a text a little wider than its box still reads in place; past `tall`, it collides.
           if (!fits(tall) && !bad.has(pageOf(el)))
@@ -65,7 +78,7 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               pageOf(el),
               `${say(el)} overflows its printed box (${nowrap ? `${String(el.scrollWidth)} of ${String(el.clientWidth)} px wide` : `${String(el.offsetHeight)} of ${String(Math.round(printed))} px high`})`,
             )
-          return { k: round(floor), z: round(smallest) }
+          return { k: round(floor), z: round(smallest), lx: 0 }
         })
         // Each text's drawn box against its printed box, both relative to its page's container; measured before its
         // baseline shift, which sets it where the print does.
@@ -131,17 +144,19 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
         tall: TALL,
         overlap: OVERLAP,
         maxShift: MAX_SHIFT,
+        narrow: NARROW,
+        maxFill: MAX_FILL,
       },
     )
     const parts = html.split('style="--x:')
     await writeFile(
       htmlPath,
       parts.reduce((out, part, i) => {
-        const { k, z } = fits[i - 1] ?? { k: 1, z: 1 }
+        const { k, z, lx } = fits[i - 1] ?? { k: 1, z: 1, lx: 0 }
         // The element's own style comes first in its part.
         const kept = drops.some((d) => d.index === i - 1) ? withoutOwnFace(part) : part
         const dy = shifts[i - 1] ?? 0
-        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}${dy ? `--dy:${String(dy)};` : ''}--x:${kept}`
+        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}${lx ? `--lx:${String(lx)};` : ''}${dy ? `--dy:${String(dy)};` : ''}--x:${kept}`
       }),
     )
     return failing

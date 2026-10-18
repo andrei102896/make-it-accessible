@@ -26,7 +26,9 @@ const ICON_MAX = 40
 
 export type IconPiece = Pick<Picture, 'box' | 'kind'>
 export type LegendEntry = IconPiece & { label: string }
-type Line = { runs: Run[]; box: Box }
+// `seed`: the first word's box, which every word of the line must overlap; the union box would chain down a
+// column and across to the next one (Howies' salmon line, 36 pt tall by the left column's two lines).
+type Line = { runs: Run[]; box: Box; seed: Box }
 
 const overlap = (a: Box, b: Box): number => Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
 const across = (a: Box, b: Box): number => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
@@ -40,11 +42,11 @@ const union = (a: Box, b: Box): Box => {
 function linesOf(runs: readonly Run[]): Line[] {
   const lines: Line[] = []
   for (const r of [...runs].sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x)) {
-    const line = lines.find((l) => overlap(l.box, r.box) >= Math.min(l.box.h, r.box.h) * SAME_LINE)
+    const line = lines.find((l) => overlap(l.seed, r.box) >= Math.min(l.seed.h, r.box.h) * SAME_LINE)
     if (line) {
       line.runs.push(r)
       line.box = union(line.box, r.box)
-    } else lines.push({ runs: [r], box: r.box })
+    } else lines.push({ runs: [r], box: r.box, seed: r.box })
   }
   for (const l of lines) l.runs.sort((a, b) => a.box.x - b.box.x)
   return lines
@@ -135,14 +137,9 @@ export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extrac
     if (!line || !entry || labels.size !== 1 || own.has(JSON.stringify(icon.box))) return []
     const beside = line.runs.find((r) => r.box.x >= icon.box.x + icon.box.w - 1) ?? line.runs.at(-1)
     if (!beside) return []
-    return entry.label.split(' ').map((str) => ({
-      id: '',
-      str,
-      box: icon.box,
-      flow: beside.flow,
-      line: beside.line,
-      icon: true,
-    }))
+    // One run for the whole label: a citation of the icon is a citation of all its words (a lone "gluten" cited
+    // from "gluten free" named the opposite of what the print says).
+    return [{ id: '', str: entry.label, box: icon.box, flow: beside.flow, line: beside.line, icon: true }]
   })
   const runs = [...e.runs, ...added].map((r, i) => (r.id ? r : { ...r, id: `${String(e.pdfPage)}:${String(i)}` }))
   return { ...e, runs }

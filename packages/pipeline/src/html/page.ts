@@ -33,7 +33,8 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     )
   const topLevel = Math.min(...page.structure.blocks.flatMap((b) => (b.kind === 'heading' ? [b.level] : [])))
   const scale = Number.isFinite(topLevel) ? topLevel : Math.min(...levels(page.structure.blocks))
-  const raw = (t: TextValue): string => visibleText(t, e)
+  const capsFaces = new Set(page.backdrop?.grid.capsFaces ?? [])
+  const raw = (t: TextValue): string => visibleText(t, e, false, capsFaces)
   const heading = (b: Block & { kind: 'heading' }): string => ('seen' in b.text ? b.text.seen : raw(b.text))
   const chips = listedHeadings(page.structure.blocks, heading, titleWords, kind === 'menu')
   // Plain text for a label reused outside its element (the contents list); inked text, with the runs printed in a
@@ -48,7 +49,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
   const asOne = (html: string): string =>
     html.includes('class="diet icon"') && !html.includes('<a ') ? ' role="text"' : ''
   const text = (t: TextValue, path?: string): string => inked(t, raw(t), esc, path)
-  const rawName = (t: TextValue): string => visibleText(t, e, smallCaps.has('name'))
+  const rawName = (t: TextValue): string => visibleText(t, e, smallCaps.has('name'), capsFaces)
   // The narrowest element carrying a finding is marked, so a reviewer (and the scorer) sees what was flagged.
   const flagged = (path: string, exact = false): string =>
     page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
@@ -243,7 +244,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const details = item.details.map((d, i) => {
       const at = `${path}.details[${i}]`
       if (d.kind !== 'paragraph' || 'seen' in d.text) return block(at, d)
-      const { rest, codes: found } = trailingCodes(visibleText(d.text, e, smallCaps.has('desc')), legend)
+      const { rest, codes: found } = trailingCodes(visibleText(d.text, e, smallCaps.has('desc'), capsFaces), legend)
       codes.push(...found)
       if (!rest) return ''
       const addon = isAddOn(rest)

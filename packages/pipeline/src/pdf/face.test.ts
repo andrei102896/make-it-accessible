@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { classOf, lineAt, printedFace, textLines } from './face.ts'
+import { bodySize, classOf, lineAt, printedFace, textLines } from './face.ts'
 import { parseExtraction } from './types.ts'
 
 test('a printed face: subset prefix dropped, weight from the name before <b>, italic from name or <i>', () => {
@@ -85,4 +85,19 @@ test('a saved extraction without fonts still parses', () => {
 test("a brush script embedded as Type 1C is a script face: kept as printed when no face stands in (Claudio's Haystack)", () => {
   assert.equal(classOf('haystack'), 'script')
   assert.equal(classOf('haystackregular'), 'script')
+})
+
+test("a page's body size is the printed size half its letters are at or under; a page without sized runs has none", () => {
+  const at = (
+    str: string,
+    size: number,
+  ): { str: string; font: { key: string; size: number; weight: number; italic: boolean } } => ({
+    str,
+    font: { key: 'kabel', size, weight: 400, italic: false },
+  })
+  assert.equal(
+    bodySize([at('DESSERTS', 24), at('pink strawberry cake', 11), at('red velvet cake', 11), at('12.95', 11)]),
+    11,
+  )
+  assert.equal(bodySize([{ str: 'x' }]), 0)
 })

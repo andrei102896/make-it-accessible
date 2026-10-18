@@ -56,7 +56,9 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
-  pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (and their redrawn outlines), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
+  pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (glyphs by baseline ownership), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
+  pdf/copies.ts               the shapes that draw placed words again (outlines, letter-shaped fills): under the words they mostly cover, never hidden by a later opaque box
+  pdf/printedfaces.ts         per printed face, the pdf.js program printing most of its letters, rebuilt for a browser (measured by eval/facemetrics.ts)
   pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
   pdf/pdfjs.ts                what the pipeline reads of pdf.js (text items, font objects; zod) and the item that prints a word
   pdf/actualtext.ts           the replacement text a PDF gives a drawn glyph (/ActualText spans with their own place), read from a content stream
@@ -86,7 +88,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/lines.ts               the PDF's rules where it draws them: under or through a heading, above or below a block, a band's top, between columns; a rule crossing a band's columns splits it into rows
   html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; each line in its printed face and letter spacing; text set on its side or in doubt left printed
   html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one; words in another brand ink in their own ink where it reads, colours as drawn
-  html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class; files beside the page (fonts/)
+  html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class, at the weight the metrics matched; headings in an unmatched face stay printed; files beside the page (fonts/)
   html/print.ts               the printed view's sheet and switch; shown where the body text reads at 12 px or more
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
@@ -144,12 +146,13 @@ packages/eval/src/            evaluation harness, never shipped
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
   backdrop.ts                 renders each page's backdrop in Chromium (JPEG at 2× CSS px) and its light grid (pNN/backdrop.jpg, backdrop.json)
+  facemetrics.ts              measures each printed face beside its lookalike in a browser (x-height, cap height, stem): the size scale and weight placed.ts applies (backdrop.json metrics)
   pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page tracking and own faces; a page it cannot read has neither
   rawfonts.ts                 the font programs as embedded (FlateDecode streams): per PostScript name its licence notice where every program permits embedding
   streams.ts                  every FlateDecode stream of a PDF, inflated (capped): what rawfonts and wholewords read
   wholewords.ts               extractWhole: a page read by Poppler with its ligature-split words whole (process, rerender, wiki)
   legend.ts                   documentLegend: a document's icon legend read once from every page (adhoc, rerender)
-  fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
+  fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box, spreads a narrower one with letter spacing (--lx) (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
   look.ts                     a document's title, colours, template and heading class (brief kept in brief.json for rescores)
   cost.ts                     model list prices and the cost of a call
   run.ts                      CLI: run and score against the answer keys
@@ -210,7 +213,7 @@ out/                          run outputs (local only)
 - **Drawn geometry comes from the PDF's vectors, not the render.** A box the PDF draws round a section is a stroked rectangle, a filled ring (Sarge's 5 pt red border is a fill with a hole) or a fill; some sit in compositing groups inside `<defs>` (blend modes), so definitions are stripped selectively, never wholesale (`vectors.test.ts`). White fills on paper are knock-outs behind words, not panels. Rules come from the same layer (`lines.test.ts`): a rule is matched to a heading by height *and* nearness (a rule at the same height in the next column is not its own: Sarge's UNREAL DELI, Prohibition PK PREMIUM SIDES), and a stroke's thickness follows the matrix's other axis (Kendells' rules sit under a 4.8× horizontal scale). Once a document's vector layer places a rule, the render-measured signature rules are dropped so a line is never drawn twice. Do not remove.
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
-- **Icon words are appended to a page's runs, never inserted** (2026-10-18): citations, `runIndex` and the rerender count check are array indices; the words carry `icon: true` and every matcher keyed by a glyph (the backdrop's copies and `undrawn`, a line's own face, fit's letter check) skips them. Do not place them as text: the backdrop keeps the drawing.
+- **Icon words are appended to a page's runs, never inserted** (2026-10-18): citations and `runIndex` are array indices into the text layer's runs; the words carry `icon: true`, one run per icon with its whole label ("gluten free"), read afresh on every rerender (the count check compares text-layer runs only), and every matcher keyed by a glyph (the backdrop's copies and `undrawn`, a line's own face, fit's letter check) skips them. Do not place them as text: the backdrop keeps the drawing.
 - **A lost ligature is filled only where the gap shows it** (held-out batch 1, Gigi's 31 and Noah's 10 words): a font that maps its ti, tt, fi, fl, ff, ft glyphs to no text splits the word on one line with a 0.35–1 em gap; the model's letters there are accepted and listed as read from the image (`validate.test.ts`). A normal word space ("of ice" written "office") and a capital after the gap stay errors. Do not widen the fill set (th, st, ct let "Plaster" pass for "Platter"). Since 2026-10-18 the PDF's own /ActualText fills them first (`pdf/ligatures.ts`: Gigi's 56 and Noah's 10, all of the set); the model's letters stay the fallback.
 - **Prices shown as printed are bounded forms** (`text/money.ts` printedAsIs): sizes need a sign or cents and must rise ("$12/2", a count cut short, is no price), a price per unit needs a sign or cents, so a date ("10/16/2026") or a measure ("1/2 lb") stays an error; sizes with no size label go to review. Do not remove.
 - **A copy-protected PDF is refused by name in `extractPage`**, the one call every run path makes (Hogfish: pdftohtml stops with no message). Do not move it to `pageCount`, which only `adhoc` calls.

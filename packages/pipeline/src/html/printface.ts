@@ -1,6 +1,7 @@
 import type { HeadingClass } from '../model/brief.ts'
 import { classOf } from '../pdf/face.ts'
 import type { Grid } from '../pdf/backdrop.ts'
+import { faceKey } from '../pdf/face.ts'
 import type { Extraction, RunFont } from '../pdf/types.ts'
 import { familyFor, fileFor, type FontFile, type FontManifest } from './webfonts.ts'
 
@@ -38,28 +39,42 @@ export type PrintFace = {
   file: { manifest: FontManifest; file: FontFile } | null
 }
 
-export function printFaceOf(font: RunFont, library: readonly FontManifest[]): PrintFace | null {
+// `weight`: the lookalike weight measured to match the printed stem (backdrop metrics), else the printed weight.
+export function printFaceOf(font: RunFont, library: readonly FontManifest[], weight = font.weight): PrintFace | null {
   const system = SYSTEM.find(([re]) => re.test(font.key))?.[1]
-  if (system) return { family: system, weight: font.weight, file: null }
+  if (system) return { family: system, weight, file: null }
   const c = classOf(font.key)
   const standIn = c ? STAND_IN[c] : undefined
   const only = PRINT_ONLY.find(([re]) => re.test(font.key))?.[1]
   const manifest = familyFor(font.key, library) ?? library.find((m) => m.key === (only ?? standIn))
-  const file = manifest && fileFor(manifest, font.weight, font.italic)
+  const file = manifest && fileFor(manifest, weight, font.italic)
   if (!manifest || !file) return null
   const [lo = 400, hi = lo] = file.weight.split(' ').map(Number)
   const generic = manifest.category === 'display' ? 'cursive' : c && SANS.has(c) ? 'sans-serif' : 'serif'
   return {
     family: `'${nameOf(manifest)}', ${generic}`,
-    weight: Math.min(hi, Math.max(lo, font.weight)),
+    weight: Math.min(hi, Math.max(lo, weight)),
     file: { manifest, file },
   }
 }
 
-// A word in a hand we cannot draw: a script face whose maker forbids embedding it (no own face) and that no
-// vendored family stands in for (Fig's signature). The backdrop keeps it as printed, ours is read.
-export const keptAsPrinted = (font: RunFont, own: boolean, library: readonly FontManifest[]): boolean =>
-  !own && classOf(font.key) === 'script' && printFaceOf(font, library) === null
+// A heading is at least this many times the page's body size.
+const DISPLAY = 1.4
+// A family with a vendored twin, a lookalike of its own, or the desktop's face: close enough to set a heading in.
+const matched = (key: string, library: readonly FontManifest[]): boolean =>
+  familyFor(key, library) !== undefined || SYSTEM.some(([re]) => re.test(key))
+
+// A word the backdrop keeps as printed, ours read: a script we cannot draw (Fig's signature), or a heading (DISPLAY
+// × `body`, the page's body size) in a family only a class or hand-lettering stand-in serves (K&Z's BinnerD).
+export const keptAsPrinted = (
+  font: RunFont,
+  own: boolean,
+  library: readonly FontManifest[],
+  body = Infinity,
+): boolean =>
+  !own &&
+  ((classOf(font.key) === 'script' && printFaceOf(font, library) === null) ||
+    (font.size >= body * DISPLAY && !matched(font.key, library)))
 
 // Its own name, so the text view's embedded face of the same family never resolves to these files (nor they to it).
 const nameOf = (m: FontManifest): string => `print-${m.key}`
@@ -67,12 +82,16 @@ const nameOf = (m: FontManifest): string => `print-${m.key}`
 // One @font-face per file the printed pages' words may take, with its copyright and licence beside it (OFL and
 // Apache); a file no placed line uses is never fetched.
 export function printFaces(
-  pages: readonly { extraction: Extraction; backdrop?: { grid: Pick<Grid, 'fonts'> } | null }[],
+  pages: readonly { extraction: Extraction; backdrop?: { grid: Pick<Grid, 'fonts' | 'metrics'> } | null }[],
   library: readonly FontManifest[],
 ): string {
-  const fonts = pages.flatMap((p) => (p.backdrop ? p.extraction.runs.flatMap((r) => (r.font ? [r.font] : [])) : []))
-  const distinct = new Map(fonts.map((f) => [`${f.key}:${String(f.weight)}:${String(f.italic)}`, f]))
-  const faces = [...distinct.values()].map((f) => printFaceOf(f, library))
+  // Each page's faces at the weight its own metrics matched: one page may have none where another has (fit).
+  const faces = pages.flatMap((p) => {
+    if (!p.backdrop) return []
+    const metrics = p.backdrop.grid.metrics
+    const distinct = new Map(p.extraction.runs.flatMap((r) => (r.font ? [[faceKey(r.font), r.font] as const] : [])))
+    return [...distinct].map(([key, f]) => printFaceOf(f, library, metrics[key]?.weight))
+  })
   const files = new Map(faces.flatMap((f) => (f?.file ? [[f.file.file.file, f.file] as const] : [])))
   const own = new Map(pages.flatMap((p) => Object.entries(p.backdrop?.grid.fonts ?? {})))
   // The notice is the font's own text: it must not close the comment or the style element.

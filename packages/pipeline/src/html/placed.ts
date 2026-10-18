@@ -1,5 +1,6 @@
 import type { TextValue } from '../model/schema.ts'
-import type { Grid } from '../pdf/backdrop.ts'
+import type { FaceMetrics, Grid } from '../pdf/backdrop.ts'
+import { faceKey } from '../pdf/face.ts'
 import type { Box } from '../pdf/types.ts'
 import { inkOn, inlineInk } from './printink.ts'
 import { unionOf } from './profile.ts'
@@ -20,6 +21,8 @@ const LARGE_PX = 24
 const LARGE_BOLD_PX = 18.66
 // A run's box is about this much taller than its face's size (ascent and descent), when no size is reported.
 const BOX_TO_SIZE = 0.8
+// A matched lookalike weight never falls below this on text under LARGE_PX: thin stems vanish at reading sizes.
+const MIN_SMALL_WEIGHT = 300
 
 // A leaf's (or a line's) placement as custom properties, in hundredths of the page width; every property written,
 // so a placed line never inherits its leaf's. `pxPerPt`: the page's scale at the printed view's narrowest width.
@@ -33,19 +36,26 @@ export function placement(
   const u = (v: number): string => String(Math.round((v / pageWidth) * 100_000) / 1000)
   const { box } = spot
   const props = [`--x:${u(box.x)}`, `--y:${u(box.y)}`, `--w:${u(box.w)}`, `--h:${u(box.h)}`]
-  const size = spot.size ?? (box.h / spot.lines) * BOX_TO_SIZE
+  // A lookalike is sized to the printed face's x-height and cap height and set in the weight whose stem matches
+  // (the backdrop's metrics); the PDF's own face is the printed glyphs and keeps the printed size.
+  const metrics = spot.font && !spot.own ? grid?.metrics[faceKey(spot.font)] : undefined
+  const scale = metrics ? blend(metrics, spot.lowercase) : 1
+  const size = (spot.size ?? (box.h / spot.lines) * BOX_TO_SIZE) * scale
   props.push(`--fs:${u(size)}`, `--lh:${u(box.h / spot.lines)}`)
   props.push(`--ws:${spot.lines === 1 ? 'nowrap' : 'normal'}`, `--ta:${spot.align}`)
-  const face = spot.font ? printFaceOf(spot.font, library) : null
+  const large = size * pxPerPt >= LARGE_PX
+  const matched = metrics && !large ? Math.max(metrics.weight, MIN_SMALL_WEIGHT) : metrics?.weight
+  const face = spot.font ? printFaceOf(spot.font, library, matched) : null
   const weight = face?.weight ?? spot.weight
   props.push(`--fw:${String(weight)}`, `--fi:${spot.italic ? 'italic' : 'normal'}`)
   // The PDF's own face first, its stand-in after: fit.ts drops the own face where it lacks a letter of the line.
   const families = [spot.own ? `'${spot.own}'` : null, face?.family ?? null].filter((f) => f !== null)
   if (families.length) props.push(`--ff:${families.join(', ')}`)
   if (spot.baseline !== null) props.push(`--bl:${u(spot.baseline)}`)
-  // Letters printed tighter than their face only where large: running text never closes up.
-  const large = size * pxPerPt >= LARGE_PX
-  props.push(`--ls:${String(spot.tracking < 0 && !large ? 0 : spot.tracking)}`)
+  // Letters printed tighter than their face only where large: running text never closes up. Tracking is in ems
+  // of the printed size; a scaled face keeps the printed spacing in points.
+  const tracking = (spot.tracking < 0 && !large ? 0 : spot.tracking) / scale
+  props.push(`--ls:${String(Math.round(tracking * 1000) / 1000)}`)
   if (spot.color) {
     const readLarge = large || (weight >= 700 && size * pxPerPt >= LARGE_BOLD_PX)
     const target = readLarge ? READABLE_LARGE : READABLE
@@ -61,6 +71,11 @@ export function placement(
   }
   return ` style="${props.join(';')}"`
 }
+
+// A line's size scale: the x-height scale to the power of its lowercase share, the cap-height scale to the rest
+// (running text takes the printed x-height, a price or a capitals heading the printed cap height).
+const blend = ({ lower, caps }: FaceMetrics, lowercase: number): number =>
+  lower !== null && caps !== null ? lower ** lowercase * caps ** (1 - lowercase) : (lower ?? caps ?? 1)
 
 export type Placer = {
   // The attributes that place a leaf: its spot, ` data-pl` when its lines are placed instead, ` data-free` when it

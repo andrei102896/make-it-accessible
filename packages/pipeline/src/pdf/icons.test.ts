@@ -85,10 +85,8 @@ test('inline icons the legend names become words at their box, on the line of th
   assert.deepEqual(
     e.runs.slice(5).map((r) => [r.id, r.str, r.line, r.icon]),
     [
-      ['1:5', 'gluten', 12, true],
-      ['1:6', 'free', 12, true],
-      ['1:7', 'dairy', 15, true],
-      ['1:8', 'free', 15, true],
+      ['1:5', 'gluten free', 12, true],
+      ['1:6', 'dairy free', 15, true],
     ],
   )
   assert.deepEqual(e.runs[5]?.box, inline[0]?.box)
@@ -99,5 +97,23 @@ test('inline icons the legend names become words at their box, on the line of th
     page(legendRuns, iconsOn(legendPieces, legendRuns), 3),
   ])
   assert.equal(twice.length, 10)
-  assert.equal(withIcons(page(runs, iconsOn(inline, runs)), twice).runs.length, 9)
+  assert.equal(withIcons(page(runs, iconsOn(inline, runs)), twice).runs.length, 7)
+})
+
+test("a line is anchored on its first word: the left column's lines do not chain the right column's into one tall band (Howies' salmon line)", () => {
+  const runs = [
+    word('Scottish', 119.7, 271.8, 38.6, 1),
+    word('chowder', 352.9, 271.8, 40, 1),
+    word('Served', 153.3, 286.2, 32.4, 2),
+    word('focaccia', 320.4, 286.2, 38.8, 2),
+    word('(', 529.5, 276.6, 4.1, 3, 1),
+    word('available)', 567.5, 276.6, 42.7, 3, 1),
+    word('Homemade', 489.6, 291, 55.3, 4, 1),
+    word('soda', 547.5, 291, 21.3, 4, 1),
+  ]
+  const icons = iconsOn([piece(535.4, 279.5, 10.7, 13.6), piece(550.6, 279.1, 13.4, 13)], runs)
+  assert.deepEqual(
+    icons.map((i) => i.box.x),
+    [535.4, 550.6],
+  )
 })

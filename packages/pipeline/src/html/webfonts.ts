@@ -52,7 +52,7 @@ const LOOKALIKES: [RegExp, string][] = [
   [/^recoleta/, 'fraunces'],
   [/^inkwell(sans)?/, 'lato'],
   [/^bimbo/, 'caveat'],
-  [/^(snellroundhand|allura|edwardianscript|zapfino)/, 'greatvibes'],
+  [/^(snellroundhand|edwardianscript|zapfino)/, 'greatvibes'],
 ]
 // What may follow a family name and still be that family: weights, styles and foundry suffixes, not "slab" or "mono".
 const STYLE_REST =

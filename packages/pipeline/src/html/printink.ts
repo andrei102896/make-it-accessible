@@ -43,12 +43,10 @@ export function inkOn(
   const { ink, ground, lo, hi, spread } = m
   if (reads(spot, m, target)) return { color: hex(ink), shadow: printed }
   const l = luminance(ink)
-  // readableOn darkens on a ground lighter than MID and lightens on a darker one: only where that keeps the ink's
-  // side of its ground (Gigi's white title stays light, never turned dark on its olive band).
-  const sameSide = l < luminance(ground) === luminance(ground) > MID
+  // On a flat ground the printed ink stays as printed, however faint (Andrei, 2026-10-18: Howies' gold prices
+  // darkened to brown read as the wrong colour); the text view is the conforming version. Elsewhere a halo.
   const flat = spread <= FLAT && hi - lo <= EDGE
-  const moved = flat && sameSide ? readableOn(ink, ground, target) : null
-  if (moved) return { color: hex(moved), shadow: printed }
+  if (flat) return { color: hex(ink), shadow: printed }
   const glow = hex(readableOn(ground, ink, target) ?? (l < MID ? [255, 255, 255] : [0, 0, 0]))
   const halo = `0 0 .04em ${glow}, 0 0 .08em ${glow}, 0 0 .3em ${glow}`
   return { color: hex(ink), shadow: spot.shadow ? `${printed}, ${halo}` : halo }

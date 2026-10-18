@@ -85,6 +85,21 @@ export function webFont(f: PdfFont, drawn: ReadonlyMap<string, number>): { data:
   return data ? { data, range: unicodeRange([...map.keys()]) } : null
 }
 
+// A face drawing capitals for lowercase (eval/facemetrics.ts capsFaces) maps each letter's other case to the same
+// glyph: the layer sets "two" and "COURSES" by whichever codes the PDF used, and ours asks for either (Howies' Lulo).
+export function caseFilled(data: Uint8Array): { data: Uint8Array; range: string } | null {
+  const map = new Map(cmapOf(data))
+  for (const [cp, glyph] of [...map]) {
+    const letter = String.fromCodePoint(cp)
+    for (const other of [letter.toUpperCase(), letter.toLowerCase()]) {
+      const code = other.codePointAt(0)
+      if (other.length === 1 && code !== undefined && code !== cp && !map.has(code)) map.set(code, glyph)
+    }
+  }
+  const filled = withCmap(data, map)
+  return filled ? { data: filled, range: unicodeRange([...map.keys()]) } : null
+}
+
 export function unicodeRange(codes: readonly number[]): string {
   const sorted = [...new Set(codes)].sort((a, b) => a - b)
   const spans: [number, number][] = []

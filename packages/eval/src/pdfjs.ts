@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { z } from 'zod'
 import { ownFonts, type Drawn, type OwnFonts } from '@make-it-accessible/pipeline/pdf/ownfont'
+import { printedFaces, type PrintedFace } from '@make-it-accessible/pipeline/pdf/printedfaces'
 import { PdfFont, PdfItem } from '@make-it-accessible/pipeline/pdf/pdfjs'
 import { trackingOf } from '@make-it-accessible/pipeline/pdf/tracking'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
@@ -10,11 +11,11 @@ import { permittedFonts } from './rawfonts.ts'
 // Poppler's words and pdf.js' items agree on the page's frame only where the crop box is the media box: within this.
 export const SAME_FRAME = 0.5
 
-// Per page: each run's printed letter spacing (pdf/tracking.ts) and the PDF's own face it is printed in, where its
-// maker permits embedding (pdf/ownfont.ts).
-export type PageFacts = { tracking: Record<string, number>; own: OwnFonts }
+// Per page: each run's printed letter spacing (pdf/tracking.ts), the PDF's own face it is printed in, where its
+// maker permits embedding (pdf/ownfont.ts), and each printed face's program for measuring (pdf/printedfaces.ts).
+export type PageFacts = { tracking: Record<string, number>; own: OwnFonts; printed: Map<string, PrintedFace> }
 type Facts = { of: (e: Extraction) => Promise<PageFacts>; close: () => Promise<void> }
-const NONE = (): PageFacts => ({ tracking: {}, own: { faces: {}, fonts: {}, files: new Map() } })
+const NONE = (): PageFacts => ({ tracking: {}, own: { faces: {}, fonts: {}, files: new Map() }, printed: new Map() })
 
 // The PDF read by pdf.js for its fonts. Both facts only refine the printed view: a PDF or page pdf.js cannot read
 // is untracked and in stand-in faces, and logged.
@@ -48,9 +49,11 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
           return p.success ? [p.data] : []
         })
         const box = [x0, y0, x1, y1] as const
+        const drawn = drawnWith(ops)
         return {
           tracking: trackingOf(e.runs, items, fonts, box),
-          own: ownFonts(e.runs, items, fonts, box, permitted, drawnWith(ops)),
+          own: ownFonts(e.runs, items, fonts, box, permitted, drawn),
+          printed: printedFaces(e.runs, items, fonts, box, drawn),
         }
       } catch (err) {
         console.error(`${pdf} p${String(e.pdfPage)}: no tracking or own faces: ${String(err)}`)

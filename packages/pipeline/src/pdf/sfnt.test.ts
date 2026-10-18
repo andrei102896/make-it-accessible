@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { webFont } from './ownfont.ts'
 import type { PdfFont } from './pdfjs.ts'
+import { caseFilled } from './ownfont.ts'
 import { cmapOf, isSfnt, permitsEmbedding, tablesOf, withCmap } from './sfnt.ts'
 
 // A TrueType program holding a head table (its magic number in place) and maxp (8 glyphs).
@@ -109,4 +110,29 @@ test("a PDF font's web font maps each one-letter ToUnicode to the glyph pdf.js d
   )
   assert.equal(web.range, 'U+31, U+41, U+68')
   assert.equal(webFont({ ...font, missingFile: true }, new Map()), null)
+})
+
+test("a face drawing capitals for lowercase answers to both cases: each letter's other case maps to the same glyph (Howies' Lulo)", () => {
+  const data = withCmap(
+    bare(),
+    new Map([
+      [0x74, 1],
+      [0x57, 2],
+      [0x31, 3],
+    ]),
+  )
+  assert.ok(data)
+  const filled = caseFilled(data)
+  assert.ok(filled)
+  assert.deepEqual(
+    [...cmapOf(filled.data)].sort((a, b) => a[0] - b[0]),
+    [
+      [0x31, 3],
+      [0x54, 1],
+      [0x57, 2],
+      [0x74, 1],
+      [0x77, 2],
+    ],
+  )
+  assert.equal(filled.range, 'U+31, U+54, U+57, U+74, U+77')
 })

@@ -14,8 +14,11 @@ import { pageSvg } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
 import { keptAsPrinted, PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
+import { bodySize, faceKey } from '@make-it-accessible/pipeline/pdf/face'
+import { caseFilled } from '@make-it-accessible/pipeline/pdf/ownfont'
 import { turned } from '@make-it-accessible/pipeline/pdf/runs'
 import { fontLibrary } from './brand.ts'
+import { faceMetrics, type Cache } from './facemetrics.ts'
 import { pdfFacts } from './pdfjs.ts'
 
 // Sharp at twice the CSS pixels of the printed size (1 pt = 4/3 px), which covers a retina screen at 100 %; once
@@ -31,16 +34,34 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
   const facts = await pdfFacts(pdf)
   const library = await fontLibrary()
   const browser = await chromium.launch()
+  const faces: Cache = new Map()
   try {
     for (const r of results) {
       const { width, height } = r.extraction
       const page = await pageSvg(pdf, r.pdfPage)
-      const { tracking, own } = await facts.of(r.extraction)
-      // Words left as printed: set at an angle, or in a hand we cannot draw (pdf/backdrop.ts, html/printface.ts).
+      const { tracking, own, printed } = await facts.of(r.extraction)
+      const { metrics, capsFaces } = await faceMetrics(browser, printed, library, faces)
+      // An own face drawing capitals for lowercase answers to both cases of each letter.
+      const capsIds = new Set<string>()
+      for (const w of r.extraction.runs) {
+        const id = own.faces[w.id]
+        if (id !== undefined && w.font && capsFaces.includes(faceKey(w.font))) capsIds.add(id)
+      }
+      for (const id of capsIds) {
+        const data = own.files.get(id)
+        const filled = data && caseFilled(data)
+        const font = own.fonts[id]
+        if (!filled || !font) continue
+        own.files.set(id, filled.data)
+        own.fonts[id] = { ...font, range: filled.range }
+      }
+      // Words left as printed: set at an angle, in a hand we cannot draw, or a heading in a face we cannot match
+      // (pdf/backdrop.ts, html/printface.ts).
       const tilted = tiltedOf(page, r.extraction.runs)
+      const body = bodySize(r.extraction.runs)
       const kept = new Set(
         r.extraction.runs
-          .filter((w) => tilted.has(w.id) || (w.font && keptAsPrinted(w.font, w.id in own.faces, library)))
+          .filter((w) => tilted.has(w.id) || (w.font && keptAsPrinted(w.font, w.id in own.faces, library, body)))
           .map((w) => w.id),
       )
       // An icon's words (pdf/icons.ts) have no glyphs to take out: the drawing stays in the backdrop.
@@ -50,9 +71,11 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
         flaggedPaths(r.validation),
         (w) => turned(w) || kept.has(w.id),
       ).filter((w) => !w.icon)
+      const placed = new Set(words.map((w) => w.id))
       const svg = backdropSvg(
         page,
         words.map((w) => w.box),
+        r.extraction.runs.filter((w) => !placed.has(w.id)).map((w) => w.box),
       )
       let drawn: Drawn | null = null
       for (const scale of SCALES) {
@@ -92,6 +115,8 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           tracking,
           faces: own.faces,
           fonts: own.fonts,
+          metrics,
+          capsFaces,
         }),
       )
     }
