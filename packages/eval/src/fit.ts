@@ -14,6 +14,8 @@ const MIN_FIT_OWN = 0.97
 const TALL = 1.15
 // Two placed texts overlap when they share this much of the smaller one, and their printed boxes did not.
 const OVERLAP = 0.2
+// A printed baseline further than this share of a line from ours is no baseline of that line: it stays where it was.
+const MAX_SHIFT = 0.5
 
 // Measures each placed text of a printed view in a browser and writes its fit (--k) into the page: the share of
 // its natural width that brings it within its printed box (every scale keeps it, all in cqw). Returns the pages
@@ -30,8 +32,8 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
     await tab.goto(`file://${encodeURI(htmlPath)}`)
     const drops = await ownFacesKept(tab)
     for (const d of drops) console.info(`${htmlPath}: ${d.why}`)
-    const { fits, failing } = await tab.evaluate(
-      ({ min, minOwn, smallest, step, tall, overlap }) => {
+    const { fits, shifts, failing } = await tab.evaluate(
+      ({ min, minOwn, smallest, step, tall, overlap, maxShift }) => {
         const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
         const firstPage = document.querySelector('section[data-page]')?.getAttribute('data-page') ?? ''
         const pageOf = (el: Element): string =>
@@ -65,7 +67,8 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
             )
           return { k: round(floor), z: round(smallest) }
         })
-        // Each text's drawn box against its printed box, both relative to its page's container.
+        // Each text's drawn box against its printed box, both relative to its page's container; measured before its
+        // baseline shift, which sets it where the print does.
         const boxes = placed.flatMap((el) => {
           const page = el.closest('section, header')
           if (el.tagName === 'IMG' || !page) return []
@@ -80,6 +83,24 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               printed: { x: u('--x'), y: u('--y'), w: u('--w'), h: u('--h') },
             },
           ]
+        })
+        // Our first baseline set on the printed one (--bl): the face's ascent and the line box no longer decide
+        // where a line sits (Moosewood's script "entrees", its tall box, sat on the dish below).
+        const shifts = placed.map((el) => {
+          const page = el.closest('section, header')
+          const bl = el.style.getPropertyValue('--bl')
+          if (el.tagName === 'IMG' || !page || !bl) return 0
+          const probe = document.createElement('span')
+          probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'
+          el.prepend(probe)
+          const c = page.getBoundingClientRect()
+          const dy = ((Number(bl) * c.width) / 100 - (probe.getBoundingClientRect().top - c.top)) / (c.width / 100)
+          probe.remove()
+          const line = Number(el.style.getPropertyValue('--lh') || el.style.getPropertyValue('--h'))
+          if (Math.abs(dy) > line * maxShift) return 0
+          const shift = Math.round(dy * 1000) / 1000
+          el.style.setProperty('--dy', String(shift))
+          return shift
         })
         type Box = { x: number; y: number; w: number; h: number }
         const shared = (a: Box, b: Box): number => {
@@ -96,9 +117,21 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               shared(a.printed, b.printed) <= overlap
             )
               bad.set(a.page, `${say(a.el)} collides with ${say(b.el)}`)
-        return { fits, failing: [...bad].map(([page, why]) => ({ page: Number(page), why })).filter((m) => m.page > 0) }
+        return {
+          fits,
+          shifts,
+          failing: [...bad].map(([page, why]) => ({ page: Number(page), why })).filter((m) => m.page > 0),
+        }
       },
-      { min: MIN_FIT, minOwn: MIN_FIT_OWN, smallest: MIN_SIZE, step: STEP, tall: TALL, overlap: OVERLAP },
+      {
+        min: MIN_FIT,
+        minOwn: MIN_FIT_OWN,
+        smallest: MIN_SIZE,
+        step: STEP,
+        tall: TALL,
+        overlap: OVERLAP,
+        maxShift: MAX_SHIFT,
+      },
     )
     const parts = html.split('style="--x:')
     await writeFile(
@@ -107,7 +140,8 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
         const { k, z } = fits[i - 1] ?? { k: 1, z: 1 }
         // The element's own style comes first in its part.
         const kept = drops.some((d) => d.index === i - 1) ? withoutOwnFace(part) : part
-        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}--x:${kept}`
+        const dy = shifts[i - 1] ?? 0
+        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}${dy ? `--dy:${String(dy)};` : ''}--x:${kept}`
       }),
     )
     return failing

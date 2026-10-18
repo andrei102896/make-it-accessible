@@ -38,7 +38,7 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 5,
+  version: 6,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -51,6 +51,7 @@ const white: Grid = {
   strokes: {},
   undrawn: [],
   kept: [],
+  baselines: {},
   tracking: {},
   faces: {},
   fonts: {},
@@ -233,4 +234,16 @@ test("a line whose words share one of the PDF's own faces takes it first, its st
   const name = spotsOf(structure.blocks, extraction, mixed).get('blocks[2].items[0].name')
   assert.ok(name)
   assert.doesNotMatch(placement(name, extraction.width, mixed, 2, []), /--ff:/)
+})
+
+test("a placed text stands on its first line's printed baseline, where most of that line's letters stand (Moosewood's entrees)", () => {
+  const runs = extraction.runs.map((r) => (r.id === '1:4' ? { ...r, line: 2, box: { ...r.box, y: 215 } } : r))
+  const e: Extraction = { ...extraction, runs }
+  const measured: Grid = { ...white, baselines: { '1:1': 209, '1:2': 208, '1:3': 208, '1:4': 223 } }
+  const name = spotsOf(structure.blocks, e, measured).get('blocks[2].items[0].name')
+  assert.ok(name)
+  assert.match(placement(name, e.width, measured, 2, []), /--bl:34\.667;/)
+  const unmeasured = spotsOf(structure.blocks, extraction, white).get('blocks[2].items[0].name')
+  assert.ok(unmeasured)
+  assert.doesNotMatch(placement(unmeasured, extraction.width, white, 2, []), /--bl:/)
 })

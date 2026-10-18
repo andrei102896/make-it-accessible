@@ -16,7 +16,7 @@ const PAD = 0.25
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 5
+export const BACKDROP_VERSION = 6
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -28,6 +28,13 @@ const MIN_COPY = 0.3
 const TILT = 0.03
 // Its glyph origins lie on one straight line within this (pt): a raised letter ("1st") or a swash is no tilt.
 const ON_LINE = 0.5
+// A baseline lies below this share of its word's box (ascent above it); higher is the line above's.
+const BASELINE_FLOOR = 0.3
+// Boxes up to this ratio of the shortest one's height are words of one line; a taller one is a script over them.
+const SAME_LINE = 1.2
+// A letter and its copy drawn on one spot start this close (pt; Kenny & Ziggy's 0.02); another line's glyph is further
+// off (Moosewood's 0.49).
+const ONE_SPOT = 0.05
 // A copy glyph sits at its letter's offset within this (pt); two inks this close (sum over RGB, 0–255) are one ink.
 const SAME_SPOT = 0.5
 const SAME_INK = 48
@@ -60,6 +67,8 @@ const Grid = z
     shadows: z.record(z.string(), Shadow),
     strokes: z.record(z.string(), Stroke),
     undrawn: z.array(z.string()),
+    // Per placed word its printed baseline (pt from the page's top): its first letter's origin.
+    baselines: z.record(z.string(), z.number()),
     // Words the backdrop keeps as printed and ours only read: set at an angle, or in a hand we cannot draw
     // (keptRuns, eval: a script face neither embeddable nor stood in for; Fig's stamp and signature).
     kept: z.array(z.string()),
@@ -72,7 +81,7 @@ const Grid = z
   })
   .strict()
 export type Grid = z.infer<typeof Grid>
-export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn'>
+export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'baselines'>
 export const parseGrid = (json: string): Grid => Grid.parse(JSON.parse(json))
 
 type Word = { id: string; box: Box }
@@ -138,15 +147,26 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const between = svg.slice(open, g.range[0])
     return { ...g, fill: open >= 0 && !between.includes('</g>') ? colourOf(attr(between, 'fill')) : null }
   })
-  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [] }
-  // A word's own glyphs: their origins (on the baseline) inside its box. A glyph another word owns is never this
-  // one's ink or copy (Ferrara's black asterisks beside the red SYRUPS).
-  const boxes = words.map(({ box: b }) => ({ ...b, x: b.x - EDGE }))
-  const owner = glyphs.map((g) => boxes.findIndex((b) => holds(b, g.at)))
+  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], baselines: {} }
+  // A word's own glyphs: origins in the lower part of its box, as its top reaches the line above's baseline (Kenny &
+  // Ziggy's tight lines). Another word's glyph is never its ink or copy (Ferrara's black asterisks by the red SYRUPS).
+  const boxes = words.map(({ box: b }) => ({
+    x: b.x - EDGE,
+    y: b.y + b.h * BASELINE_FLOOR,
+    w: b.w,
+    h: b.h * (1 - BASELINE_FLOOR),
+  }))
+  // Boxes overlap: a glyph belongs to the word of its line starting last before it (Kenny & Ziggy's letter-by-letter
+  // titles), never to a script's tall box over that line (Moosewood's entrees over its burger).
+  const owner = glyphs.map((g) => {
+    const held = boxes.flatMap((b, k) => (holds(b, g.at) ? [{ k, b }] : []))
+    const shortest = Math.min(...held.map(({ b }) => b.h))
+    return held.filter(({ b }) => b.h <= shortest * SAME_LINE).sort((p, q) => q.b.x - p.b.x)[0]?.k ?? -1
+  })
   for (const [i, { id, box }] of words.entries()) {
     const zone = zoneOf(box)
     const around = glyphs.flatMap((g, k) => (holds(zone, g.at) ? [{ ...g, owner: owner[k] ?? -1 }] : []))
-    const mine = around.filter((g) => holds(boxes[i] ?? box, g.at))
+    const mine = around.filter((g) => g.owner === i)
     const last = mine.at(-1) ?? around.at(-1)
     if (!last) {
       out.undrawn.push(id)
@@ -154,6 +174,12 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     }
     if (last.fill) out.inks[id] = last.fill
     if (last.alpha < 1) out.alpha[id] = Math.round(last.alpha * 1000) / 1000
+    // Its baseline: its first letter's, the glyph nearest its left edge and drawn last on that spot (the ink over its
+    // copy); a glyph of the line under a tall box is not on it (Moosewood's soups).
+    const lead = (g: { at: Point }): number => Math.abs(g.at[0] - box.x)
+    const nearest = Math.min(...mine.map(lead))
+    const foot = mine.filter((g) => lead(g) <= nearest + ONE_SPOT).at(-1)
+    if (foot) out.baselines[id] = round(foot.at[1])
     // Each copy glyph against its nearest inked glyph: on tight lines the zone also holds the next line's glyphs, so
     // a mean over the zone drifts by a line (Kenny & Ziggy's paragraph doubled one line down).
     const inked = mine.filter((g) => g.fill === last.fill).map((g) => g.at)

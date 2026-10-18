@@ -68,7 +68,7 @@ ${on} ${page} :is(div, ul)[data-frame] { position: absolute; left: calc(var(--tx
 ${on} ${page} [data-frame] :is(table, caption, thead, tbody, tr, th, td) { border: 0; padding: 0; background: none;
   font-size: 0; }
 ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0)) * 1cqw);
-  top: calc((var(--y) - var(--ty, 0)) * 1cqw);
+  top: calc((var(--y) - var(--ty, 0) + var(--dy, 0)) * 1cqw);
   width: calc(var(--w) / var(--k, 1) * 1cqw + var(--ls, 0) * 1em); transform: scaleX(var(--k, 1)); transform-origin: left top;
   display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; list-style: none; max-width: none;
   font-size: calc(var(--fs, var(--h)) * var(--z, 1) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw);

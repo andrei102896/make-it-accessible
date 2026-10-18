@@ -42,8 +42,13 @@ type Spot = {
   tracking: number
   // The PDF's own face every word is printed in (pdf/ownfont.ts), when they share one.
   own: string | null
+  // Its first line's printed baseline (pt from the page's top): fit.ts sets ours on it.
+  baseline: number | null
 }
-type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces'>
+type Drawn = Pick<
+  Grid,
+  'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces' | 'baselines'
+>
 const NOTHING_DRAWN: Drawn = {
   inks: {},
   alpha: {},
@@ -53,6 +58,7 @@ const NOTHING_DRAWN: Drawn = {
   kept: [],
   tracking: {},
   faces: {},
+  baselines: {},
 }
 
 // The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
@@ -92,6 +98,7 @@ export function spotsOf(
       font: null,
       tracking: 0,
       own: null,
+      baseline: null,
     })
   }
   const block = (path: string, b: Block): void => {
@@ -172,6 +179,14 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     const run = runs.find((r) => JSON.stringify(of(r) ?? null) === key)
     return (run && of(run)) ?? null
   }
+  // The first line's words with a printed baseline, each weighted by its letters.
+  const lead = runs[0]
+  const first = runs.flatMap((r) => {
+    const b = drawn.baselines[r.id]
+    return lead && r.flow === lead.flow && r.line === lead.line && b !== undefined
+      ? [[b, r.str.length] satisfies [number, number]]
+      : []
+  })
   const align = lines.length === 1 ? 'center' : (edges.sort((a, b) => a[1] - b[1])[0]?.[0] ?? 'left')
   return {
     box,
@@ -188,6 +203,7 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     tracking: median(runs.map((r) => [drawn.tracking[r.id] ?? 0, r.str.length])),
     own:
       new Set(runs.map((r) => drawn.faces[r.id] ?? null)).size === 1 ? (drawn.faces[runs[0]?.id ?? ''] ?? null) : null,
+    baseline: first.length ? median(first) : null,
   }
 }
 const faceKey = (f: RunFont): string => `${f.key}:${String(f.weight)}:${String(f.italic)}`
@@ -220,6 +236,7 @@ export function placement(
   // The PDF's own face first, its stand-in after: fit.ts drops the own face where it lacks a letter of the line.
   const families = [spot.own ? `'${spot.own}'` : null, face?.family ?? null].filter((f) => f !== null)
   if (families.length) props.push(`--ff:${families.join(', ')}`)
+  if (spot.baseline !== null) props.push(`--bl:${u(spot.baseline)}`)
   // Letters printed tighter than their face only where large: running text never closes up.
   const large = size * pxPerPt >= LARGE_PX
   props.push(`--ls:${String(spot.tracking < 0 && !large ? 0 : spot.tracking)}`)
