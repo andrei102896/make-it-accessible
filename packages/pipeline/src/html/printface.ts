@@ -56,6 +56,11 @@ export function printFaceOf(font: RunFont, library: readonly FontManifest[]): Pr
   }
 }
 
+// A word in a hand we cannot draw: a script face whose maker forbids embedding it (no own face) and that no
+// vendored family stands in for (Fig's signature). The backdrop keeps it as printed, ours is read.
+export const keptAsPrinted = (font: RunFont, own: boolean, library: readonly FontManifest[]): boolean =>
+  !own && classOf(font.key) === 'script' && printFaceOf(font, library) === null
+
 // Its own name, so the text view's embedded face of the same family never resolves to these files (nor they to it).
 const nameOf = (m: FontManifest): string => `print-${m.key}`
 

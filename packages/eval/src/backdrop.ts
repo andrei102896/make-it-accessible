@@ -5,6 +5,7 @@ import { placedRuns } from '@make-it-accessible/pipeline/html/source'
 import {
   BACKDROP_VERSION,
   backdropSvg,
+  tiltedOf,
   CELL,
   luminanceGrid,
   printedOf,
@@ -12,7 +13,9 @@ import {
 import { pageSvg } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
-import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
+import { keptAsPrinted, PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
+import { turned } from '@make-it-accessible/pipeline/pdf/runs'
+import { fontLibrary } from './brand.ts'
 import { pdfFacts } from './pdfjs.ts'
 
 // Sharp at twice the CSS pixels of the printed size (1 pt = 4/3 px), which covers a retina screen at 100 %; once
@@ -26,12 +29,26 @@ const QUALITY = 0.8
 // A page that renders at no scale in time gets none, and its document keeps the text view only.
 export async function writeBackdrops(pdf: string, results: readonly PageResult[]): Promise<void> {
   const facts = await pdfFacts(pdf)
+  const library = await fontLibrary()
   const browser = await chromium.launch()
   try {
     for (const r of results) {
       const { width, height } = r.extraction
-      const words = placedRuns(r.structure, r.extraction, flaggedPaths(r.validation))
       const page = await pageSvg(pdf, r.pdfPage)
+      const { tracking, own } = await facts.of(r.extraction)
+      // Words left as printed: set at an angle, or in a hand we cannot draw (pdf/backdrop.ts, html/printface.ts).
+      const tilted = tiltedOf(page, r.extraction.runs)
+      const kept = new Set(
+        r.extraction.runs
+          .filter((w) => tilted.has(w.id) || (w.font && keptAsPrinted(w.font, w.id in own.faces, library)))
+          .map((w) => w.id),
+      )
+      const words = placedRuns(
+        r.structure,
+        r.extraction,
+        flaggedPaths(r.validation),
+        (w) => turned(w) || kept.has(w.id),
+      )
       const svg = backdropSvg(
         page,
         words.map((w) => w.box),
@@ -59,7 +76,6 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
         },
       })
       await writeFile(join(r.dir, 'backdrop.jpg'), Buffer.from(drawn.jpeg.slice(drawn.jpeg.indexOf(',') + 1), 'base64'))
-      const { tracking, own } = await facts.of(r.extraction)
       // The document's folder holds the faces, one file per program, whichever page uses it.
       const fonts = join(dirname(r.dir), PRINT_FONTS_DIR)
       if (own.files.size) await mkdir(fonts, { recursive: true })
@@ -71,6 +87,7 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           cell: CELL,
           ...grid,
           ...printedOf(page, words),
+          kept: [...kept],
           tracking,
           faces: own.faces,
           fonts: own.fonts,

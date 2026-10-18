@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { backdropSvg, luminanceGrid, printedOf } from './backdrop.ts'
+import { backdropSvg, luminanceGrid, printedOf, tiltedOf } from './backdrop.ts'
 
 const page = (defs: string, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="612pt" height="792pt" viewBox="0 0 612 792"><defs>${defs}</defs>${body}</svg>`
@@ -124,4 +124,17 @@ test("specks of an engraving inside a word's box are no copy of it: they stay pr
   const svg = page(glyphs, speck + ink(100, 125))
   assert.match(backdropSvg(svg, [word.box]), /M 104 110/)
   assert.deepEqual(printedOf(svg, [word]).shadows, {})
+})
+
+test("a word whose glyphs rise along one line is set at an angle (Fig's rubber stamp); a raised letter is no tilt", () => {
+  const at = (x: number, y: number): string => `<use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/>`
+  const stamp = at(22.3, 750.7) + at(29.4, 750.2) + at(36.5, 749.8) + at(43.6, 749.4)
+  const first = at(60, 750) + at(66, 747) + at(70, 747)
+  const level = at(80, 750) + at(86, 750)
+  const tilted = tiltedOf(page(glyphs, `<g fill="rgb(0%, 0%, 0%)">${stamp + first + level}</g>`), [
+    { id: 'OCT', box: { x: 22.34, y: 740.56, w: 28, h: 14.15 } },
+    { id: '1st', box: { x: 60, y: 740, w: 14, h: 14 } },
+    { id: 'Date', box: { x: 80, y: 740, w: 12, h: 14 } },
+  ])
+  assert.deepEqual([...tilted], ['OCT'])
 })

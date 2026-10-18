@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { printedFace } from '../pdf/face.ts'
-import { covers, ownFaceIn, printFaceOf, printFaces, withoutOwnFace } from './printface.ts'
+import type { RunFont } from '../pdf/types.ts'
+import { covers, keptAsPrinted, ownFaceIn, printFaceOf, printFaces, withoutOwnFace } from './printface.ts'
 import type { FontManifest } from './webfonts.ts'
 
 const family = (key: string, weight = '100 900', category: 'text' | 'display' = 'text'): FontManifest => ({
@@ -68,4 +69,12 @@ test("a line keeps the PDF's own face only where its range holds every letter sh
     "--fi:normal;--ff:'print-jost', sans-serif;--ls:0",
   )
   assert.equal(withoutOwnFace(`--fi:normal;--ff:'pdf-0123456789ab';--ls:0"`), '--fi:normal;--ls:0"')
+})
+
+test("a script the PDF may not embed and no vendored face stands in for stays printed (Fig's signature); one we can draw is placed", () => {
+  const font = (name: string): RunFont => ({ ...printedFace(name, false, false), size: 20 })
+  assert.equal(keptAsPrinted(font('Revive80Signature'), false, library), true)
+  assert.equal(keptAsPrinted(font('Revive80Signature'), true, library), false)
+  assert.equal(keptAsPrinted(font('BrushScriptMT'), false, library), false)
+  assert.equal(keptAsPrinted(font('AveriaLibre-Regular'), false, library), false)
 })

@@ -4,7 +4,7 @@ import type { Box, RunFont } from './types.ts'
 // Common families by typeface class; a font name is a stronger signal than a look at a small render.
 const FAMILIES: [HeadingClass, RegExp][] = [
   ['condensed', /condensed|narrow|compressed|\bdin|bebas|oswald|leaguegothic|impact|bahnschrift|binner/],
-  ['script', /script|brush|hand|pacifico|lobster|dancing|greatvibes|edwardian|zapfino|comic|marker/],
+  ['script', /script|signature|brush|hand|pacifico|lobster|dancing|greatvibes|edwardian|zapfino|comic|marker/],
   ['slab', /slab|rockwell|clarendon|archer|arvo|courier|museoslab|serifa|memphis|glypha/],
   ['didone', /bodoni|didot|playfair|walbaum/],
   ['oldstyle', /garamond|caslon|palatino|bembo|minion|goudy(?!sans)|jenson|sabon|bookantiqua|plantin|iowan/],

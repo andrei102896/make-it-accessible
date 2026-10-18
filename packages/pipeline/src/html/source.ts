@@ -16,7 +16,14 @@ export const flaggedAt = (path: string, flagged: readonly string[]): boolean =>
   flagged.some((f) => f === path || under(path, f) || under(f, path))
 // The shown words any text of the page cites (names, prices, notes alike): those our own text stands in for.
 // Text with a word set on its side, or a finding on it, is left printed (the print shows it right).
-export function placedRuns(page: PageStructure, e: Extraction, flagged: readonly string[] = []): Run[] {
+// `kept`: a word the backdrop keeps as printed (set on its side, at an angle, or in a hand we cannot draw): its
+// whole text stays printed.
+export function placedRuns(
+  page: PageStructure,
+  e: Extraction,
+  flagged: readonly string[] = [],
+  kept: (r: Run) => boolean = turned,
+): Run[] {
   const cited = new Set<number>()
   const visit = (value: unknown, path: string): void => {
     if (Array.isArray(value))
@@ -31,8 +38,8 @@ export function placedRuns(page: PageStructure, e: Extraction, flagged: readonly
           continue
         }
         // ponytail: judged per cited text; a price whose label alone is turned loses its amount's spot too.
-        const turnedText = src.data.flatMap(([from, to]) => e.runs.slice(from, to + 1)).some(turned)
-        if (!turnedText && !flaggedAt(path, flagged))
+        const keptText = src.data.flatMap(([from, to]) => e.runs.slice(from, to + 1)).some(kept)
+        if (!keptText && !flaggedAt(path, flagged))
           for (const [from, to] of src.data) for (let i = from; i <= to; i++) cited.add(i)
       }
   }

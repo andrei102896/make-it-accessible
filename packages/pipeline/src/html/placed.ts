@@ -43,8 +43,17 @@ type Spot = {
   // The PDF's own face every word is printed in (pdf/ownfont.ts), when they share one.
   own: string | null
 }
-type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'tracking' | 'faces'>
-const NOTHING_DRAWN: Drawn = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], tracking: {}, faces: {} }
+type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces'>
+const NOTHING_DRAWN: Drawn = {
+  inks: {},
+  alpha: {},
+  shadows: {},
+  strokes: {},
+  undrawn: [],
+  kept: [],
+  tracking: {},
+  faces: {},
+}
 
 // The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
 // colour as drawn and the words drawn inside a picture (pdf/backdrop.ts); `frames` gets each table's printed box.
@@ -54,12 +63,12 @@ export function spotsOf(
   drawn: Drawn = NOTHING_DRAWN,
   frames = new Map<string, Box>(),
 ): Map<string, Spot> {
-  const pictured = new Set(drawn.undrawn)
+  const pictured = new Set([...drawn.undrawn, ...drawn.kept])
   const hidden = new Set(e.hidden)
   const out = new Map<string, Spot>()
   const words = (t: TextValue | PriceValue | undefined): Run[] =>
     !t || 'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
-  // Text with a word set on its side, or printed inside a picture, has no spot: the print shows it, ours is read.
+  // Text with a word set on its side, printed inside a picture or kept as printed has no spot: ours is read.
   const put = (path: string, runs: readonly Run[]): void => {
     if (runs.some((r) => turned(r) || pictured.has(r.id))) return
     const box = unionOf(runs)

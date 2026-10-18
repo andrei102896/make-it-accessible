@@ -16,7 +16,7 @@ const PAD = 0.25
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 4
+export const BACKDROP_VERSION = 5
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -24,6 +24,10 @@ const MIN_OFFSET = 0.3
 // A shape copying placed words is at least this share of their height: a letter is; a speck of an engraving inside
 // their box is not (Boater's lobster under THE MENU; Moosewood's next line inside the tall box of "entrees").
 const MIN_COPY = 0.3
+// A word tilted by this much (rise over run of its glyph origins, ~1.7°) is set at an angle, not on the line.
+const TILT = 0.03
+// Its glyph origins lie on one straight line within this (pt): a raised letter ("1st") or a swash is no tilt.
+const ON_LINE = 0.5
 // A copy glyph sits at its letter's offset within this (pt); two inks this close (sum over RGB, 0–255) are one ink.
 const SAME_SPOT = 0.5
 const SAME_INK = 48
@@ -56,6 +60,9 @@ const Grid = z
     shadows: z.record(z.string(), Shadow),
     strokes: z.record(z.string(), Stroke),
     undrawn: z.array(z.string()),
+    // Words the backdrop keeps as printed and ours only read: set at an angle, or in a hand we cannot draw
+    // (keptRuns, eval: a script face neither embeddable nor stood in for; Fig's stamp and signature).
+    kept: z.array(z.string()),
     // Per placed word its printed letter spacing in ems (pdf/tracking.ts), where tracked.
     tracking: z.record(z.string(), z.number()),
     // Per placed word the PDF's own face it is printed in, and per face the letters it draws and its maker's
@@ -218,4 +225,21 @@ export function luminanceGrid(px: Pixels): Pick<Grid, 'cols' | 'rows' | 'min' | 
   const r3 = (v: number): number => Math.round(v * 1000) / 1000
   const colours = sums.map((s) => hex([s.r / Math.max(1, s.n), s.g / Math.max(1, s.n), s.b / Math.max(1, s.n)]))
   return { cols, rows, min: min.map(r3), max: max.map(r3), mean: colours }
+}
+
+// The words printed at an angle (Fig's rubber stamp): their glyph origins, two or more, rise or fall along one line.
+export function tiltedOf(svg: string, words: readonly Word[]): Set<string> {
+  const glyphs = drawnElements(svg).glyphs
+  const out = new Set<string>()
+  for (const { id, box } of words) {
+    const own = glyphs.filter(
+      ({ at: [x, y] }) => x >= box.x - EDGE && x < box.x + box.w && y >= box.y && y <= box.y + box.h,
+    )
+    const [first, last] = [own[0]?.at, own.at(-1)?.at]
+    if (!first || !last || own.length < 2 || last[0] - first[0] <= 0) continue
+    const slope = (last[1] - first[1]) / (last[0] - first[0])
+    const straight = own.every(({ at: [x, y] }) => Math.abs(first[1] + (x - first[0]) * slope - y) <= ON_LINE)
+    if (straight && Math.abs(slope) >= TILT) out.add(id)
+  }
+  return out
 }
