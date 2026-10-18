@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
 import { printCss } from './print.ts'
-import { asDrawn } from './printink.ts'
+import { asDrawn, inkOn } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
@@ -70,4 +70,27 @@ test('the printed view sets each brand ink from its line, and nothing without on
     printCss(1200, ['#c00000']),
     /\[style\*="--x:"\] \.ink-c00000 \{ color: var\(--ink-c00000, inherit\); \}/,
   )
+})
+
+test('a hairline or a panel edge inside a cell leaves the ground flat: the ink moves instead of taking a halo', () => {
+  const gold = { box: { x: 0, y: 0, w: 16, h: 8 }, color: '#d69f65', alpha: 1, shadow: null, stroke: null }
+  const framed: Grid = { ...blank, cols: 2, min: [0.775, 1], max: [1, 1], mean: ['#fefbf9', '#ffffff'] }
+  const u = (v: number): string => String(v)
+  assert.equal(inkOn(gold, framed, 4.5, u).shadow, 'none')
+  assert.notEqual(inkOn(gold, framed, 4.5, u).color, '#d69f65')
+  const photo: Grid = { ...blank, cols: 2, min: [0.05, 0.9], max: [0.3, 1], mean: ['#333333', '#f0f0f0'] }
+  assert.match(inkOn(gold, photo, 4.5, u).shadow, /0 0 \.04em/)
+})
+
+test("the cells under a word's letters decide, not the row its box shares with a QR code or the page below (BOOK NOW)", () => {
+  const gold = { box: { x: 0, y: 8, w: 8, h: 17 }, color: '#d69f65', alpha: 1, shadow: null, stroke: null }
+  const band: Grid = {
+    ...blank,
+    rows: 4,
+    min: [1, 0.04, 0.04, 0.04],
+    max: [1, 1, 0.04, 1],
+    mean: ['#ffffff', '#0f1a24', '#073b5a', '#8a9099'],
+  }
+  const u = (v: number): string => String(v)
+  assert.deepEqual(inkOn(gold, band, 4.5, u), { color: '#d69f65', shadow: 'none' })
 })

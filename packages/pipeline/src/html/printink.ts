@@ -6,8 +6,13 @@ import type { HtmlPage } from './types.ts'
 
 // MID: the luminance as far from black as from white in contrast terms.
 const MID = 0.179
-// A backdrop this even under a box (luminance spread) is flat: its ink can move instead of taking a halo.
+// A backdrop this even under a box (spread of its cells' mean luminance) is flat: its ink can move instead of
+// taking a halo, unless the box's extremes are further apart than a hairline or a panel's edge makes them.
 const FLAT = 0.08
+const EDGE = 0.35
+// The letters' bodies sit in the middle of a word's box: a cell counts when at least half of it lies within the
+// box inset by this share of its height top and bottom (BOOK NOW's row touching its QR code above does not).
+const INSET = 0.25
 
 // What a placed text shows of its printed ink (placed.ts): its colour, opacity, and its printed shadow or outline.
 export type Inked = {
@@ -35,13 +40,14 @@ export function inkOn(
     : 'none'
   const m = measured(spot, grid)
   if (!m) return { color: spot.color ?? '#000000', shadow: printed }
-  const { ink, ground, lo, hi } = m
+  const { ink, ground, lo, hi, spread } = m
   if (reads(spot, m, target)) return { color: hex(ink), shadow: printed }
   const l = luminance(ink)
   // readableOn darkens on a ground lighter than MID and lightens on a darker one: only where that keeps the ink's
   // side of its ground (Gigi's white title stays light, never turned dark on its olive band).
   const sameSide = l < luminance(ground) === luminance(ground) > MID
-  const moved = hi - lo <= FLAT && sameSide ? readableOn(ink, ground, target) : null
+  const flat = spread <= FLAT && hi - lo <= EDGE
+  const moved = flat && sameSide ? readableOn(ink, ground, target) : null
   if (moved) return { color: hex(moved), shadow: printed }
   const glow = hex(readableOn(ground, ink, target) ?? (l < MID ? [255, 255, 255] : [0, 0, 0]))
   const halo = `0 0 .04em ${glow}, 0 0 .08em ${glow}, 0 0 .3em ${glow}`
@@ -55,14 +61,19 @@ export function inlineInk(spot: Inked, grid: Grid | null, target: number): strin
   return m && reads(spot, m, target) ? hex(m.ink) : null
 }
 
-type Measured = { ink: Rgb; ground: Rgb; lo: number; hi: number }
+type Measured = { ink: Rgb; ground: Rgb; lo: number; hi: number; spread: number }
 function measured(spot: Inked, grid: Grid | null): Measured | null {
   const { box } = spot
   const cells: number[] = []
   if (grid) {
     const [c0, c1] = [Math.floor(box.x / grid.cell), Math.floor((box.x + box.w) / grid.cell)]
-    const [r0, r1] = [Math.floor(box.y / grid.cell), Math.floor((box.y + box.h) / grid.cell)]
+    const [top, bottom] = [box.y + box.h * INSET, box.y + box.h * (1 - INSET)]
+    const [r0, r1] = [Math.floor(top / grid.cell), Math.floor(bottom / grid.cell)]
+    const within = (r: number): number => Math.min(bottom, (r + 1) * grid.cell) - Math.max(top, r * grid.cell)
+    const rows = []
     for (let r = Math.max(0, r0); r <= Math.min(grid.rows - 1, r1); r++)
+      if (within(r) >= Math.min(grid.cell, bottom - top) / 2) rows.push(r)
+    for (const r of rows.length ? rows : [Math.min(grid.rows - 1, Math.floor((top + bottom) / 2 / grid.cell))])
       for (let c = Math.max(0, c0); c <= Math.min(grid.cols - 1, c1); c++) cells.push(r * grid.cols + c)
   }
   if (!grid || !cells.length) return null
@@ -70,7 +81,8 @@ function measured(spot: Inked, grid: Grid | null): Measured | null {
   const ink = blend(fromHex(spot.color ?? '#000000'), ground, spot.alpha)
   const lo = Math.min(...cells.map((i) => grid.min[i] ?? 0))
   const hi = Math.max(...cells.map((i) => grid.max[i] ?? 1))
-  return { ink, ground, lo, hi }
+  const means = cells.map((i) => luminance(fromHex(grid.mean[i] ?? '#ffffff')))
+  return { ink, ground, lo, hi, spread: Math.max(...means) - Math.min(...means) }
 }
 // A printed outline or shadow round the letters is their edge: it carries their contrast when it stands out from the
 // ink or from the ground (WCAG 1.4.3 counts an outline as the text's boundary; La Segunda's red round yellow).
