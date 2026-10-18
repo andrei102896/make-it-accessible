@@ -33,7 +33,7 @@ Why (Andrei, 2026-10-16): every PDF is a scenario to learn from; a fix that only
 - [x] 19 NY/FL previews published at andreiprojects.com/preview (`previews/EXPIRY.csv`), refreshed after every engine change
 - [ ] Follow-ups to the first 56: first 10 on 19 Oct, the other 46 on 20–21 Oct (drafts only; Andrei sends); `pnpm outreach:due` prints them, `pnpm outreach:log` records them (2026-10-18, 54 due: one bounce, one reply)
 - [ ] Kendells follow-up if no answer by 21 Oct
-- [ ] mail-tester.com run on the sending address (until then "0 replies" is not interpretable)
+- [x] mail-tester.com run on the sending address (2026-10-18): 10/10, authenticated (Proton), not blocklisted; silence now reads as interest, not spam
 - [ ] Wave of 20 NY/FL restaurants, each email linking its reviewed page, once Andrei passes the layout checkpoint
 - [ ] Previews deleted by 15 Nov (`pnpm preview:expire`)
 - [ ] Decision at the thresholds in `outreach/emails.md`: continue, change segment, or stop
