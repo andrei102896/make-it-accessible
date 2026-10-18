@@ -26,7 +26,7 @@ Why (Andrei, 2026-10-16): every PDF is a scenario to learn from; a fix that only
 ## Demand test (`outreach/`, local)
 - [x] 56 cold emails, 14–15 Oct (UK pubs and restaurants, US agencies and restaurants); one real reply (Kendells), answered with the price on 16 Oct
 - [x] 19 NY/FL previews published at andreiprojects.com/preview (`previews/EXPIRY.csv`), refreshed after every engine change
-- [ ] Follow-ups to the first 56: first 10 on 19 Oct, the other 46 on 20–21 Oct (drafts only; Andrei sends)
+- [ ] Follow-ups to the first 56: first 10 on 19 Oct, the other 46 on 20–21 Oct (drafts only; Andrei sends); `pnpm outreach:due` prints them, `pnpm outreach:log` records them (2026-10-18, 54 due: one bounce, one reply)
 - [ ] Kendells follow-up if no answer by 21 Oct
 - [ ] mail-tester.com run on the sending address (until then "0 replies" is not interpretable)
 - [ ] Wave of 20 NY/FL restaurants, each email linking its reviewed page, once Andrei passes the layout checkpoint

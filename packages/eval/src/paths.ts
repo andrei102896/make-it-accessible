@@ -14,3 +14,5 @@ export const FONTS_DIR = join(ROOT, 'packages', 'pipeline', 'fonts')
 export const PREVIEWS_DIR = join(ROOT, 'previews')
 // Where the previews are served from: the portfolio site (andreiprojects.com), deployed with the Vercel CLI.
 export const PORTFOLIO_PREVIEW_DIR = join(ROOT, '..', 'portofolio', 'public', 'preview')
+// The demand test's contacts and first emails (business addresses): local only, gitignored.
+export const OUTREACH_DIR = join(ROOT, 'outreach')

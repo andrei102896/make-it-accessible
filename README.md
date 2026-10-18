@@ -165,6 +165,9 @@ packages/eval/src/            evaluation harness, never shipped
   wiki.ts, wiki-facts.ts      the layout wiki: facts measured per document from its saved run and PDF (docs/wiki)
   preview.ts                  private previews: unlisted file names, noindex, the 30-day expiry list
   preview-add.ts, preview-expire.ts, preview-publish.ts   CLIs for previews/: stage, expire, copy to the portfolio site and deploy
+  outreach.ts, csv.ts          the demand test's contacts (outreach/targets.csv, local) and the follow-ups they are due
+  outreach-due.ts, outreach-log.ts   CLIs: today's follow-ups ready to paste (never sent), sends and replies recorded
+  outreach-files.ts           reads outreach/ and rewrites targets.csv atomically, keeping targets.csv.bak
   font-metrics.ts             a vendored face's x-height, measured in a browser when the family is added
 validation/                   answer keys, sources, results (PDFs and renders local only)
 docs/                         SPEC, VALIDATION protocol, STAGE0 plan and log

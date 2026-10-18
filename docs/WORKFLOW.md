@@ -33,10 +33,10 @@ Why: the first US batch (20 menus) took ~15 minutes of compute and ~$2.90 of mod
 - Promote the scratch scripts to commands used by `batch` and on their own: `pnpm rerender <slug>|--all` (done 2026-10-16; `rebuild` is pnpm's own command: renders a saved run again into out/rebuilt, from the local source list), `pnpm check:page <html> [--shots]` (done: axe at 1280/390/320, forced colours, 1.4.12, overflow), `pnpm preview:refresh [--copy <dir>]` (done: the listed previews take their rebuilt pages); still scratch: recount, keyboard.
 - Replaces: the zz-* scripts, manual screenshot folders, me reading findings out of logs.
 
-### 3. Outreach as commands (0.5 day) — drafts, never sends
-- `pnpm outreach:drafts <batch.json>` creates Proton drafts over CDP from the approved pages (subject, body with the preview link and the hook, US footer); never clicks Send or Schedule; prints the list for Andrei.
-- `pnpm outreach:due` prints today's follow-ups from `targets.csv` (day 3–4 and day 8–10 after `sent`) with the draft text ready to paste.
-- `pnpm outreach:log <business> <field> <text>` records sends and replies in `targets.csv` (word for word for the price question).
+### 3. Outreach as commands (0.5 day) — drafts, never sends · due and log done 2026-10-18
+- `pnpm outreach:due [--date YYYY-MM-DD]` prints the day's follow-ups from `targets.csv`, oldest first, at most 20 (follow-up 1 from day 3 after `sent`, follow-up 2 from day 8 and at least 3 days after the first; a bounce or a real reply stops them, an auto-reply does not), each greeted and signed as its first email in `batch*.json` (a later batch replaces an earlier draft to the same address; US ones keep the address and opt-out lines), with the document the first email named, a CHECK line where it had to guess, and the `outreach:log` line to record them once sent.
+- `pnpm outreach:log <sent|followup1|followup2|reply> <date or text> <business>...` records sends (several businesses at once, never over a date already set) and a reply word for word (one business, appended); `targets.csv` is rewritten whole and the previous copy kept as `targets.csv.bak`.
+- `pnpm outreach:drafts <batch.json>` (Proton drafts over CDP from the approved pages) waits for the wave of 20: follow-ups are replies in existing threads, which a paste covers, and clicking in Proton once sent an email.
 - Once: a mail-tester.com run to know whether the Proton address lands in spam; until then, "0 replies" is not interpretable.
 
 ### 4. Guards that run themselves (0.5 day)
