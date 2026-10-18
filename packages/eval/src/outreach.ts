@@ -79,15 +79,15 @@ const THING = /I had a look at (?:the |your |today's )?(.+?)(?: on your website|
 const LINES: Record<'agency' | 'business', Record<1 | 2, (thing: string) => string>> = {
   agency: {
     1: () =>
-      'Bumping this in case it got buried. If it would help with your restaurant clients, I\'m happy to convert one of their PDF menus so you can judge the result, no cost. Just reply "yes".',
+      "One thing I left out: the page keeps each restaurant's look (fonts, colours and layout) and opens as a page rather than a download, so it sits naturally in a site you've built. At launch, owners will upload a new PDF themselves when the menu changes, so nothing comes back to you. If one of your clients has a PDF menu you'd like to see converted, send me the link and I'll return the page within two days.",
     2: () =>
-      "Last note from me. If PDF menus aren't a priority for your clients right now, no worries at all. If it's ever useful, reply and I'll convert one.",
+      "Last note from me. If PDF menus aren't a priority for your clients right now, no problem at all. If that changes, reply and I'll convert one.",
   },
   business: {
     1: (thing) =>
-      `Bumping this in case it got buried. Happy to send your ${thing} back as a phone-friendly page, no cost. Just reply "yes".`,
+      `One thing I left out: the page keeps the look of your ${thing} (your fonts, colours and layout), so guests see your menu rather than a generic list, and it opens straight away on a phone. If you'd like to see yours, a "yes" is enough and I'll send the link within two days.`,
     2: () =>
-      "Last note from me. If this isn't a priority right now, no worries at all. If it's ever useful, reply and I'll convert the current one.",
+      "Last note from me. If this isn't on the list right now, no problem at all. If that changes, reply and I'll convert the current one.",
   },
 }
 
