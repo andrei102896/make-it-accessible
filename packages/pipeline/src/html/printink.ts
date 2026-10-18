@@ -1,6 +1,8 @@
-import type { Grid } from '../pdf/backdrop.ts'
-import type { Box } from '../pdf/types.ts'
+import { sameInk, type Grid } from '../pdf/backdrop.ts'
+import type { Box, Run } from '../pdf/types.ts'
 import { contrast, fromHex, hex, luminance, readableOn, type Rgb } from './color.ts'
+import { unionOf } from './profile.ts'
+import type { HtmlPage } from './types.ts'
 
 // MID: the luminance as far from black as from white in contrast terms.
 const MID = 0.179
@@ -15,6 +17,8 @@ export type Inked = {
   shadow: Grid['shadows'][string] | null
   stroke: Grid['strokes'][string] | null
 }
+// Words of a placed text printed in another brand ink (`cls`, their `.ink-` span): as drawn, under their own box.
+export type Inline = { cls: string; color: string; alpha: number; box: Box }
 
 // The printed ink where it reads on the backdrop under its box, blended at its printed opacity over the backdrop's
 // colour there. Its printed shadow is drawn as printed and carries the contrast when it reaches the target; else on
@@ -29,28 +33,11 @@ export function inkOn(
   const printed = spot.shadow
     ? `calc(${u(spot.shadow.dx)} * 1cqw) calc(${u(spot.shadow.dy)} * 1cqw) 0 ${spot.shadow.color}`
     : 'none'
-  const raw = spot.color ?? '#000000'
-  const { box } = spot
-  const cells: number[] = []
-  if (grid) {
-    const [c0, c1] = [Math.floor(box.x / grid.cell), Math.floor((box.x + box.w) / grid.cell)]
-    const [r0, r1] = [Math.floor(box.y / grid.cell), Math.floor((box.y + box.h) / grid.cell)]
-    for (let r = Math.max(0, r0); r <= Math.min(grid.rows - 1, r1); r++)
-      for (let c = Math.max(0, c0); c <= Math.min(grid.cols - 1, c1); c++) cells.push(r * grid.cols + c)
-  }
-  if (!grid || !cells.length) return { color: raw, shadow: printed }
-  const ground = average(cells.map((i) => fromHex(grid.mean[i] ?? '#ffffff')))
-  const ink = blend(fromHex(raw), ground, spot.alpha)
-  const lo = Math.min(...cells.map((i) => grid.min[i] ?? 0))
-  const hi = Math.max(...cells.map((i) => grid.max[i] ?? 1))
+  const m = measured(spot, grid)
+  if (!m) return { color: spot.color ?? '#000000', shadow: printed }
+  const { ink, ground, lo, hi } = m
+  if (reads(spot, m, target)) return { color: hex(ink), shadow: printed }
   const l = luminance(ink)
-  const ratio = (v: number): number => (Math.max(l, v) + 0.05) / (Math.min(l, v) + 0.05)
-  // A printed outline or shadow round the letters is their edge: it carries their contrast when it stands out from
-  // the ink or from the ground (WCAG 1.4.3 counts an outline as the text's boundary; La Segunda's red round yellow).
-  const edge = spot.stroke?.color ?? spot.shadow?.color
-  if (edge && Math.max(contrast(ink, fromHex(edge)), contrast(fromHex(edge), ground)) >= target)
-    return { color: hex(ink), shadow: printed }
-  if (Math.min(ratio(lo), ratio(hi)) >= target) return { color: hex(ink), shadow: printed }
   // readableOn darkens on a ground lighter than MID and lightens on a darker one: only where that keeps the ink's
   // side of its ground (Gigi's white title stays light, never turned dark on its olive band).
   const sameSide = l < luminance(ground) === luminance(ground) > MID
@@ -59,6 +46,80 @@ export function inkOn(
   const glow = hex(readableOn(ground, ink, target) ?? (l < MID ? [255, 255, 255] : [0, 0, 0]))
   const halo = `0 0 .04em ${glow}, 0 0 .08em ${glow}, 0 0 .3em ${glow}`
   return { color: hex(ink), shadow: spot.shadow ? `${printed}, ${halo}` : halo }
+}
+
+// A word's own brand ink as printed, where it reads under its box by the test its line passes as printed; else null
+// and it keeps its line's colour (never moved or haloed on its own).
+export function inlineInk(spot: Inked, grid: Grid | null, target: number): string | null {
+  const m = measured(spot, grid)
+  return m && reads(spot, m, target) ? hex(m.ink) : null
+}
+
+type Measured = { ink: Rgb; ground: Rgb; lo: number; hi: number }
+function measured(spot: Inked, grid: Grid | null): Measured | null {
+  const { box } = spot
+  const cells: number[] = []
+  if (grid) {
+    const [c0, c1] = [Math.floor(box.x / grid.cell), Math.floor((box.x + box.w) / grid.cell)]
+    const [r0, r1] = [Math.floor(box.y / grid.cell), Math.floor((box.y + box.h) / grid.cell)]
+    for (let r = Math.max(0, r0); r <= Math.min(grid.rows - 1, r1); r++)
+      for (let c = Math.max(0, c0); c <= Math.min(grid.cols - 1, c1); c++) cells.push(r * grid.cols + c)
+  }
+  if (!grid || !cells.length) return null
+  const ground = average(cells.map((i) => fromHex(grid.mean[i] ?? '#ffffff')))
+  const ink = blend(fromHex(spot.color ?? '#000000'), ground, spot.alpha)
+  const lo = Math.min(...cells.map((i) => grid.min[i] ?? 0))
+  const hi = Math.max(...cells.map((i) => grid.max[i] ?? 1))
+  return { ink, ground, lo, hi }
+}
+// A printed outline or shadow round the letters is their edge: it carries their contrast when it stands out from the
+// ink or from the ground (WCAG 1.4.3 counts an outline as the text's boundary; La Segunda's red round yellow).
+function reads(spot: Inked, { ink, ground, lo, hi }: Measured, target: number): boolean {
+  const edge = spot.stroke?.color ?? spot.shadow?.color
+  if (edge && Math.max(contrast(ink, fromHex(edge)), contrast(fromHex(edge), ground)) >= target) return true
+  const l = luminance(ink)
+  const ratio = (v: number): number => (Math.max(l, v) + 0.05) / (Math.min(l, v) + 0.05)
+  return Math.min(ratio(lo), ratio(hi)) >= target
+}
+
+// A placed text's words in a brand ink other than its line's, each ink with its letters' drawn colour and box.
+export function inlinesOf(
+  runs: readonly Run[],
+  drawn: Pick<Grid, 'inks' | 'alpha'>,
+  inks: ReadonlySet<string>,
+  line: string | null,
+): Inline[] {
+  const marked = Map.groupBy(
+    runs.filter((r) => r.color !== undefined && inks.has(r.color)),
+    (r) => r.color ?? '',
+  )
+  return [...marked].flatMap(([cls, words]) => {
+    const color = mostOf(words, (r) => drawn.inks[r.id] ?? cls) ?? cls
+    const box = unionOf(words)
+    if (!box || sameInk(color, line)) return []
+    return [{ cls, color, alpha: mostOf(words, (r) => drawn.alpha[r.id] ?? 1) ?? 1, box }]
+  })
+}
+
+// The page with each word's colour as drawn, named by the brand ink it matches: the text layer can put a colour on
+// the wrong letters (Kenny & Ziggy's orange on C and P, its gold "&" dark), and `.ink-` spans follow these colours.
+export function asDrawn(page: HtmlPage, inks: ReadonlySet<string>): HtmlPage {
+  const drawn = page.backdrop?.grid.inks
+  if (!drawn) return page
+  const runs = page.extraction.runs.map((r) => {
+    const ink = drawn[r.id]
+    const agrees = ink === undefined || sameInk(ink, r.color ?? null)
+    const color = agrees ? r.color : ([...inks].find((b) => sameInk(b, ink)) ?? ink)
+    return color === r.color ? r : { ...r, color }
+  })
+  return { ...page, extraction: { ...page.extraction, runs } }
+}
+
+// The value most of the words' letters show.
+function mostOf<T>(words: readonly Run[], value: (r: Run) => T): T | undefined {
+  const tally = new Map<T, number>()
+  for (const r of words) tally.set(value(r), (tally.get(value(r)) ?? 0) + r.str.length)
+  return [...tally].sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 const average = (cs: readonly Rgb[]): Rgb => {
   const of = (k: 0 | 1 | 2): number => cs.reduce((s, c) => s + c[k], 0) / Math.max(1, cs.length)

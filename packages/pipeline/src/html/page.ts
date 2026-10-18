@@ -22,7 +22,7 @@ const SEPARATOR = /[,;]$/
 
 export function renderPage(page: HtmlPage, ctx: Context): Rendered {
   const { ui, lang, index, long, legend, running, classes } = ctx
-  const { layout, kind, inks, inlinePrices, smallCaps, titleWords, printPx } = ctx
+  const { layout, kind, inks, inlinePrices, smallCaps, titleWords } = ctx
   const e = page.extraction
   const runs = e.runs
   const toc: Rendered['toc'] = []
@@ -58,7 +58,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
       ? ' data-review'
       : ''
-  const pl = placer(page, printPx, ctx.library)
+  const pl = placer(page, ctx)
   const place = pl.place
   const attrs = (path: string): string => flagged(path) + place(path)
 

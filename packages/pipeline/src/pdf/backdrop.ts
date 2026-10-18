@@ -38,7 +38,7 @@ const ONE_SPOT = 0.05
 // A copy glyph sits at its letter's offset within this (pt); two inks this close (sum over RGB, 0–255) are one ink.
 const SAME_SPOT = 0.5
 const SAME_INK = 48
-const sameInk = (a: string, b: string | null): boolean =>
+export const sameInk = (a: string, b: string | null): boolean =>
   b !== null &&
   [1, 3, 5].reduce((sum, i) => sum + Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)), 0) <=
     SAME_INK

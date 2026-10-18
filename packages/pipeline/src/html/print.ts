@@ -42,7 +42,9 @@ const leaf = '[style*="--x:"]'
 export const printWidthIn = (html: string): number =>
   Number(/@media screen and \(min-width: (\d+)px\) and \(forced-colors: none\)/.exec(html)?.[1] ?? 0)
 
-export const printCss = (width: number): string => `
+// A word in another brand ink takes `--ink-*` from its own placed line where it reads (placed.ts), else the line's
+// colour: no placed text holds another, so the variable never comes from an outer one.
+export const printCss = (width: number, inks: readonly string[]): string => `
 .view, .backdrop { display: none; }
 @media screen and (min-width: ${String(width)}px) and (forced-colors: none) {
 .view { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; align-items: center; border: 0; margin: 1rem 0; padding: 0; }
@@ -80,5 +82,5 @@ ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }
-}
+${inks.map((c) => `${on} ${page} ${leaf} .ink-${c.slice(1)} { color: var(--ink-${c.slice(1)}, inherit); }\n`).join('')}}
 `

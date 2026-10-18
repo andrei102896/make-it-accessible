@@ -3,11 +3,11 @@ import type { Grid } from '../pdf/backdrop.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { turned } from '../pdf/runs.ts'
 import type { Box, Extraction, Run, RunFont } from '../pdf/types.ts'
-import { inkOn } from './printink.ts'
+import { inkOn, inlineInk, inlinesOf, type Inline } from './printink.ts'
 import { unionOf } from './profile.ts'
 import { printFaceOf } from './printface.ts'
 import { flaggedAt, inkSegments, lineParts, type Segment } from './source.ts'
-import type { HtmlPage } from './types.ts'
+import type { Context, HtmlPage } from './types.ts'
 import type { FontManifest } from './webfonts.ts'
 
 // The printed view: each leaf of a page (a heading, a dish's name, a price, a picture) placed where it is printed,
@@ -44,6 +44,8 @@ type Spot = {
   own: string | null
   // Its first line's printed baseline (pt from the page's top): fit.ts sets ours on it.
   baseline: number | null
+  // Its words in another brand ink, shown in it where it reads (printink.ts).
+  inline: Inline[]
 }
 type Drawn = Pick<
   Grid,
@@ -68,6 +70,7 @@ export function spotsOf(
   e: Extraction,
   drawn: Drawn = NOTHING_DRAWN,
   frames = new Map<string, Box>(),
+  inks: ReadonlySet<string> = new Set(),
 ): Map<string, Spot> {
   const pictured = new Set([...drawn.undrawn, ...drawn.kept])
   const hidden = new Set(e.hidden)
@@ -78,7 +81,7 @@ export function spotsOf(
   const put = (path: string, runs: readonly Run[]): void => {
     if (runs.some((r) => turned(r) || pictured.has(r.id))) return
     const box = unionOf(runs)
-    if (box) out.set(path, spotOf(box, runs, drawn))
+    if (box) out.set(path, spotOf(box, runs, drawn, inks))
   }
   const { width, height } = fitScale(e.width, e.height)
   const picture = (path: string, [x, y, w, h]: readonly number[]): void => {
@@ -99,6 +102,7 @@ export function spotsOf(
       tracking: 0,
       own: null,
       baseline: null,
+      inline: [],
     })
   }
   const block = (path: string, b: Block): void => {
@@ -155,10 +159,10 @@ export function spotsOf(
 
 // What most of the words show (by letters): the leaf's size, colour and face. One line is centred on its printed
 // box, so a lookalike face's different width spreads to both sides; lines share the edge the print aligns.
-function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
-  const most = <T>(value: (r: Run) => T): T | null => {
+function spotOf(box: Box, runs: readonly Run[], drawn: Drawn, inks: ReadonlySet<string>): Spot {
+  const most = <T>(value: (r: Run) => T, among = runs): T | null => {
     const tally = new Map<T, number>()
-    for (const r of runs) tally.set(value(r), (tally.get(value(r)) ?? 0) + r.str.length)
+    for (const r of among) tally.set(value(r), (tally.get(value(r)) ?? 0) + r.str.length)
     return [...tally].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
   }
   const size = most((r) => r.font?.size ?? null)
@@ -188,12 +192,15 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
       : []
   })
   const align = lines.length === 1 ? 'center' : (edges.sort((a, b) => a[1] - b[1])[0]?.[0] ?? 'left')
+  // The line's ink is its unmarked words' when some words carry their own (Almond's red "Micky's" before "Ramen").
+  const plain = runs.filter((r) => r.color === undefined || !inks.has(r.color))
+  const color = most((r) => drawn.inks[r.id] ?? r.color ?? null, plain.length ? plain : runs)
   return {
     box,
     size,
     lines: lines.length,
     align,
-    color: most((r) => drawn.inks[r.id] ?? r.color ?? null),
+    color,
     alpha: most((r) => drawn.alpha[r.id] ?? 1) ?? 1,
     shadow: carried((r) => drawn.shadows[r.id]),
     stroke: carried((r) => drawn.strokes[r.id]),
@@ -204,6 +211,7 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     own:
       new Set(runs.map((r) => drawn.faces[r.id] ?? null)).size === 1 ? (drawn.faces[runs[0]?.id ?? ''] ?? null) : null,
     baseline: first.length ? median(first) : null,
+    inline: inlinesOf(runs, drawn, inks, color),
   }
 }
 const faceKey = (f: RunFont): string => `${f.key}:${String(f.weight)}:${String(f.italic)}`
@@ -242,11 +250,16 @@ export function placement(
   props.push(`--ls:${String(spot.tracking < 0 && !large ? 0 : spot.tracking)}`)
   if (spot.color) {
     const readLarge = large || (weight >= 700 && size * pxPerPt >= LARGE_BOLD_PX)
-    const { color, shadow } = inkOn(spot, grid, readLarge ? READABLE_LARGE : READABLE, u)
+    const target = readLarge ? READABLE_LARGE : READABLE
+    const { color, shadow } = inkOn(spot, grid, target, u)
     props.push(`--c:${color}`, `--ts:${shadow}`)
     // The printed outline is centred on the letter's edge with its inner half under the fill, as `paint-order:
     // stroke fill` draws ours: the same width shows the same.
     if (spot.stroke) props.push(`--st:calc(${u(spot.stroke.width)} * 1cqw) ${spot.stroke.color}`)
+    for (const w of spot.inline) {
+      const ink = inlineInk({ ...spot, ...w }, grid, target)
+      if (ink) props.push(`--ink-${w.cls.slice(1)}:${ink}`)
+    }
   }
   return ` style="${props.join(';')}"`
 }
@@ -269,11 +282,12 @@ export type Placer = {
   // ` data-free` on a page in the printed view (text inside a placed leaf that the print does not show there).
   free: string
 }
-export function placer(page: HtmlPage, printPx: number | null, library: readonly FontManifest[]): Placer {
+export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' | 'inks'>): Placer {
+  const { printPx, library, inks } = ctx
   const e = page.extraction
   const backdrop = page.backdrop ?? null
   const frames = new Map<string, Box>()
-  const spots = backdrop ? spotsOf(page.structure.blocks, e, backdrop.grid, frames) : null
+  const spots = backdrop ? spotsOf(page.structure.blocks, e, backdrop.grid, frames, inks) : null
   const drawn: Drawn = backdrop?.grid ?? NOTHING_DRAWN
   const pxPerPt = (printPx ?? e.width) / e.width
   const split = new Set<string>()
@@ -312,7 +326,7 @@ export function placer(page: HtmlPage, printPx: number | null, library: readonly
         .map((p) => {
           if (!('runs' in p)) return p.gap
           const box = unionOf(p.runs)
-          const spot = box ? spotOf(box, p.runs, drawn) : null
+          const spot = box ? spotOf(box, p.runs, drawn, inks) : null
           const style = spot ? placement(spot, e.width, backdrop?.grid ?? null, pxPerPt, library) : ''
           return `<span class="pl"${style}>${html(p.segments)}${p === last ? tail : ''}</span>`
         })

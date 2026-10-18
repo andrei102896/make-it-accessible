@@ -4,8 +4,9 @@ import { parsePage } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
 import type { Extraction } from '../pdf/types.ts'
 import { renderDocument } from './document.ts'
-import { placement, spotsOf } from './placed.ts'
+import { placement, placer, spotsOf } from './placed.ts'
 import { printWidth } from './print.ts'
+import { inkedHtml, visibleText } from './source.ts'
 
 const font = { key: 'serif', size: 9, weight: 400, italic: false }
 const words = ['MENU', 'Soup', 'of', 'the', 'day', '$9']
@@ -246,4 +247,51 @@ test("a placed text stands on its first line's printed baseline, where most of t
   const unmeasured = spotsOf(structure.blocks, extraction, white).get('blocks[2].items[0].name')
   assert.ok(unmeasured)
   assert.doesNotMatch(placement(unmeasured, extraction.width, white, 2, []), /--bl:/)
+})
+
+test("a line's ink is its unmarked words'; a word in another brand ink shows it where it reads, on a whole leaf and on each printed line (Almond's red Micky's)", () => {
+  const runs = [
+    { str: "Micky's", box: { x: 60, y: 200, w: 40, h: 10 }, line: 0, color: '#c00000' },
+    { str: 'Ramen', box: { x: 104, y: 200, w: 34, h: 10 }, line: 0, color: '#000000' },
+    { str: 'pickled', box: { x: 60, y: 220, w: 40, h: 10 }, line: 1, color: '#000000' },
+    { str: 'beets', box: { x: 104, y: 220, w: 30, h: 10 }, line: 1, color: '#000000' },
+    { str: 'Farm', box: { x: 60, y: 232, w: 30, h: 10 }, line: 2, color: '#c00000' },
+    { str: 'Sun', box: { x: 94, y: 232, w: 20, h: 10 }, line: 2, color: '#ffee00' },
+    { str: 'grown', box: { x: 118, y: 232, w: 30, h: 10 }, line: 2, color: '#000000' },
+    { str: 'SALADS', box: { x: 60, y: 260, w: 60, h: 14 }, line: 3, color: '#c00000' },
+    { str: 'BAR', box: { x: 124, y: 260, w: 30, h: 14 }, line: 3, color: '#c00000' },
+  ].map((r, i) => ({ ...r, id: `1:${String(i)}`, flow: 0, font }))
+  const e: Extraction = { ...extraction, runs }
+  const page = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'heading', level: 2, text: { src: [[0, 1]] } },
+        { kind: 'paragraph', text: { src: [[2, 6]] } },
+        { kind: 'heading', level: 2, text: { src: [[7, 8]] } },
+      ],
+    }),
+  )
+  const grid: Grid = { ...white, inks: Object.fromEntries(runs.map((r) => [r.id, r.color])) }
+  const inks = new Set(['#c00000', '#ffee00'])
+  const pl = placer(
+    {
+      keyPage: 1,
+      structure: page,
+      extraction: e,
+      flagged: [],
+      imageSrc: () => undefined,
+      backdrop: { src: 'b.jpg', grid },
+    },
+    { printPx: null, library: [], inks },
+  )
+  assert.match(pl.place('blocks[0]'), /--c:#000000;.*--ink-c00000:#c00000"/)
+  const text = page.blocks[1]?.kind === 'paragraph' ? page.blocks[1].text : { seen: '' }
+  const lines = pl.lined('blocks[1]', text, visibleText(text, e), (s) => inkedHtml(s, inks, (x) => x)) ?? ''
+  assert.match(
+    lines,
+    /<span class="pl" style="[^"]*--c:#000000[^"]*--ink-c00000:#c00000"><span class="ink-c00000">Farm/,
+  )
+  assert.doesNotMatch(lines, /--ink-ffee00/)
+  assert.doesNotMatch(pl.place('blocks[2]'), /--ink-/)
 })

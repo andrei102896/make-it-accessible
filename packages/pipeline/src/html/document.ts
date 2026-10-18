@@ -9,6 +9,7 @@ import { brandCss, headingClasses } from './brand.ts'
 import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
 import { GUTTER_PX, printCss, printWidth, viewSwitch } from './print.ts'
+import { asDrawn } from './printink.ts'
 import { printFaces } from './printface.ts'
 import { css } from './style.ts'
 
@@ -44,8 +45,9 @@ export function renderDocument(doc: HtmlDocument): string {
   const rules = looks.size ? [] : (brand?.rules ?? [])
   if (titleKey) classes.set(titleKey, `${classes.get(titleKey) ?? ''} masthead-title`.trim())
   const print = printWidth(doc.pages)
+  const inks = new Set(brand?.profile.inks ?? [])
   const rendered = doc.pages.map((p, index) =>
-    renderPage(p, {
+    renderPage(asDrawn(p, inks), {
       ui,
       lang: doc.lang,
       index,
@@ -55,7 +57,7 @@ export function renderDocument(doc: HtmlDocument): string {
       classes,
       layout: segments[index] ?? NO_LAYOUT,
       kind: doc.kind ?? null,
-      inks: new Set(brand?.profile.inks ?? []),
+      inks,
       inlinePrices: brand?.profile.pricesInline ?? false,
       smallCaps,
       titleWords,
@@ -109,7 +111,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print) + printFaces(doc.pages, brand?.library ?? [])}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print, [...inks]) + printFaces(doc.pages, brand?.library ?? [])}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>

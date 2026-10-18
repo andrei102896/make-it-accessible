@@ -55,3 +55,6 @@
 - A brush or hand-lettered stand-in belongs where text keeps its printed size (the printed view), not where a display face may reach dish names on a phone. (Yellowtail, 2026-10-18)
 - A narrower face uncovers what a wider one hid: compare the PDF beside the page after every face change, at 4× on dense sheets (Lexington's false grey shadow, 2026-10-18).
 - What we cannot draw faithfully stays printed: a signature, a rubber stamp at an angle, a slanted handwritten note read better as the print than in any stand-in; ours is read, not shown (Fig, 2026-10-18).
+- The text layer's colour can sit on the wrong letters: a word's printed colour comes from its drawn glyph, and a span is only a hook (Kenny & Ziggy's CAKES & PIES: orange on C and P, the gold "&" dark; inline inks, 2026-10-18).
+- A line's ink is that of its unmarked words when the marked ones carry their own: a longer coloured part must not recolour the rest (Almond's "Micky's Ramen", Gigi's "(C) (Serves…)", 2026-10-18).
+- Measure a risk that already ships before letting it defer new work (spans inside Almond's descriptions already raise the VoiceOver question, 2026-10-18).

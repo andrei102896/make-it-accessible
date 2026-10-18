@@ -81,7 +81,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/lines.ts               the PDF's rules where it draws them: under or through a heading, above or below a block, a band's top, between columns; a rule crossing a band's columns splits it into rows
   html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; each line in its printed face and letter spacing; text set on its side or in doubt left printed
-  html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one
+  html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one; words in another brand ink in their own ink where it reads, colours as drawn
   html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class; files beside the page (fonts/)
   html/print.ts               the printed view's sheet and switch; shown where the body text reads at 12 px or more
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
