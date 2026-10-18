@@ -56,7 +56,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
-  pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (and their redrawn outlines), its light range per 8 pt cell, each word's ink as drawn
+  pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (and their redrawn outlines), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
   pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
   pdf/pdfjs.ts                what the pipeline reads of pdf.js (text items, font objects; zod) and the item that prints a word
   pdf/sfnt.ts                 a font program's tables, names, embedding permission and format 4 cmap, read and rewritten

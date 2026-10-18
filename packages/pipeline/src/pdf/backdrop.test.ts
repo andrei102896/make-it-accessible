@@ -186,3 +186,12 @@ test("a word's baseline is its first letter's: the ink over a copy drawn under i
   ])
   assert.deepEqual(menu.baselines, { soups: 287, CAULIFLOWER: 308 })
 })
+
+test("a word's ink is its first letter's: a glyph drawn after its letters in another ink does not set it (Kenny & Ziggy's gold &)", () => {
+  const at = (fill: string, x: number, y: number): string =>
+    `<g fill="${fill}"><use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/></g>`
+  const gold = at('rgb(97.6%, 65.5%, 17.6%)', 100, 110) + at('rgb(97.6%, 65.5%, 17.6%)', 106, 110)
+  const space = at('rgb(100%, 100%, 100%)', 112, 110)
+  const printed = printedOf(page(glyphs, gold + space), [{ id: '&', box: { x: 100, y: 96, w: 18, h: 18 } }])
+  assert.deepEqual(printed.inks, { '&': '#f9a72d' })
+})

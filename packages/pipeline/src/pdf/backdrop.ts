@@ -137,11 +137,10 @@ const round = (v: number): number => Math.round(v * 100) / 100
 const near = (dx: number, dy: number, h: number): boolean =>
   Math.hypot(dx, dy) >= MIN_OFFSET && Math.abs(dx) <= h * SHADOW_REACH && Math.abs(dy) <= h * SHADOW_REACH
 
-// How each placed word is printed. Its ink is the fill of the last glyph drawn in its box, at that glyph's opacity
-// (Kenny & Ziggy's yellow over its black copy; Gigi's white at 84 %); glyphs in another fill a little offset, or a
-// letter-shaped fill copy under it, are its printed shadow. A word with no glyph in its box is printed inside a
-// picture under an invisible text layer (Stone House's cover). pdftocairo draws glyph uses in a group with their fill.
+// How each placed word is printed: ink, opacity and baseline from its first letter; glyphs in another ink a little
+// offset, or a letter-shaped fill under it, are its shadow; with no glyph it is inside a picture (Stone House's cover).
 export function printedOf(svg: string, words: readonly Word[]): Printed {
+  // pdftocairo draws glyph uses in a group with their fill.
   const glyphs = drawnElements(svg).glyphs.map((g) => {
     const open = svg.lastIndexOf('<g ', g.range[0])
     const between = svg.slice(open, g.range[0])
@@ -167,23 +166,23 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const zone = zoneOf(box)
     const around = glyphs.flatMap((g, k) => (holds(zone, g.at) ? [{ ...g, owner: owner[k] ?? -1 }] : []))
     const mine = around.filter((g) => g.owner === i)
-    const last = mine.at(-1) ?? around.at(-1)
-    if (!last) {
-      out.undrawn.push(id)
-      continue
-    }
-    if (last.fill) out.inks[id] = last.fill
-    if (last.alpha < 1) out.alpha[id] = Math.round(last.alpha * 1000) / 1000
-    // Its baseline: its first letter's, the glyph nearest its left edge and drawn last on that spot (the ink over its
-    // copy); a glyph of the line under a tall box is not on it (Moosewood's soups).
+    // Its first letter: the glyph nearest its left edge, drawn last on that spot (the ink over its copy, not a space
+    // drawn after it: Kenny & Ziggy's gold "&"); a glyph of the line under a tall box is not on it (Moosewood's soups).
     const lead = (g: { at: Point }): number => Math.abs(g.at[0] - box.x)
     const nearest = Math.min(...mine.map(lead))
     const foot = mine.filter((g) => lead(g) <= nearest + ONE_SPOT).at(-1)
+    const letter = foot ?? around.at(-1)
+    if (!letter) {
+      out.undrawn.push(id)
+      continue
+    }
+    if (letter.fill) out.inks[id] = letter.fill
+    if (letter.alpha < 1) out.alpha[id] = Math.round(letter.alpha * 1000) / 1000
     if (foot) out.baselines[id] = round(foot.at[1])
     // Each copy glyph against its nearest inked glyph: on tight lines the zone also holds the next line's glyphs, so
     // a mean over the zone drifts by a line (Kenny & Ziggy's paragraph doubled one line down).
-    const inked = mine.filter((g) => g.fill === last.fill).map((g) => g.at)
-    const other = around.filter((g) => g.fill !== null && g.fill !== last.fill && (g.owner === -1 || g.owner === i))
+    const inked = mine.filter((g) => g.fill === letter.fill).map((g) => g.at)
+    const other = around.filter((g) => g.fill !== null && g.fill !== letter.fill && (g.owner === -1 || g.owner === i))
     const color = other[0]?.fill
     if (!color) continue
     const pairs = other.flatMap(({ at: [x, y] }) => {
@@ -199,7 +198,7 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const copied = inked.filter(([x, y]) =>
       other.some((g) => Math.abs(g.at[0] - x - dx) <= SAME_SPOT && Math.abs(g.at[1] - y - dy) <= SAME_SPOT),
     ).length
-    if (copied >= 2 && copied * 2 >= inked.length && pairs.length * 2 >= other.length && !sameInk(color, last.fill))
+    if (copied >= 2 && copied * 2 >= inked.length && pairs.length * 2 >= other.length && !sameInk(color, letter.fill))
       out.shadows[id] = { color, dx: round(dx), dy: round(dy) }
   }
   for (const d of copiesOf(
