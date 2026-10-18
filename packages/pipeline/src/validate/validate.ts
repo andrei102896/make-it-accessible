@@ -28,6 +28,11 @@ const LOST = ['ffi', 'ffl', 'ff', 'fi', 'fl', 'ft', 'ti', 'tt']
 const LOST_GAP: [number, number] = [0.35, 1]
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// Whether the model's text may stand for the cited words: the same characters, or lost ligatures filled in. The
+// page shows nothing else (html/source.ts); every other difference is an error here.
+export const modelTextAccepted = (text: string, cited: readonly Run[]): boolean =>
+  loose(text) === loose(joinRuns(cited)) || ligaturesLost(text, cited)
+
 // The model's text is the cited words with lost ligatures filled in where a word splits on one line (after a comma
 // too: "apricots, " + "gs").
 function ligaturesLost(model: string, runs: readonly Run[]): boolean {

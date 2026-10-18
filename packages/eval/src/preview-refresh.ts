@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { parseExpiry, writePreview } from './preview.ts'
+import { heldErrors, parseExpiry, writePreview } from './preview.ts'
 import { PREVIEWS_DIR } from './paths.ts'
 import { loadSources, REBUILT_DIR } from './sources.ts'
 
@@ -16,6 +16,12 @@ for (const r of rows) {
   const s = sources.find((x) => x.title === r.business)
   if (!s) {
     console.info(`${r.business}: no source, kept as is`)
+    continue
+  }
+  const held = await heldErrors(join(REBUILT_DIR, s.slug))
+  if (held.length) {
+    // A held document (content errors) keeps its last published page; Andrei decides whether to withdraw it.
+    console.error(`${r.business}: held, preview not refreshed:\n  ${held.join('\n  ')}`)
     continue
   }
   const html = await readFile(join(REBUILT_DIR, s.slug, 'page.html'), 'utf8')

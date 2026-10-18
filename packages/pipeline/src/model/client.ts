@@ -3,6 +3,9 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { SYSTEM_PROMPT } from './prompt.ts'
 
+// Slowest page on record: 161 s (cost.json, 2026-10-18); a call past this is killed and the page fails, never hangs.
+const MODEL_TIMEOUT_MS = 600_000
+
 const ModelUsage = z.object({
   inputTokens: z.number(),
   outputTokens: z.number(),
@@ -61,7 +64,11 @@ export async function callModel(
   ]
   const started = Date.now()
   const stdout = await new Promise<string>((resolve, reject) => {
-    const child = spawn('claude', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn('claude', args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: MODEL_TIMEOUT_MS,
+      killSignal: 'SIGKILL',
+    })
     let out = ''
     let err = ''
     child.stdout.on('data', (d: Buffer) => {

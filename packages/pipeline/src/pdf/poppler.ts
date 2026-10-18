@@ -14,7 +14,15 @@ import { lettersDrawnBeside } from './drawnletters.ts'
 import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
-export const poppler = promisify(execFile)
+const run = promisify(execFile)
+// Slowest call on the set (2026-10-18): 6.6 s, pdftoppm on Kenny & Ziggy's p1 at 300 dpi; an untrusted PDF that
+// hangs is killed here, never holding the worker.
+const POPPLER_TIMEOUT_MS = 120_000
+const limits = { timeout: POPPLER_TIMEOUT_MS, killSignal: 'SIGKILL' } as const
+export const poppler = (file: string, args: readonly string[], options: { maxBuffer?: number } = {}) =>
+  run(file, args, { ...options, ...limits, encoding: 'utf8' })
+export const popplerBytes = (file: string, args: readonly string[], options: { maxBuffer?: number } = {}) =>
+  run(file, args, { ...options, ...limits, encoding: 'buffer' })
 export const MAX_BUFFER = 64 * 1024 * 1024
 const MIN_IMAGE_AREA = 0.01
 const MAX_IMAGE_AREA = 0.9
@@ -118,8 +126,7 @@ export async function renderPixels(pdf: string, pdfPage: number, dpi: number, ar
   const page = String(pdfPage)
   const px = (v: number): string => String(Math.max(0, Math.round((v * dpi) / 72)))
   const crop = area ? ['-x', px(area.x), '-y', px(area.y), '-W', px(area.w), '-H', px(area.h)] : []
-  const { stdout } = await poppler('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(dpi), ...crop, pdf], {
-    encoding: 'buffer',
+  const { stdout } = await popplerBytes('pdftoppm', ['-q', '-f', page, '-l', page, '-r', String(dpi), ...crop, pdf], {
     maxBuffer: MAX_BUFFER,
   })
   return parsePpm(stdout)

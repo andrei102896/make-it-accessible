@@ -1,5 +1,6 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { HELD_FILE } from './preview.ts'
 import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
 import { area, intersection } from '@make-it-accessible/pipeline/pdf/geometry'
@@ -102,6 +103,11 @@ export async function buildHtml(
   printed = false,
 ): Promise<string> {
   const pages: HtmlPage[] = []
+  // A content error holds the document from publication (Andrei, 2026-10-18: a fidelity failure falls back to the
+  // text view, a content one is never shown as true); preview:add and preview:refresh refuse a held document.
+  for (const r of results) await writeFile(join(r.dir, 'validation.json'), json(r.validation))
+  const held = results.flatMap((r) => r.validation.errors.map((f) => ({ pdfPage: r.pdfPage, ...f })))
+  await writeFile(join(docDir, HELD_FILE), json(held))
   if (printed) await writeBackdrops(pdfPath, results)
   const look = await documentLook(pdfPath, docDir, results, briefModel)
   const named = logoAt(look.brief?.logo ?? null, results)

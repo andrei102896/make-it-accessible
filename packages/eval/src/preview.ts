@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
-import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
 
@@ -87,3 +87,17 @@ export const formatExpiry = (rows: readonly ExpiryRow[]): string =>
 
 export const expired = (rows: readonly ExpiryRow[], today: Date): ExpiryRow[] =>
   rows.filter((r) => r.deleteBy <= day(today))
+
+// A document's content errors (eval/process.ts): a held document is not published. Missing file: built before the
+// gate, read as held so it is rebuilt first.
+export const HELD_FILE = 'held.json'
+export async function heldErrors(docDir: string): Promise<string[]> {
+  const raw = await readFile(join(docDir, HELD_FILE), 'utf8').catch(() => null)
+  if (raw === null) return ['built before the publication gate: rebuild it']
+  const parsed = z
+    .array(z.object({ pdfPage: z.number(), path: z.string(), problem: z.string() }))
+    .safeParse(JSON.parse(raw))
+  return parsed.success
+    ? parsed.data.map((f) => `p${String(f.pdfPage)} ${f.path}: ${f.problem}`)
+    : ['held.json unreadable: rebuild it']
+}

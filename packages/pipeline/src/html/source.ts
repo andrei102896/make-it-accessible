@@ -5,6 +5,7 @@ import { joinRuns, turned } from '../pdf/runs.ts'
 import { faceKey } from '../pdf/face.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
+import { modelTextAccepted } from '../validate/validate.ts'
 
 // Every run a text cites (none for text read from the image), hidden ones included: geometry wants every box.
 export const citedRuns = (e: Extraction, t: TextValue): Run[] =>
@@ -78,7 +79,9 @@ export function visibleText(
   // never for a printed case the layer reports whole ("RAW BAR").
   const recased =
     t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed) && !modelCase
-  const shown = t.text !== undefined && words.length === cited.length && !recased ? t.text : printed
+  // Text the validator rejects never shows: the cited words do (a content error holds the page, eval/process.ts).
+  const accepted = t.text !== undefined && modelTextAccepted(t.text, cited)
+  const shown = t.text !== undefined && accepted && words.length === cited.length && !recased ? t.text : printed
   const allCaps = words.length > 0 && words.every((r) => r.font !== undefined && capsFaces.has(faceKey(r.font)))
   return allCaps ? shown.toUpperCase() : shown
 }

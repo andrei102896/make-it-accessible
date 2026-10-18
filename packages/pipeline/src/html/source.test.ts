@@ -138,3 +138,14 @@ test("words in a face that draws capitals for lowercase show in capitals, as pri
   assert.equal(visibleText(t, e, false, new Set(['lulocleanw01:700:false'])), 'DINNER MENU')
   assert.equal(visibleText(t, e, false, new Set(['other:400:false'])), 'dinner menu')
 })
+
+test("the model's text shows only where the validator accepts it: a rejected text shows the cited words", () => {
+  const runs: Run[] = [
+    { id: '1:0', str: 'Truf', box: { x: 0, y: 0, w: 20, h: 10 }, flow: 0, line: 0 },
+    { id: '1:1', str: 'e', box: { x: 26, y: 0, w: 5, h: 10 }, flow: 0, line: 0 },
+  ]
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  const text = (t: string): TextValue => ({ src: [[0, 1]], text: t })
+  assert.equal(visibleText(text('Truffle'), e), 'Truffle')
+  assert.equal(visibleText(text('Lobster'), e), 'Truf e')
+})

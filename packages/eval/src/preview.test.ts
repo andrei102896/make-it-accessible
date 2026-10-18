@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { expired, expiryRow, formatExpiry, parseExpiry, previewFile, withAssets, withNoindex } from './preview.ts'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import {
+  expired,
+  expiryRow,
+  formatExpiry,
+  HELD_FILE,
+  heldErrors,
+  parseExpiry,
+  previewFile,
+  withAssets,
+  withNoindex,
+} from './preview.ts'
 
 test('a preview file name is the slug with a random suffix; its row expires after 30 days', () => {
   const file = previewFile("Bud & Alley's")
@@ -46,4 +59,17 @@ test("a preview's backdrops become files in a folder named like the page; its cr
     { from: 'fonts/jost-normal.woff2', to: 'gigi-a1b2c3/fonts/jost-normal.woff2' },
     { from: 'fonts/pdf-0123456789ab.otf', to: 'gigi-a1b2c3/fonts/pdf-0123456789ab.otf' },
   ])
+})
+
+test('a document is held while it has content errors, or was built before the gate', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mia-held-'))
+  try {
+    assert.match((await heldErrors(dir))[0] ?? '', /before the publication gate/)
+    await writeFile(join(dir, HELD_FILE), '[]')
+    assert.deepEqual(await heldErrors(dir), [])
+    await writeFile(join(dir, HELD_FILE), JSON.stringify([{ pdfPage: 2, path: 'blocks[0]', problem: 'not an amount' }]))
+    assert.deepEqual(await heldErrors(dir), ['p2 blocks[0]: not an amount'])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

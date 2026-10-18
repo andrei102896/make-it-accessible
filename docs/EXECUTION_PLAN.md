@@ -19,6 +19,7 @@ Sources: `docs/ENGINE_REVIEW.md` (five internal audits) and an independent revie
 
 Done in the working tree, rerender running: the text view shows the model's text only where the validator accepts it; a content error writes `held.json` and preview:add/refresh refuse a held document; every Poppler call and the model call have timeouts measured from the set (6.6 s → 120 s; 161 s → 600 s).
 Exit: whole set rerendered, held documents listed, `/reviewer`, commit.
+Result (2026-10-18): 10 of 34 documents held (Carew, Carmine's, Gargiulo's, Kenny & Ziggy's, La Segunda, Lexington, Pastabilities, Ridgway, Rucola, Sarge's); 6 of them have published previews, left as last published for Andrei to decide; 14 previews refreshed. The text view now shows the cited words where the model's text is rejected, which surfaced: broken text layers the model had read right (Lexington "Pu s." for "Purchase!", Sarge's "SNAPORAZZO") — phase 3 OCR; a false reject (Pastabilities' "GREENS|", the model rightly dropping a separator) — phase 2 calibration; a faithful gain (Sarge's printed "ENTREÉS" no longer corrected by the model).
 
 ## Phase 1 — close publication (~3 d)
 
