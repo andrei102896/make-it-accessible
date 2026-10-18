@@ -50,7 +50,7 @@ const LOOKALIKES: [RegExp, string][] = [
   [/^betont?/, 'robotoslab'],
   [/^gillsans/, 'lato'],
   [/^recoleta/, 'fraunces'],
-  [/^inkwell(sans)?/, 'kalam'],
+  [/^inkwell(sans)?/, 'lato'],
   [/^bimbo/, 'caveat'],
   [/^(snellroundhand|allura|edwardianscript|zapfino)/, 'greatvibes'],
 ]

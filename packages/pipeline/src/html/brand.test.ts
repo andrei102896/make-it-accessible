@@ -25,7 +25,7 @@ const library = [
   manifest('Arimo', 'text', ['400 700']),
   manifest('Barlow', 'text', ['400', '700']),
   manifest('Bodoni Moda', 'text', ['400 900']),
-  manifest('Kalam', 'display', ['300', '400', '700']),
+  manifest('Lato', 'text', ['400', '700']),
   manifest('Caveat', 'display', ['400 700']),
 ]
 
@@ -40,7 +40,7 @@ test('a printed family finds its vendored face, a longer name by prefix, a comme
   assert.equal(familyFor('dinnextltpro', library)?.family, 'Barlow')
   assert.equal(familyFor('bodoniflf', library)?.family, 'Bodoni Moda')
   assert.equal(familyFor('bodoniegyptianpro', library)?.family, 'Bodoni Moda')
-  assert.equal(familyFor('inkwellsans', library)?.family, 'Kalam')
+  assert.equal(familyFor('inkwellsans', library)?.family, 'Lato')
   assert.equal(familyFor('axiforma', library), undefined)
   // A longer name is the same family only when the rest is a weight or style word.
   assert.equal(familyFor('oswaldsemibolditalic', library)?.family, 'Oswald')
@@ -124,7 +124,7 @@ const brand = (p: Profile, background = '#ffffff'): Brand => ({
 test('a small-caps role synthesises small caps; a hand-print display face dresses names, never prices', () => {
   const names = {
     name: { ...style('bodonibt', 16, '#000000'), smallCaps: true },
-    price: style('inkwellsans', 16, '#000000'),
+    price: style('bimbo', 16, '#000000'),
   }
   const css = brandCss(brand(profile([], names)))
   assert.match(
@@ -134,12 +134,9 @@ test('a small-caps role synthesises small caps; a hand-print display face dresse
   assert.match(css, /\.products\.menu \.name, \.products\.cards \.name \{ font-family: "Bodoni Moda"/)
   assert.doesNotMatch(
     css,
-    /\.products\.menu \.prices, \.products\.menu \.price\[data-role="current"\], td\.num \{ font-family: "Kalam"/,
+    /\.products\.menu \.prices, \.products\.menu \.price\[data-role="current"\], td\.num \{ font-family: "Caveat"/,
   )
-  assert.match(
-    brandCss(brand(profile([], { name: style('inkwellsans', 16, '#000000') }))),
-    /\.name \{ font-family: "Kalam"/,
-  )
+  assert.match(brandCss(brand(profile([], { name: style('bimbo', 16, '#000000') }))), /\.name \{ font-family: "Caveat"/)
   // The measured price weight reaches the price itself, past the base rule's bold.
   assert.match(
     css,
