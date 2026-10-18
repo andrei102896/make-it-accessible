@@ -57,6 +57,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const seenTexts: string[] = []
   const figureAlts: { path: string; img: ImageValue }[] = []
   const hidden = new Set(e.hidden)
+  const lost = new Set(e.lost ?? [])
   const onPage = e.runs.filter((r) => !hidden.has(r.id))
   const currency = pageCurrency(joinRuns(onPage))
   // Only a leaflet with fused cents needs a currency and a check on bare digits; elsewhere "19" is shown as printed.
@@ -88,6 +89,9 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     }
     const cited = runsOf(path, t.src)
     const joined = joinRuns(cited)
+    // A word a dropped glyph leaves unwhole ("Pance a") is an error, its leaf flagged, unless the model read it whole.
+    if (t.text === undefined && cited.some((r) => lost.has(r.id)))
+      errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${joined}"` })
     if (t.text !== undefined && loose(t.text) !== loose(joined)) {
       if (ligaturesLost(t.text, cited))
         generated.push({

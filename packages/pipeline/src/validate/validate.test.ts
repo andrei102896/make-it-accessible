@@ -194,3 +194,23 @@ test('a word the text layer split where a ligature drew takes the letters the mo
     ['blocks[2]', 'blocks[3]'],
   )
 })
+
+test('a word a dropped glyph leaves unwhole, its letters named nowhere in the PDF, is an error unless the model read it', () => {
+  const e = {
+    ...page([
+      ['Pance', 0],
+      ['a', 32],
+      ['Pla', 100],
+      ['er', 122],
+    ]),
+    lost: ['1:1', '1:3'],
+  }
+  const para = (from: number, text?: string) => ({ kind: 'paragraph', text: { src: [[from, from + 1]], text } })
+  const structure = parsePage(JSON.stringify({ lang: 'en', blocks: [para(0), para(2, 'Platter')], dropped: [] }))
+  const v = validatePage(structure, e)
+  assert.deepEqual(
+    v.errors.map((f) => f.path),
+    ['blocks[0]'],
+  )
+  assert.match(v.errors[0]?.problem ?? '', /names nowhere are missing from "Pance a"/)
+})

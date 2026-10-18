@@ -2,13 +2,13 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { profileOf } from '@make-it-accessible/pipeline/html/profile'
 import { parsePage } from '@make-it-accessible/pipeline/model/schema'
-import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { fontLibrary } from './brand.ts'
 import { BriefFile } from './look.ts'
 import { ROOT } from './paths.ts'
 import { loadSources } from './sources.ts'
+import { extractWhole } from './wholewords.ts'
 import {
   columnsPerPage,
   dietaryCodes,
@@ -38,11 +38,14 @@ for (const s of sources) {
   const findings = { errors: 0, review: 0 }
   for (const d of (await readdir(s.run)).filter((d) => /^p\d+$/.test(d)).sort()) {
     const extraction = parseExtraction(await readFile(join(s.run, d, 'extraction.json'), 'utf8'))
-    const fresh = await extractPage(join(ROOT, s.pdf), extraction.pdfPage)
+    const fresh = await extractWhole(join(ROOT, s.pdf), extraction.pdfPage)
+    extraction.hidden = fresh.hidden
+    extraction.lost = fresh.lost
     extraction.runs.forEach((r, i) => {
       const f = fresh.runs[i]
       if (f?.font) r.font = f.font
       if (f?.color) r.color = f.color
+      if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored })
     })
     const structure = parsePage(await readFile(join(s.run, d, 'structure.json'), 'utf8'))
     const v = validatePage(structure, extraction)

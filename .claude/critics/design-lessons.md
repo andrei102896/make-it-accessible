@@ -58,3 +58,4 @@
 - The text layer's colour can sit on the wrong letters: a word's printed colour comes from its drawn glyph, and a span is only a hook (Kenny & Ziggy's CAKES & PIES: orange on C and P, the gold "&" dark; inline inks, 2026-10-18).
 - A line's ink is that of its unmarked words when the marked ones carry their own: a longer coloured part must not recolour the rest (Almond's "Micky's Ramen", Gigi's "(C) (Serves…)", 2026-10-18).
 - Measure a risk that already ships before letting it defer new work (spans inside Almond's descriptions already raise the VoiceOver question, 2026-10-18).
+- A gap in the text layer is seen, not only heard: the backdrop loses the glyph too, so check the printed view as well as the screen reader (Gigi "Pance a", 2026-10-18).

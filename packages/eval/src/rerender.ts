@@ -1,11 +1,11 @@
 import { cp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parsePage } from '@make-it-accessible/pipeline/model/schema'
-import { extractPage } from '@make-it-accessible/pipeline/pdf/poppler'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { buildHtml, type PageResult } from './process.ts'
 import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
+import { extractWhole } from './wholewords.ts'
 
 // pnpm rerender <slug>... | --all: renders a saved run again, no model call, in out/rebuilt/<slug>; fonts, colours,
 // hidden words and drawn shapes are read afresh from the PDF, lines.json again when its version is behind.
@@ -29,10 +29,11 @@ async function rebuild(s: Source): Promise<string> {
   for (const d of (await readdir(out)).filter((x) => /^p\d+$/.test(x)).sort()) {
     const dir = join(out, d)
     const extraction = parseExtraction(await readFile(join(dir, 'extraction.json'), 'utf8'))
-    const fresh = await extractPage(pdf, extraction.pdfPage)
+    const fresh = await extractWhole(pdf, extraction.pdfPage)
     if (fresh.runs.length !== extraction.runs.length)
       throw new Error(`${s.slug} ${d}: the PDF's runs differ from the run's`)
     extraction.hidden = fresh.hidden
+    extraction.lost = fresh.lost
     extraction.vectors = fresh.vectors
     extraction.rules = fresh.rules
     extraction.pictures = fresh.pictures
@@ -40,6 +41,7 @@ async function rebuild(s: Source): Promise<string> {
       const f = fresh.runs[i]
       if (f?.color) r.color = f.color
       if (f?.font) r.font = f.font
+      if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored })
     })
     const structure = parsePage(await readFile(join(dir, 'structure.json'), 'utf8'))
     results.push({

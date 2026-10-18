@@ -16,6 +16,7 @@ Why (Andrei, 2026-10-16): every PDF is a scenario to learn from; a fix that only
 - [ ] Step 4, page colour and background art (6 of 9): a coloured page, banners, curved panels (Boater's cream wave), background illustrations shown faintly behind their section (Noah's p2) · ~1 d
 - [ ] Step 5, arrangement (6 of 9): dense multi-column sheets kept in columns, a cover beside its content, free arrangements · ~1.5 d
 - [ ] Types of their own: landscape pages (Almond), flattened designs whose page is one image with text over it (Bud & Alley's), the newspaper page (Prohibition p2) · to assess
+- [x] Words split by a dropped ligature made whole from the PDF's /ActualText (2026-10-18): Gigi 56, Noah's 10; a dropped glyph with no text is a validator error
 - [ ] Printed view: words in an ink that is no brand ink inside a coloured line (black codes, +, *, ♥; 30 of 5,032 placed lines, 2026-10-18) need spans by drawn ink in the DOM both views share · to assess
 - [ ] Open from Andrei's review: Sarge's (to review together), Rucola's logo over its frame and small-caps headings, Moosewood's side notes (legend, dressings), Ferrara's two-column list of short items
 - [ ] Dietary codes: legend as a key, codes beside the name, icon words (Moosewood fish) · 0.4 d

@@ -8,7 +8,7 @@ import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { permittedFonts } from './rawfonts.ts'
 
 // Poppler's words and pdf.js' items agree on the page's frame only where the crop box is the media box: within this.
-const SAME_FRAME = 0.5
+export const SAME_FRAME = 0.5
 
 // Per page: each run's printed letter spacing (pdf/tracking.ts) and the PDF's own face it is printed in, where its
 // maker permits embedding (pdf/ownfont.ts).

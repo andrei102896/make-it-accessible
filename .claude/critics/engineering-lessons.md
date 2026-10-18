@@ -80,3 +80,6 @@
 - Measure a box before moving it instead of subtracting the move afterwards: the reconstruction differs by layout snapping (1/64 px) and flips a threshold compared at equality (Kenny & Ziggy's 0.1998 against 0.2000, #18, 2026-10-18).
 - Before writing a descendant selector for a class, grep every place that emits it: `.ink-X` sits on inline spans (source.ts) and on a placed price itself (page.ts); `${leaf} .ink-X` reaches only the first (inline inks, 2026-10-18).
 - Near the line cap, a new positional parameter on a long signature costs a line per parameter after Prettier: pass the context the caller already holds (`Pick<Context, …>`, placer, 2026-10-18).
+- pdf.js `getTextContent` NFKC-normalises ligatures (U+FB00–04, FB06) unless `disableNormalization`; the operator list keeps them. Before calling text "unknowable from the PDF", read its marked-content /ActualText: pdf.js drops it, Poppler puts it at the page's edge (Apple Pages exports: Gigi, Noah's, 2026-10-18).
+- Changing a run's `str` reaches every matcher pairing runs with another source by text (`itemOf`); a fallback added there must be limited to the runs that need it, then measured on the whole set (an unlimited one moved 298 own faces on 22 documents, 2026-10-18).
+- Read pdfinfo's Creator and Producer before naming a producer in code or docs ("Word export" was Apple Pages, 2026-10-18).

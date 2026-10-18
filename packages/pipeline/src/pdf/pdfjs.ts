@@ -40,11 +40,27 @@ export function itemOf(
   const bare = (t: string): string => t.replace(/\s/g, '')
   const cx = r.box.x + r.box.w / 2
   const foot = r.box.y + r.box.h
-  return items
-    .filter(({ str, transform: [a, b, c, , x, y], width }) => {
-      const [left, base] = [x - view[0], view[3] - y]
-      const inside = cx >= left && cx <= left + width && base >= r.box.y && base <= foot
-      return a > 0 && b === 0 && c === 0 && inside && bare(str).includes(bare(r.str))
+  const level = ({ transform: [a, b, c] }: PdfItem): boolean => a > 0 && b === 0 && c === 0
+  const onLine = ({ transform: [, , , , , y] }: PdfItem): boolean => view[3] - y >= r.box.y && view[3] - y <= foot
+  const found = items
+    .filter((i) => {
+      const left = i.transform[4] - view[0]
+      return level(i) && onLine(i) && cx >= left && cx <= left + i.width && bare(i.str).includes(bare(r.str))
     })
     .sort((p, q) => Math.abs(foot - view[3] + p.transform[5]) - Math.abs(foot - view[3] + q.transform[5]))[0]
+  if (found || !r.restored) return found
+  // A word sewn with its dropped ligature (pdf/ligatures.ts: "Pance" + "tta") is printed by no one item: the
+  // overlapping item sharing most of its letters (its start or end) prints it.
+  const word = bare(r.str)
+  const shared = (s: string): number =>
+    Array.from({ length: word.length }, (_, k) => k + 1).reduce(
+      (most, k) => (s.startsWith(word.slice(-k)) || s.endsWith(word.slice(0, k)) ? k : most),
+      0,
+    )
+  return items
+    .filter((i) => {
+      const left = i.transform[4] - view[0]
+      return level(i) && onLine(i) && left < r.box.x + r.box.w && left + i.width > r.box.x && shared(bare(i.str)) > 0
+    })
+    .sort((p, q) => shared(bare(q.str)) - shared(bare(p.str)))[0]
 }

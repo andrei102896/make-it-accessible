@@ -17,6 +17,8 @@ const Run = z.object({
     .regex(/^#[0-9a-f]{6}$/)
     .optional(),
   font: Font.optional(),
+  // Its letters include a dropped ligature's, from the PDF's replacement text (pdf/ligatures.ts).
+  restored: z.literal(true).optional(),
 })
 const PageImage = z.object({ id: z.string(), box: Box })
 // A box the PDF draws round text (pdf/vectors.ts): a frame (stroke, or a filled ring) or a panel (a fill).
@@ -61,6 +63,8 @@ const Extraction = z.object({
   duplicates: z.array(z.string()),
   // Words in the text layer that draw nothing visible; runs extracted before this check have none.
   hidden: z.array(z.string()).default([]),
+  // Words a glyph the text layer dropped leaves unwhole, its letters named nowhere in the PDF (pdf/ligatures.ts).
+  lost: z.array(z.string()).optional(),
   // Frames and panels from the vector layer; runs extracted before they were read have none.
   vectors: z.array(Vector).optional(),
   rules: z.array(Rule).optional(),

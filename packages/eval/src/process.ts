@@ -10,7 +10,7 @@ import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import { pictureIn } from '@make-it-accessible/pipeline/pdf/art'
 import { parseGrid } from '@make-it-accessible/pipeline/pdf/backdrop'
 import { cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-accessible/pipeline/pdf/crop'
-import { extractPage, renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
+import { renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
@@ -20,6 +20,7 @@ import { fitPlaced } from './fit.ts'
 import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
 import { FONTS_DIR } from './paths.ts'
+import { extractWhole } from './wholewords.ts'
 import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 
 const MAX_UNCOVERED = 0.1
@@ -54,7 +55,7 @@ export async function processPage(
 ): Promise<PageResult | null> {
   const dir = pageDir(docDir, keyPage)
   await mkdir(dir, { recursive: true })
-  const extraction = await extractPage(pdfPath, pdfPage)
+  const extraction = await extractWhole(pdfPath, pdfPage)
   const size = fitScale(extraction.width, extraction.height)
   const image = await renderPage(pdfPath, pdfPage, size, join(dir, 'model'))
   await writeFile(join(dir, 'extraction.json'), JSON.stringify(extraction))
