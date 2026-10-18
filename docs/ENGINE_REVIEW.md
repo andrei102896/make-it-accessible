@@ -53,7 +53,7 @@ For each attribute (text, price, face, size, weight, colour, picture, icon, posi
 - Placement per printed line, baselines, tracking from advance widths, frames and rules from the vector layer, own fonts from the PDF's programs, size and weight from glyph metrics, drawn letters marked lost.
 - The fit gate's fallback to the text view; one HTML for both views; the review drawn by one rasteriser (pdfshot.ts).
 
-## Plan (order matters: each step makes the next one measurable)
+## Plan (superseded the same evening by `docs/EXECUTION_PLAN.md`, which adds the independent review's findings)
 
 1. **Safety for self-serve** (small): validator errors block what they flag (the text view shows the cited words, never the model's mismatching text; a content error holds the page); every subprocess gets a timeout and a per-page budget with the text view as fallback.
 2. **The fidelity measure** (`pnpm fidelity`, revised after both critics): per placed word, PDF vs ours in one Chromium at device scale 3, PNG only; the PDF's ground from a second pdf.js render with text drawing turned off, ours from a capture without the backdrop (alpha = coverage); weight normalised by ink area, size with a pixel allowance, shape per word after alignment, word gaps for spacing, per-word baseline spread (dancing letters), residual ink where the PDF has none (doubled or ghost letters), ink colour clusters; contrast-corrected lines labelled, not failed; path-drawn text and geometry mismatches counted as unmeasured, never as passes. Results in review.html grouped by cause, failures only.
