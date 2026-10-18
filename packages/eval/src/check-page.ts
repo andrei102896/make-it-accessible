@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { AxeBuilder } from '@axe-core/playwright'
 import { chromium } from 'playwright'
-import { printWidthIn } from '@make-it-accessible/pipeline/html/print'
+import { printFloorIn } from '@make-it-accessible/pipeline/html/print'
 
 // pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe (critical and serious) at 1280, 390 and 320 px, in
 // forced colours and in the printed view, a horizontal-overflow check, WCAG 1.4.12 text spacing at 320 px, the
@@ -62,10 +62,11 @@ try {
     )
     await ctx.close()
   }
-  // The printed view, where the page has one: axe on it, and the same words as the text view (one document).
-  const printed = printWidthIn(await readFile(file, 'utf8'))
+  // The printed view, where the page has one, at its narrowest (smallest text, strictest contrast): axe on it, and
+  // the same words as the text view (one document).
+  const printed = printFloorIn(await readFile(file, 'utf8'))
   if (printed) {
-    const ctx = await browser.newContext({ viewport: { width: Math.max(printed, MODES[0].width), height: 900 } })
+    const ctx = await browser.newContext({ viewport: { width: printed, height: 900 } })
     const page = await ctx.newPage()
     await page.goto(pathToFileURL(file).href)
     const r = await new AxeBuilder({ page }).analyze()

@@ -89,7 +89,7 @@ packages/pipeline/src/        product code, reused by the MVP
   html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; each line in its printed face and letter spacing; text set on its side or in doubt left printed
   html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one; words in another brand ink in their own ink where it reads, colours as drawn
   html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class, at the weight the metrics matched; headings in an unmatched face stay printed; files beside the page (fonts/)
-  html/print.ts               the printed view's sheet and switch; shown where the body text reads at 12 px or more
+  html/print.ts               the printed view's sheet and switch; fitted to the window while body text reads at 7 px or more
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
   html/webfonts.ts            vendored font manifests, family and file choice, @font-face with copyright and licence

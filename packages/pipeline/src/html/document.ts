@@ -8,7 +8,7 @@ import { type Strings, UI } from './strings.ts'
 import { brandCss, headingClasses } from './brand.ts'
 import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
-import { GUTTER_PX, printCss, printWidth, viewSwitch } from './print.ts'
+import { GUTTER_PX, printCss, printFloor, printWidth, viewSwitch } from './print.ts'
 import { asDrawn } from './printink.ts'
 import { printFaces } from './printface.ts'
 import { css } from './style.ts'
@@ -61,7 +61,7 @@ export function renderDocument(doc: HtmlDocument): string {
       inlinePrices: brand?.profile.pricesInline ?? false,
       smallCaps,
       titleWords,
-      printPx: print === null ? null : print - GUTTER_PX,
+      printPx: print === null ? null : printFloor(print) - GUTTER_PX,
       library: brand?.library ?? [],
     }),
   )

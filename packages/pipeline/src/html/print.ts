@@ -1,9 +1,12 @@
 import type { Extraction } from '../pdf/types.ts'
 import type { Strings } from './strings.ts'
 
-// The printed view's switch and sheet. It applies on a screen wide enough for the body text to read at
-// MIN_BODY_PX; below that, in forced colours, in print, and with "Text only", the reflowed page shows.
+// The printed view's switch and sheet, fitted to the window while its body text reads at MIN_FIT_PX or more (pinch to
+// read closer); MIN_BODY_PX sets the width fitting and checks measure at. Below, in forced colours, in print and
+// with "Text only", the reflowed page shows. Andrei, 2026-10-18: large sheets printed, not reflowed (Bud & Alley's).
 const MIN_BODY_PX = 12
+// Cmd+ zoom reaches the reflowed page within one or two steps from a 1440 px window (design critic, 2026-10-18).
+const MIN_FIT_PX = 7
 // Phones and narrow tablets keep the reflowed page whatever the print's size; main's side padding (2 × 1rem).
 const MIN_PRINT_PX = 768
 export const GUTTER_PX = 32
@@ -24,6 +27,10 @@ export function printWidth(pages: readonly { extraction: Extraction; backdrop?: 
   return widths.length ? Math.ceil(Math.max(MIN_PRINT_PX, ...widths) + GUTTER_PX) : null
 }
 
+// The narrowest window (CSS px) the printed view of a document `width` wide (printWidth) shows in.
+export const printFloor = (width: number): number =>
+  Math.ceil(Math.max(MIN_PRINT_PX, ((width - GUTTER_PX) * MIN_FIT_PX) / MIN_BODY_PX) + GUTTER_PX)
+
 export const viewSwitch = (ui: Strings): string =>
   `<fieldset class="view"><legend>${ui.view}</legend><label><input type="radio" name="view" id="view-print" checked> ${ui.printed}</label><label><input type="radio" name="view" id="view-text"> ${ui.textOnly}</label></fieldset>`
 
@@ -39,15 +46,18 @@ const page = `:is(${printed}, ${lead} > header.masthead)`
 // Containers keep no box of their own; their loose text (a comma between two prices) is read, not shown.
 const leaf = '[style*="--x:"]'
 
-// The printed view's width in a rendered page (its media query below); 0 when the page has none.
+// The printed view's width (printWidth) and its floor in a rendered page (`main`'s width and the media query
+// below); 0 when the page has none.
 export const printWidthIn = (html: string): number =>
+  Number(/main \{ max-width: max\(64rem, (\d+)px\); \}/.exec(html)?.[1] ?? 0)
+export const printFloorIn = (html: string): number =>
   Number(/@media screen and \(min-width: (\d+)px\) and \(forced-colors: none\)/.exec(html)?.[1] ?? 0)
 
 // A word in another brand ink takes `--ink-*` from its own placed line where it reads (placed.ts), else the line's
 // colour: no placed text holds another, so the variable never comes from an outer one.
 export const printCss = (width: number, inks: readonly string[]): string => `
 .view, .backdrop { display: none; }
-@media screen and (min-width: ${String(width)}px) and (forced-colors: none) {
+@media screen and (min-width: ${String(printFloor(width))}px) and (forced-colors: none) {
 .view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem 1.25rem; align-items: center; border: 0;
   margin: 0 0 .5rem; padding: 0; font-size: .875rem; color: var(--muted); }
 .view legend { float: left; font-weight: 500; padding: 0; }
