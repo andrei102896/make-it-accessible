@@ -16,7 +16,7 @@ const PAD = 0.25
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 3
+export const BACKDROP_VERSION = 4
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -24,6 +24,9 @@ const MIN_OFFSET = 0.3
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 const Shadow = z.object({ color: Hex, dx: z.number(), dy: z.number() }).strict()
+// A face id is its family and file name; its range goes into CSS: both from our own bytes, checked all the same.
+const FaceId = z.string().regex(/^pdf-[0-9a-f]+$/)
+const RANGE = /^U\+[0-9A-F]+(-[0-9A-F]+)?(, U\+[0-9A-F]+(-[0-9A-F]+)?)*$/
 const Stroke = z.object({ color: Hex, width: z.number().positive() }).strict()
 // pNN/backdrop.json: per cell (row by row) the darkest and lightest relative luminance and the mean colour; per
 // placed word its drawn ink and opacity, its printed shadow, and whether it is drawn at all (printedOf).
@@ -43,6 +46,10 @@ const Grid = z
     undrawn: z.array(z.string()),
     // Per placed word its printed letter spacing in ems (pdf/tracking.ts), where tracked.
     tracking: z.record(z.string(), z.number()),
+    // Per placed word the PDF's own face it is printed in, and per face the letters it draws and its maker's
+    // notice (pdf/ownfont.ts); its file is fonts/<face>.otf beside the page.
+    faces: z.record(z.string(), FaceId),
+    fonts: z.record(FaceId, z.object({ range: z.string().regex(RANGE), notice: z.string() }).strict()),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>

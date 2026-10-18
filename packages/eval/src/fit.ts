@@ -1,12 +1,15 @@
 import { readFile, writeFile } from 'node:fs/promises'
-import { chromium } from 'playwright'
+import { chromium, type Page } from 'playwright'
 import { printWidthIn } from '@make-it-accessible/pipeline/html/print'
+import { covers, ownFaceIn, withoutOwnFace } from '@make-it-accessible/pipeline/html/printface'
 
 // Narrowest fit tried; past it the face is set smaller too (a condensed print: La Segunda's "12.99", 23 pt wide at
 // 16 pt), down to MIN_SIZE; a text that still needs less does not fit, and its page fails.
 const MIN_FIT = 0.6
 const MIN_SIZE = 0.6
 const STEP = 0.05
+// A line in the PDF's own face only needs rounding slack: narrower than this it is no longer the printed face.
+const MIN_FIT_OWN = 0.97
 // Slack on a wrapped text's printed height: the lookalike face's line boxes differ a little.
 const TALL = 1.15
 // Two placed texts overlap when they share this much of the smaller one, and their printed boxes did not.
@@ -25,14 +28,10 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
   try {
     const tab = await browser.newPage({ viewport: { width, height: 900 } })
     await tab.goto(`file://${encodeURI(htmlPath)}`)
-    // A printed-view face that fails to load would measure its fallback's widths.
-    const broken = await tab.evaluate(async () => {
-      await document.fonts.ready
-      return [...document.fonts].filter((f) => f.status === 'error').map((f) => f.family)
-    })
-    if (broken.length) throw new Error(`${htmlPath}: fonts did not load: ${broken.join(', ')}`)
+    const drops = await ownFacesKept(tab)
+    for (const d of drops) console.info(`${htmlPath}: ${d.why}`)
     const { fits, failing } = await tab.evaluate(
-      ({ min, smallest, step, tall, overlap }) => {
+      ({ min, minOwn, smallest, step, tall, overlap }) => {
         const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
         const firstPage = document.querySelector('section[data-page]')?.getAttribute('data-page') ?? ''
         const pageOf = (el: Element): string =>
@@ -42,18 +41,21 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
         const fits = placed.map((el) => {
           const page = el.closest('section, header')
           if (el.tagName === 'IMG' || !page) return { k: 1, z: 1 }
+          const style = getComputedStyle(el)
+          const floor = el.style.getPropertyValue('--ff').trim().startsWith("'pdf-") ? minOwn : min
           const printed = (Number(el.style.getPropertyValue('--h')) * page.clientWidth) / 100
-          const nowrap = getComputedStyle(el).whiteSpace === 'nowrap'
+          const nowrap = style.whiteSpace === 'nowrap'
           const fits = (slack = 1): boolean =>
             nowrap ? el.scrollWidth <= el.clientWidth * slack + 1 : el.offsetHeight <= printed * tall * slack + 1
           const round = (v: number): number => Math.round(v * 100) / 100
-          for (let k = 1; k >= min; k -= step) {
+          for (let k = 1; k >= floor; k = Math.max(floor, k - step)) {
             el.style.setProperty('--k', String(round(k)))
             if (fits()) return { k: round(k), z: 1 }
+            if (k === floor) break
           }
           for (let z = 1 - step; z >= smallest; z -= step) {
             el.style.setProperty('--z', String(round(z)))
-            if (fits()) return { k: round(min), z: round(z) }
+            if (fits()) return { k: round(floor), z: round(z) }
           }
           // At the smallest fit, a text a little wider than its box still reads in place; past `tall`, it collides.
           if (!fits(tall) && !bad.has(pageOf(el)))
@@ -61,7 +63,7 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               pageOf(el),
               `${say(el)} overflows its printed box (${nowrap ? `${String(el.scrollWidth)} of ${String(el.clientWidth)} px wide` : `${String(el.offsetHeight)} of ${String(Math.round(printed))} px high`})`,
             )
-          return { k: round(min), z: round(smallest) }
+          return { k: round(floor), z: round(smallest) }
         })
         // Each text's drawn box against its printed box, both relative to its page's container.
         const boxes = placed.flatMap((el) => {
@@ -96,18 +98,75 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               bad.set(a.page, `${say(a.el)} collides with ${say(b.el)}`)
         return { fits, failing: [...bad].map(([page, why]) => ({ page: Number(page), why })).filter((m) => m.page > 0) }
       },
-      { min: MIN_FIT, smallest: MIN_SIZE, step: STEP, tall: TALL, overlap: OVERLAP },
+      { min: MIN_FIT, minOwn: MIN_FIT_OWN, smallest: MIN_SIZE, step: STEP, tall: TALL, overlap: OVERLAP },
     )
     const parts = html.split('style="--x:')
     await writeFile(
       htmlPath,
       parts.reduce((out, part, i) => {
         const { k, z } = fits[i - 1] ?? { k: 1, z: 1 }
-        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}--x:${part}`
+        // The element's own style comes first in its part.
+        const kept = drops.some((d) => d.index === i - 1) ? withoutOwnFace(part) : part
+        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}--x:${kept}`
       }),
     )
     return failing
   } finally {
     await browser.close()
   }
+}
+
+// A line in the PDF's own face keeps it only where the face loaded and draws every letter the line shows (model-filled
+// letters and codes included; text read only by screen readers aside); else the whole line takes its stand-in, never
+// a face change mid-word. Then every face the page now uses must load: one that fails would measure a fallback.
+async function ownFacesKept(tab: Page): Promise<{ index: number; why: string }[]> {
+  const seen = await tab.evaluate(async () => {
+    await document.fonts.ready
+    const faces = [...document.fonts].map((f) => ({
+      family: f.family.replace(/^"|"$/g, ''),
+      range: f.unicodeRange,
+      ok: f.status !== 'error',
+    }))
+    const lines = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')].map((el) => {
+      const shown = el.cloneNode(true)
+      if (shown instanceof HTMLElement)
+        for (const hidden of shown.querySelectorAll('.sr-only, [data-free]')) hidden.remove()
+      const text = shown.textContent ?? ''
+      return {
+        ff: el.style.getPropertyValue('--ff'),
+        text: getComputedStyle(el).textTransform === 'uppercase' ? text.toUpperCase() : text,
+      }
+    })
+    return { faces, lines }
+  })
+  const faces = new Map(seen.faces.map((f) => [f.family, f]))
+  const drops = seen.lines.flatMap(({ ff, text }, index) => {
+    const own = ownFaceIn(ff)
+    const face = own ? faces.get(own) : undefined
+    if (!own) return []
+    if (!face?.ok) return [{ index, why: `${own} did not load; ${JSON.stringify(text.slice(0, 30))} in its stand-in` }]
+    return covers(face.range, text)
+      ? []
+      : [{ index, why: `${own} lacks a letter of ${JSON.stringify(text.slice(0, 30))}` }]
+  })
+  const broken = await tab.evaluate(
+    async (indexes) => {
+      const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
+      for (const i of indexes) {
+        const el = placed[i]
+        const rest =
+          el?.style
+            .getPropertyValue('--ff')
+            .trim()
+            .replace(/^'pdf-[0-9a-f]+',?\s*/, '') ?? ''
+        if (rest) el?.style.setProperty('--ff', rest)
+        else el?.style.removeProperty('--ff')
+      }
+      await document.fonts.ready
+      return [...document.fonts].filter((f) => f.status === 'error' && !f.family.includes('pdf-')).map((f) => f.family)
+    },
+    drops.map((d) => d.index),
+  )
+  if (broken.length) throw new Error(`${tab.url()}: fonts did not load: ${broken.join(', ')}`)
+  return drops
 }

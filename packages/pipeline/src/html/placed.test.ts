@@ -38,7 +38,7 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 3,
+  version: 4,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -51,6 +51,8 @@ const white: Grid = {
   strokes: {},
   undrawn: [],
   tracking: {},
+  faces: {},
+  fonts: {},
 }
 
 test('each leaf takes its printed box, size, face and drawn ink, moved to read on a flat backdrop; text read from a picture has no spot', () => {
@@ -219,4 +221,15 @@ test('a placed line takes its printed face and letter spacing; small text is nev
     /--fw:300;--fi:normal;--ff:'print-jost', sans-serif;--ls:0\.157;/,
   )
   assert.match(placement(name, e.width, tracked, 2, [jost]), /--ls:0;/)
+})
+
+test("a line whose words share one of the PDF's own faces takes it first, its stand-in after", () => {
+  const owned: Grid = { ...white, faces: { '1:0': 'pdf-0123456789ab' } }
+  const title = spotsOf(structure.blocks, extraction, owned).get('blocks[0]')
+  assert.ok(title)
+  assert.match(placement(title, extraction.width, owned, 2, []), /--ff:'pdf-0123456789ab';/)
+  const mixed: Grid = { ...white, faces: { '1:1': 'pdf-0123456789ab' } }
+  const name = spotsOf(structure.blocks, extraction, mixed).get('blocks[2].items[0].name')
+  assert.ok(name)
+  assert.doesNotMatch(placement(name, extraction.width, mixed, 2, []), /--ff:/)
 })

@@ -75,7 +75,8 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   white-space: var(--ws, normal); text-align: var(--ta, left); color: var(--c, inherit); font-weight: var(--fw, 400); font-style: var(--fi, normal);
   text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill;
   letter-spacing: calc(var(--ls, 0) * 1em); font-size-adjust: none; }
-${on} ${page} [style*="--ff:"] { font-family: var(--ff); }
+${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: none; }
+${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }

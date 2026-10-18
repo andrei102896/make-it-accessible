@@ -58,6 +58,9 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
   pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (and their redrawn outlines), its light range per 8 pt cell, each word's ink as drawn
   pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
+  pdf/pdfjs.ts                what the pipeline reads of pdf.js (text items, font objects; zod) and the item that prints a word
+  pdf/sfnt.ts                 a font program's tables, names, embedding permission and format 4 cmap, read and rewritten
+  pdf/ownfont.ts              the PDF's own fonts for the printed view: pdf.js' program with a cmap from ToUnicode, its letters as a unicode-range, per word its face
   pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
@@ -137,7 +140,8 @@ packages/eval/src/            evaluation harness, never shipped
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
   backdrop.ts                 renders each page's backdrop in Chromium (JPEG at 2× CSS px) and its light grid (pNN/backdrop.jpg, backdrop.json)
-  tracking.ts                 reads the PDF with pdf.js (pdfjs-dist, eval only) for pdf/tracking.ts; a page it cannot read is untracked
+  pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page tracking and own faces; a page it cannot read has neither
+  rawfonts.ts                 the font programs as embedded (FlateDecode streams): per PostScript name its licence notice where every program permits embedding
   fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
   look.ts                     a document's title, colours, template and heading class (brief kept in brief.json for rescores)
   cost.ts                     model list prices and the cost of a call

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { itemOf, type PdfFont, type PdfItem } from './pdfjs.ts'
 import type { Run } from './types.ts'
 
 // Printed letter spacing (tracking) per word: its printed width against the sum of its letters' advance widths in
@@ -9,25 +9,6 @@ import type { Run } from './types.ts'
 const TRACKED = 0.03
 // Past this the measure is not tracking (a word matched to the wrong font or text item).
 const IMPLAUSIBLE = 0.5
-
-// What the measure reads of pdf.js: text items (getTextContent) and font objects (commonObjs, fontExtraProperties).
-// Arrays are sparse (a code with no entry is a hole); a standard font the PDF does not embed has its widths by code
-// in an object.
-export const PdfItem = z.object({
-  str: z.string(),
-  transform: z.tuple([z.number(), z.number(), z.number(), z.number(), z.number(), z.number()]),
-  width: z.number(),
-  fontName: z.string(),
-})
-export const PdfFont = z.object({
-  loadedName: z.string(),
-  isType3Font: z.boolean(),
-  defaultWidth: z.number(),
-  widths: z.union([z.array(z.number().optional()), z.record(z.string(), z.number())]),
-  toUnicode: z.object({ _map: z.array(z.string().optional()) }).optional(),
-})
-export type PdfItem = z.infer<typeof PdfItem>
-export type PdfFont = z.infer<typeof PdfFont>
 
 // Per run id, its tracking in ems where tracked: measured in the font of the horizontal text item spanning its centre
 // on its baseline (`view`: the page's box); a letter with no code in that font leaves the run unmeasured.
@@ -51,20 +32,9 @@ export function trackingOf(
     }
     return map.get(ch)
   }
-  const bare = (t: string): string => t.replace(/\s/g, '')
   const out: Record<string, number> = {}
   for (const r of runs) {
-    const cx = r.box.x + r.box.w / 2
-    // A tall word's box also holds the baselines of lines above it (Bannatyne's script under its name): the item
-    // must print the word (pdf.js spaces out tracked letters: "R I C H"), the nearest baseline to its foot wins.
-    const foot = r.box.y + r.box.h
-    const item = items
-      .filter(({ str, transform: [a, b, c, , x, y], width }) => {
-        const [left, base] = [x - view[0], view[3] - y]
-        const inside = cx >= left && cx <= left + width && base >= r.box.y && base <= foot
-        return a > 0 && b === 0 && c === 0 && inside && bare(str).includes(bare(r.str))
-      })
-      .sort((p, q) => Math.abs(foot - view[3] + p.transform[5]) - Math.abs(foot - view[3] + q.transform[5]))[0]
+    const item = itemOf(r, items, view)
     const font = item && byName.get(item.fontName)
     if (!item || !font || font.isType3Font) continue
     // Horizontal scaling (Tz) narrows the advances, not the size: [0] is the width scale, [3] the size.

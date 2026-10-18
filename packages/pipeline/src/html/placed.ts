@@ -40,9 +40,11 @@ type Spot = {
   // The face most of its letters are printed in, and their printed letter spacing (ems, pdf/tracking.ts).
   font: RunFont | null
   tracking: number
+  // The PDF's own face every word is printed in (pdf/ownfont.ts), when they share one.
+  own: string | null
 }
-type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'tracking'>
-const NOTHING_DRAWN: Drawn = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], tracking: {} }
+type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'tracking' | 'faces'>
+const NOTHING_DRAWN: Drawn = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], tracking: {}, faces: {} }
 
 // The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
 // colour as drawn and the words drawn inside a picture (pdf/backdrop.ts); `frames` gets each table's printed box.
@@ -80,6 +82,7 @@ export function spotsOf(
       italic: false,
       font: null,
       tracking: 0,
+      own: null,
     })
   }
   const block = (path: string, b: Block): void => {
@@ -168,6 +171,8 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     italic: most((r) => r.font?.italic ?? false) ?? false,
     font: runs.find((r) => r.font && faceKey(r.font) === face)?.font ?? null,
     tracking: median(runs.map((r) => [drawn.tracking[r.id] ?? 0, r.str.length])),
+    own:
+      new Set(runs.map((r) => drawn.faces[r.id] ?? null)).size === 1 ? (drawn.faces[runs[0]?.id ?? ''] ?? null) : null,
   }
 }
 const faceKey = (f: RunFont): string => `${f.key}:${String(f.weight)}:${String(f.italic)}`
@@ -197,7 +202,9 @@ export function placement(
   const face = spot.font ? printFaceOf(spot.font, library) : null
   const weight = face?.weight ?? spot.weight
   props.push(`--fw:${String(weight)}`, `--fi:${spot.italic ? 'italic' : 'normal'}`)
-  if (face) props.push(`--ff:${face.family}`)
+  // The PDF's own face first, its stand-in after: fit.ts drops the own face where it lacks a letter of the line.
+  const families = [spot.own ? `'${spot.own}'` : null, face?.family ?? null].filter((f) => f !== null)
+  if (families.length) props.push(`--ff:${families.join(', ')}`)
   // Letters printed tighter than their face only where large: running text never closes up.
   const large = size * pxPerPt >= LARGE_PX
   props.push(`--ls:${String(spot.tracking < 0 && !large ? 0 : spot.tracking)}`)

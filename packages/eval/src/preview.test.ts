@@ -34,15 +34,16 @@ test('the expiry list round-trips, keeps commas in names, and names the rows pas
 
 test("a preview's backdrops become files in a folder named like the page; its crops stay inline", () => {
   const html =
-    '<img class="backdrop" src="p01/backdrop.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="p12/backdrop.jpg"><style>src: url(fonts/jost-normal.woff2)</style>'
+    '<img class="backdrop" src="p01/backdrop.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="p12/backdrop.jpg"><style>src: url(fonts/jost-normal.woff2) src: url(fonts/pdf-0123456789ab.otf)</style>'
   const out = withAssets(html, 'gigi-a1b2c3.html')
   assert.equal(
     out.html,
-    '<img class="backdrop" src="gigi-a1b2c3/p01.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="gigi-a1b2c3/p12.jpg"><style>src: url(gigi-a1b2c3/fonts/jost-normal.woff2)</style>',
+    '<img class="backdrop" src="gigi-a1b2c3/p01.jpg" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="gigi-a1b2c3/p12.jpg"><style>src: url(gigi-a1b2c3/fonts/jost-normal.woff2) src: url(gigi-a1b2c3/fonts/pdf-0123456789ab.otf)</style>',
   )
   assert.deepEqual(out.assets, [
     { from: 'p01/backdrop.jpg', to: 'gigi-a1b2c3/p01.jpg' },
     { from: 'p12/backdrop.jpg', to: 'gigi-a1b2c3/p12.jpg' },
     { from: 'fonts/jost-normal.woff2', to: 'gigi-a1b2c3/fonts/jost-normal.woff2' },
+    { from: 'fonts/pdf-0123456789ab.otf', to: 'gigi-a1b2c3/fonts/pdf-0123456789ab.otf' },
   ])
 })

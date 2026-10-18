@@ -1,5 +1,5 @@
-import { rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
 import { placedRuns } from '@make-it-accessible/pipeline/html/source'
 import {
@@ -12,7 +12,8 @@ import {
 import { pageSvg } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
-import { pdfTracking } from './tracking.ts'
+import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
+import { pdfFacts } from './pdfjs.ts'
 
 // Sharp at twice the CSS pixels of the printed size (1 pt = 4/3 px), which covers a retina screen at 100 %; once
 // at the CSS pixels when that runs out of time. Soft masks and filters can stall Chromium (a leaflet with 35
@@ -24,7 +25,7 @@ const QUALITY = 0.8
 // Each page's backdrop for the printed view: pNN/backdrop.jpg, and pNN/backdrop.json with its light range per cell.
 // A page that renders at no scale in time gets none, and its document keeps the text view only.
 export async function writeBackdrops(pdf: string, results: readonly PageResult[]): Promise<void> {
-  const tracking = await pdfTracking(pdf)
+  const facts = await pdfFacts(pdf)
   const browser = await chromium.launch()
   try {
     for (const r of results) {
@@ -58,6 +59,11 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
         },
       })
       await writeFile(join(r.dir, 'backdrop.jpg'), Buffer.from(drawn.jpeg.slice(drawn.jpeg.indexOf(',') + 1), 'base64'))
+      const { tracking, own } = await facts.of(r.extraction)
+      // The document's folder holds the faces, one file per program, whichever page uses it.
+      const fonts = join(dirname(r.dir), PRINT_FONTS_DIR)
+      if (own.files.size) await mkdir(fonts, { recursive: true })
+      for (const [id, data] of own.files) await writeFile(join(fonts, `${id}.otf`), data)
       await writeFile(
         join(r.dir, 'backdrop.json'),
         JSON.stringify({
@@ -65,12 +71,14 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           cell: CELL,
           ...grid,
           ...printedOf(page, words),
-          tracking: await tracking.of(r.extraction),
+          tracking,
+          faces: own.faces,
+          fonts: own.fonts,
         }),
       )
     }
   } finally {
-    await tracking.close()
+    await facts.close()
     await browser.close()
   }
 }

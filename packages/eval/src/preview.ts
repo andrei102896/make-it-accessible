@@ -51,11 +51,14 @@ export function withAssets(html: string, file: string): { html: string; assets: 
     return `src="${to}"`
   })
   // The printed view's faces (html/printface.ts), fetched only by the printed view.
-  const fonted = out.replace(new RegExp(`url\\((${PRINT_FONTS_DIR}/[\\w.-]+\\.woff2)\\)`, 'g'), (_, from: string) => {
-    const to = `${assetsDir(file)}/${from}`
-    if (!assets.some((a) => a.from === from)) assets.push({ from, to })
-    return `url(${to})`
-  })
+  const fonted = out.replace(
+    new RegExp(`url\\((${PRINT_FONTS_DIR}/[\\w.-]+\\.(?:woff2|otf))\\)`, 'g'),
+    (_, from: string) => {
+      const to = `${assetsDir(file)}/${from}`
+      if (!assets.some((a) => a.from === from)) assets.push({ from, to })
+      return `url(${to})`
+    },
+  )
   return { html: fonted, assets }
 }
 

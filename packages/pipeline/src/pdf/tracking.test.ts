@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { trackingOf, type PdfFont, type PdfItem } from './tracking.ts'
+import type { PdfFont, PdfItem } from './pdfjs.ts'
+import { trackingOf } from './tracking.ts'
 import type { Run } from './types.ts'
 
 // Codes 1–3 draw A, B, C at 500 units; 4 is a ligature "fi", which no single letter maps to.

@@ -70,3 +70,7 @@
 - `document.fonts.ready` resolves even when a face fails to load (status `error`): a measurement that depends on a web font checks each face's status. (fit probe, 2026-10-18)
 - A copy-glyph rule needs a quorum of the word's own letters: one grey glyph of the next price inside a word's zone read as its shadow (Lexington's Mozzarella, 2026-10-18).
 - A census read from saved run files sees only what was saved: fields a rerender reads afresh (fonts, colours) are missing there; read the source the build reads. (font census, 2026-10-18)
+- Chrome's OTS rejects a format 4 cmap with a wrong searchRange, a missing 0xFFFF end segment, or a glyph id ≥ maxp's count, and ignores table checksums (2c probe, 2026-10-18).
+- `textContent` and `innerText` both include screen-reader-only text: a check on what a line shows skips `.sr-only` and `[data-free]` (diet legends in placed names, 2c, 2026-10-18).
+- Several codes can share one single-letter ToUnicode with different glyphs (Cormorant's two figure styles, f, t): a Unicode cmap rebuilt from ToUnicode picks by what the page draws (the operator list), never by code order (Stone House, 2026-10-18).
+- Bytes from a PDF are untrusted even inside a font table: every parse of a program the PDF carries is wrapped, and a failure costs that program, never the document (2c review, 2026-10-18).
