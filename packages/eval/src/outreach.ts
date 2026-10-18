@@ -102,7 +102,7 @@ export function followUp(t: Target, first: SentEmail | undefined, n: 1 | 2): { t
   const footer = signed >= 0 ? lines.slice(signed + 1) : []
   const body = LINES[agency ? 'agency' : 'business'][n](thing ?? 'menu')
   return {
-    text: [greeting, '', body, '', 'Andrew', ...footer].join('\n'),
+    text: [greeting, '', body, '', 'Andrei', ...footer].join('\n'),
     guessed: !first || (!agency && !thing),
   }
 }

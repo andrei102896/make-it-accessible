@@ -53,13 +53,13 @@ test('a follow-up greets and signs as the first email did, names its document, a
   )
   const fu = followUp(target('Star'), uk, 1)
   assert.equal(fu.guessed, false)
-  assert.match(fu.text, /^Hi Adam and Anna,\n\n.*send your October price list back.*\n\nAndrew$/)
+  assert.match(fu.text, /^Hi Adam and Anna,\n\n.*send your October price list back.*\n\nAndrei$/)
   const shared = first('Hi team,\n\nI had a look at the evening menu you share across your five restaurants. It')
   assert.match(followUp(target('Dylan'), shared, 1).text, /your evening menu back/)
   const us = first(
     'Hi Ruth,\n\nI had a look at the menu on your website.\n\nMake It Accessible · x\nOradea, Romania\nReply STOP.',
   )
-  assert.match(followUp(target('Ruth'), us, 2).text, /Last note.*\n\nAndrew\nOradea, Romania\nReply STOP\.$/)
+  assert.match(followUp(target('Ruth'), us, 2).text, /Last note.*\n\nAndrei\nOradea, Romania\nReply STOP\.$/)
   const guessed = followUp(target('Carew'), undefined, 1)
   assert.equal(guessed.guessed, true)
   assert.match(guessed.text, /^Hi Carew team,\n\n.*your menu back/)
