@@ -4,11 +4,13 @@ import { basename, dirname, join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { chromium } from 'playwright'
+import { GUTTER_PX } from '@make-it-accessible/pipeline/html/print'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
+import { pdfShots } from './pdfshot.ts'
 import { loadSources, REBUILT_DIR, sourcePdf } from './sources.ts'
 
 // pnpm review:open [--all | <slug>…] [--with <page.html> <file.pdf>]: out/rebuilt/review.html, each document's PDF
-// pages beside our printed sheets at one scale, opened in Safari for Andrei's review after each rendering change.
+// pages beside our printed sheets at one scale and drawn by the same browser (pdfshot.ts), opened in Safari.
 const run = promisify(execFile)
 const RENDER_DPI = 100
 // The width our page is captured at: a desktop window, where every page shows its printed view (small body text
@@ -47,7 +49,7 @@ const exists = (p: string): Promise<boolean> =>
     () => true,
     () => false,
   )
-// A page of the PDF rendered once, kept beside the page's folder.
+// A page of the PDF rendered once by Poppler, kept beside the page's folder: the fallback when pdf.js fails.
 async function render(doc: Doc, n: number, pdfPage: number): Promise<string> {
   const out = join(doc.dir, `pdf-p${String(n).padStart(2, '0')}`)
   if (!(await exists(`${out}.jpg`)))
@@ -72,11 +74,9 @@ const rows: string[] = []
 try {
   for (const [i, doc] of docs.entries()) {
     const pages = (await readdir(doc.dir)).filter((d) => /^p\d+$/.test(d)).sort()
-    const renders: string[] = []
-    for (const [n, d] of pages.entries()) {
-      const e = parseExtraction(await readFile(join(doc.dir, d, 'extraction.json'), 'utf8'))
-      renders.push(relative(REBUILT_DIR, await render(doc, n + 1, e.pdfPage)))
-    }
+    const pdfPages: number[] = []
+    for (const d of pages)
+      pdfPages.push(parseExtraction(await readFile(join(doc.dir, d, 'extraction.json'), 'utf8')).pdfPage)
     const tab = await (await browser.newContext({ viewport: { width: CAPTURE_PX, height: 900 } })).newPage()
     await tab.goto(pathToFileURL(doc.page).href)
     await tab.waitForLoadState('networkidle')
@@ -86,16 +86,37 @@ try {
     const sheets = tab.locator(SHEET)
     const count = await sheets.count()
     const shots: string[] = []
+    const widths: number[] = []
     for (let n = 0; n < Math.max(1, count); n++) {
       const shot = join(doc.dir, `review-p${String(n + 1).padStart(2, '0')}.jpg`)
       if (count) await sheets.nth(n).screenshot({ path: shot, type: 'jpeg', quality: 85 })
       else await tab.screenshot({ path: shot, type: 'jpeg', quality: 85, fullPage: true })
+      widths.push(Math.round((count ? await sheets.nth(n).boundingBox() : null)?.width ?? 0))
       shots.push(`${relative(REBUILT_DIR, shot)}?v=${String(Date.now())}`)
     }
     await tab.context().close()
+    // Each PDF page at its sheet's width when every page prints, else at the sheets' widest (or the window's).
+    const width = (n: number): number =>
+      (count === pages.length ? widths[n] : 0) || Math.max(...widths) || CAPTURE_PX - GUTTER_PX
+    const wanted = pdfPages.map((pdfPage, n) => ({
+      pdfPage,
+      width: width(n),
+      out: join(doc.dir, `pdf-p${String(n + 1).padStart(2, '0')}-w${String(width(n))}.jpg`),
+    }))
+    const missing: typeof wanted = []
+    for (const w of wanted) if (!(await exists(w.out))) missing.push(w)
+    const drawn = await pdfShots(browser, doc.pdf, missing)
+    const renders: string[] = []
+    let raster = false
+    for (const [n, w] of wanted.entries()) {
+      const ok = drawn.has(w.pdfPage) || !missing.includes(w)
+      raster ||= !ok
+      const file = ok ? w.out : await render(doc, n + 1, w.pdfPage)
+      renders.push(`${relative(REBUILT_DIR, file)}?v=${String(Date.now())}`)
+    }
     const img = (src: string): string => `<img src="${src}" alt="">`
     rows.push(
-      `<section id="d${String(i)}"><h2>${esc(doc.title)}</h2><div class="row"><figure><figcaption>PDF</figcaption>${renders.map(img).join('')}</figure><figure><figcaption>As printed (HTML)</figcaption>${shots.map(img).join('')}</figure></div></section>`,
+      `<section id="d${String(i)}"><h2>${esc(doc.title)}</h2><div class="row"><figure><figcaption>PDF${raster ? ' (some pages as a Poppler raster: lighter strokes)' : ''}</figcaption>${renders.map(img).join('')}</figure><figure><figcaption>As printed (HTML)</figcaption>${shots.map(img).join('')}</figure></div></section>`,
     )
   }
 } finally {
