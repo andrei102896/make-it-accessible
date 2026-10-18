@@ -157,6 +157,12 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     ['right', spread((b) => b.x + b.w)],
   ]
   const face = most((r) => (r.font ? faceKey(r.font) : null))
+  // A printed shadow or outline the line's most letters carry: one word's (an asterisk's) is not the line's.
+  const carried = <T>(of: (r: Run) => T | undefined): T | null => {
+    const key = most((r) => JSON.stringify(of(r) ?? null))
+    const run = runs.find((r) => JSON.stringify(of(r) ?? null) === key)
+    return (run && of(run)) ?? null
+  }
   const align = lines.length === 1 ? 'center' : (edges.sort((a, b) => a[1] - b[1])[0]?.[0] ?? 'left')
   return {
     box,
@@ -165,8 +171,8 @@ function spotOf(box: Box, runs: readonly Run[], drawn: Drawn): Spot {
     align,
     color: most((r) => drawn.inks[r.id] ?? r.color ?? null),
     alpha: most((r) => drawn.alpha[r.id] ?? 1) ?? 1,
-    shadow: runs.map((r) => drawn.shadows[r.id]).find((x) => x !== undefined) ?? null,
-    stroke: runs.map((r) => drawn.strokes[r.id]).find((x) => x !== undefined) ?? null,
+    shadow: carried((r) => drawn.shadows[r.id]),
+    stroke: carried((r) => drawn.strokes[r.id]),
     weight: most((r) => r.font?.weight ?? 400) ?? 400,
     italic: most((r) => r.font?.italic ?? false) ?? false,
     font: runs.find((r) => r.font && faceKey(r.font) === face)?.font ?? null,

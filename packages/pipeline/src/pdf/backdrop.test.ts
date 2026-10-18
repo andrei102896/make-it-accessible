@@ -57,9 +57,10 @@ test("each cell keeps its darkest and lightest luminance and its mean colour (a 
 })
 
 test("a word's ink is its last glyph drawn, the black copy under it its shadow (Kenny & Ziggy's); a word with no glyph is undrawn", () => {
-  const shadow =
-    '<g fill="rgb(13.7%, 12.2%, 12.5%)" fill-opacity="1"><use xlink:href="#glyph-0-1" x="100" y="112"/></g>'
-  const fill = '<g fill="rgb(100%, 94.9%, 0%)" fill-opacity="1"><use xlink:href="#glyph-0-1" x="100" y="110"/></g>'
+  const at = (fill: string, x: number, y: number): string =>
+    `<g fill="${fill}" fill-opacity="1"><use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/></g>`
+  const shadow = at('rgb(13.7%, 12.2%, 12.5%)', 100, 112) + at('rgb(13.7%, 12.2%, 12.5%)', 106, 112)
+  const fill = at('rgb(100%, 94.9%, 0%)', 100, 110) + at('rgb(100%, 94.9%, 0%)', 106, 110)
   const words = [
     { id: '1:0', box: { x: 98, y: 100, w: 20, h: 12 } },
     { id: '1:1', box: { x: 300, y: 400, w: 20, h: 12 } },
@@ -97,4 +98,30 @@ test("a neighbour's glyph reaching into a word's zone is no shadow of it (Lexing
   const price = ink('rgb(39.6%, 40.4%, 41.2%)', 122)
   const printed = printedOf(page(glyphs, word + price), [{ id: '1:0', box: { x: 98, y: 100, w: 22, h: 12 } }])
   assert.deepEqual(printed.shadows, {})
+})
+
+test("a neighbour word's glyphs are never a word's ink or copy, even inside its zone (Ferrara's black asterisks beside the red SYRUPS)", () => {
+  const glyph = (fill: string, x: number): string =>
+    `<g fill="${fill}"><use xlink:href="#glyph-0-1" x="${String(x)}" y="110"/></g>`
+  const red = 'rgb(60%, 0%, 0%)'
+  const black = 'rgb(0%, 0%, 0%)'
+  const svg = page(
+    glyphs,
+    glyph(black, 92) + [100, 104, 108, 112].map((x) => glyph(red, x)).join('') + glyph(black, 116),
+  )
+  const printed = printedOf(svg, [
+    { id: '1:0', box: { x: 92, y: 100, w: 8, h: 12 } },
+    { id: '1:1', box: { x: 100, y: 100, w: 16, h: 12 } },
+    { id: '1:2', box: { x: 116, y: 100, w: 8, h: 12 } },
+  ])
+  assert.deepEqual(printed.inks, { '1:0': '#000000', '1:1': '#990000', '1:2': '#000000' })
+  assert.deepEqual(printed.shadows, {})
+})
+
+test("specks of an engraving inside a word's box are no copy of it: they stay printed and give it no shadow (Boater's THE MENU)", () => {
+  const word = { id: '1:0', box: { x: 98, y: 100, w: 20, h: 30 } }
+  const speck = '<path fill="rgb(95%, 39%, 48%)" d="M 104 110 C 105 110 105 111 104 112 Z"/>'
+  const svg = page(glyphs, speck + ink(100, 125))
+  assert.match(backdropSvg(svg, [word.box]), /M 104 110/)
+  assert.deepEqual(printedOf(svg, [word]).shadows, {})
 })

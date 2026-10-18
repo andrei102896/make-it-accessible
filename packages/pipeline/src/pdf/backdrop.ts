@@ -21,6 +21,18 @@ export const BACKDROP_VERSION = 4
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
 const MIN_OFFSET = 0.3
+// A shape copying placed words is at least this share of their height: a letter is; a speck of an engraving inside
+// their box is not (Boater's lobster under THE MENU; Moosewood's next line inside the tall box of "entrees").
+const MIN_COPY = 0.3
+// A copy glyph sits at its letter's offset within this (pt); two inks this close (sum over RGB, 0–255) are one ink.
+const SAME_SPOT = 0.5
+const SAME_INK = 48
+const sameInk = (a: string, b: string | null): boolean =>
+  b !== null &&
+  [1, 3, 5].reduce((sum, i) => sum + Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)), 0) <=
+    SAME_INK
+// A glyph's origin sits on its word's left edge; the next word's first glyph sits on this word's right edge.
+const EDGE = 0.5
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 const Shadow = z.object({ color: Hex, dx: z.number(), dy: z.number() }).strict()
@@ -73,7 +85,13 @@ function copiesOf(svg: string, words: readonly Box[]): Drawn[] {
     if (!near.length) return false
     const hull = near.reduce(union)
     const covered = words.reduce((sum, w) => sum + intersection(w, b), 0)
-    return holds(hull, [b.x, b.y]) && holds(hull, [b.x + b.w, b.y + b.h]) && covered >= area(b) * COVERED
+    const tallest = Math.max(...words.filter((w) => intersection(w, b) > 0).map((w) => w.h))
+    return (
+      holds(hull, [b.x, b.y]) &&
+      holds(hull, [b.x + b.w, b.y + b.h]) &&
+      covered >= area(b) * COVERED &&
+      b.h >= tallest * MIN_COPY
+    )
   }
   return parseVectors(svg).art.filter((d) => d.bound && (outline(d) || !plainBox(d)) && redrawn(d.bound))
 }
@@ -114,10 +132,15 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     return { ...g, fill: open >= 0 && !between.includes('</g>') ? colourOf(attr(between, 'fill')) : null }
   })
   const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [] }
-  for (const { id, box } of words) {
+  // A word's own glyphs: their origins (on the baseline) inside its box. A glyph another word owns is never this
+  // one's ink or copy (Ferrara's black asterisks beside the red SYRUPS).
+  const boxes = words.map(({ box: b }) => ({ ...b, x: b.x - EDGE }))
+  const owner = glyphs.map((g) => boxes.findIndex((b) => holds(b, g.at)))
+  for (const [i, { id, box }] of words.entries()) {
     const zone = zoneOf(box)
-    const own = glyphs.filter((g) => holds(zone, g.at))
-    const last = own.at(-1)
+    const around = glyphs.flatMap((g, k) => (holds(zone, g.at) ? [{ ...g, owner: owner[k] ?? -1 }] : []))
+    const mine = around.filter((g) => holds(boxes[i] ?? box, g.at))
+    const last = mine.at(-1) ?? around.at(-1)
     if (!last) {
       out.undrawn.push(id)
       continue
@@ -126,8 +149,8 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     if (last.alpha < 1) out.alpha[id] = Math.round(last.alpha * 1000) / 1000
     // Each copy glyph against its nearest inked glyph: on tight lines the zone also holds the next line's glyphs, so
     // a mean over the zone drifts by a line (Kenny & Ziggy's paragraph doubled one line down).
-    const inked = own.filter((g) => g.fill === last.fill).map((g) => g.at)
-    const other = own.filter((g) => g.fill !== null && g.fill !== last.fill)
+    const inked = mine.filter((g) => g.fill === last.fill).map((g) => g.at)
+    const other = around.filter((g) => g.fill !== null && g.fill !== last.fill && (g.owner === -1 || g.owner === i))
     const color = other[0]?.fill
     if (!color) continue
     const pairs = other.flatMap(({ at: [x, y] }) => {
@@ -137,9 +160,14 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
       return near(x - nx, y - ny, box.h) ? [[x - nx, y - ny] as const] : []
     })
     const mid = (vs: number[]): number => vs.sort((a, b) => a - b)[Math.floor(vs.length / 2)] ?? 0
-    // A shadow redraws most of the word's letters; a neighbour's glyph or two reaching into the zone is none.
-    if (pairs.length * 2 >= other.length && pairs.length * 2 >= inked.length)
-      out.shadows[id] = { color, dx: round(mid(pairs.map((p) => p[0]))), dy: round(mid(pairs.map((p) => p[1]))) }
+    const [dx, dy] = [mid(pairs.map((p) => p[0])), mid(pairs.map((p) => p[1]))]
+    // A shadow redraws the word letter by letter at one offset, at least two of them and most, in an ink that
+    // shows: a neighbour's glyph on the line, or the same ink drawn twice, is none (Almond, Osteria, Moosewood).
+    const copied = inked.filter(([x, y]) =>
+      other.some((g) => Math.abs(g.at[0] - x - dx) <= SAME_SPOT && Math.abs(g.at[1] - y - dy) <= SAME_SPOT),
+    ).length
+    if (copied >= 2 && copied * 2 >= inked.length && pairs.length * 2 >= other.length && !sameInk(color, last.fill))
+      out.shadows[id] = { color, dx: round(dx), dy: round(dy) }
   }
   for (const d of copiesOf(
     svg,

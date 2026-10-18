@@ -74,3 +74,4 @@
 - `textContent` and `innerText` both include screen-reader-only text: a check on what a line shows skips `.sr-only` and `[data-free]` (diet legends in placed names, 2c, 2026-10-18).
 - Several codes can share one single-letter ToUnicode with different glyphs (Cormorant's two figure styles, f, t): a Unicode cmap rebuilt from ToUnicode picks by what the page draws (the operator list), never by code order (Stone House, 2026-10-18).
 - Bytes from a PDF are untrusted even inside a font table: every parse of a program the PDF carries is wrapped, and a failure costs that program, never the document (2c review, 2026-10-18).
+- A zone padded to catch a word's shadow also catches its neighbours: ink comes from the word's own glyphs, and a copy is a letter-by-letter offset of them (two letters at least, in an ink that shows), never "a glyph of another colour near it" (Boater's, Moosewood, Ferrara, 2026-10-18).
