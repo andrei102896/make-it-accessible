@@ -45,3 +45,20 @@ Monthly subscription through Paddle as merchant of record (it handles US sales t
 | cost target ≤ €0.05 per page | measured ~$0.04 (text) to ~$0.07 (grids); lower with the Batch API in the MVP |
 
 Open: concrete prices (from the measured cost, at ≤ 25 % of revenue; first numbers in `docs/COSTS.md`) and the stage-0 verdict; a NARROW verdict limits the launch flow to the document types that passed.
+
+## Open questions from the landing design (2026-10-18)
+Raised by the design of the restaurant flow (landing, check, preview, publish). Each carries a recommendation, not a decision: Andrei decides before the website is built.
+
+| Question | Recommendation |
+|---|---|
+| Must the original PDF stay downloadable next to the page, or does the page replace it? Asked at publish, no longer at sign-up. | Default: the page replaces the link to the PDF. An owner may keep the PDF, told once that a PDF left online is assessed on its own (§6). |
+| Path B: the check deletes the file, sign-up keeps it in the tab. If the tab closes before the code is typed? | Ask them to choose the file again; keep nothing server-side, so "the file is deleted as soon as the check ends" stays true. |
+| Path A: anyone with the email link opens the preview. Can someone else (a manager on another address) keep and pay for it? | Yes: whoever pays owns the venue's account; the address we wrote to is told it was taken. |
+| Menu updates: live when the automatic checks pass, or after the owner confirms "needs you" items? Turnaround? | Live at once when nothing needs the owner; otherwise the current version stays live until the owner confirms, so an uncertain price is never published. Minutes on the batch lane, with an email. |
+| After cancelling: does the link stop, redirect to the PDF, or show a notice? | SPEC §6.1: live to the end of the paid period and 30 days more, with reminders; then a notice linking to the venue's own site, never a dead link. |
+| More than 10 pages in all (lunch, dinner, drinks): what is offered, at what price? | Open: a second allowance priced from the measured cost per page (`docs/COSTS.md`); until then, say plainly that 10 pages is the limit. |
+| Unsupported pages (a photographed drinks board): can the owner type the items in, and does that fit "never retyped"? | Yes, labelled "entered by the venue" in the page and the report, outside "checked against the PDF": "never retyped" is about us, not the owner. |
+| Link domain: is menus.makeitaccessible.com right; can a venue use its own domain? | Domain not chosen yet (SPEC §5.5, "domain TBD"); own domains later (SPEC §4.3). |
+| Pricing: is £25 VAT-inclusive, is US sales tax added, any minimum term or first-month offer? | Paddle is the seller and adds US sales tax and UK VAT (`docs/COSTS.md`); whether £25 includes VAT is Andrei's call. No minimum term (cancel anytime); no first-month offer decided. |
+| The 30-day deletion of an unkept preview: a reminder before deleting? | Yes, one reminder a few days before, sent only once Andrei has approved the product's own emails. |
+| UK spelling ("colour", "cancelled") as well as £ on the UK version? | Yes: the UK version reads as British English. |
