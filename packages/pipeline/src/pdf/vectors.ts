@@ -6,6 +6,7 @@ import {
   drawnElements,
   OPAQUE,
   type Drawn,
+  type Glyph,
   type Matrix,
   type Placed,
   type Point,
@@ -127,10 +128,11 @@ export function parseVectors(svg: string): {
   rules: Rule[]
   art: Drawn[]
   placed: Placed[]
+  glyphs: Glyph[]
   width: number
   height: number
 } {
-  const { width, height, drawn, placed } = drawnElements(svg)
+  const { width, height, drawn, placed, glyphs } = drawnElements(svg)
   const found: Vector[] = []
   const rules: Rule[] = []
   const art: Drawn[] = []
@@ -150,7 +152,7 @@ export function parseVectors(svg: string): {
     if (!kept && !lines.length) art.push(d)
   }
   art.push(...drawn.filter((d) => d.masked))
-  return { boxes: mergeDoubles(found), rules: mergeRules(rules), art, placed, width, height }
+  return { boxes: mergeDoubles(found), rules: mergeRules(rules), art, placed, glyphs, width, height }
 }
 
 // The same line drawn twice is one rule; two parallel lines over the same span a few points apart are a double.

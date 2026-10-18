@@ -214,3 +214,26 @@ test('a word a dropped glyph leaves unwhole, its letters named nowhere in the PD
   )
   assert.match(v.errors[0]?.problem ?? '', /names nowhere are missing from "Pance a"/)
 })
+
+test('a price whose digits are partly drawn as shapes is an error, the price being another amount (La Segunda "3")', () => {
+  const e = {
+    ...page([
+      ['TOAST', 0],
+      ['3', 100],
+      ['TEA', 200],
+      ['2.50', 300],
+    ]),
+    lost: ['1:1'],
+  }
+  const v = validatePage(
+    menu([
+      { name: 0, prices: [[1, 1]] },
+      { name: 2, prices: [[3, 3]] },
+    ]),
+    e,
+  )
+  assert.deepEqual(
+    v.errors.map((f) => f.path),
+    ['blocks[0].items[0].prices[0]'],
+  )
+})

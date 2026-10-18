@@ -10,6 +10,7 @@ import { lineAt, textLines, type Line } from './face.ts'
 import type { Box, Extraction, PageImage, Run } from './types.ts'
 import { piecesOf, picturesOf } from './art.ts'
 import { iconsOn } from './icons.ts'
+import { lettersDrawnBeside } from './drawnletters.ts'
 import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
@@ -64,12 +65,14 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
   }
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
-  const { boxes, rules, art, placed } = parseVectors(await pageSvg(pdf, pdfPage))
+  const { boxes, rules, art, placed, glyphs } = parseVectors(await pageSvg(pdf, pdfPage))
   const shown = new Set(hidden)
   const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())
   const pictures = picturesOf(art, placed, words, width, height)
   const icons = iconsOn(piecesOf(art, placed, words, width, height), words)
-  return { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures, icons }
+  const lost = lettersDrawnBeside(art, glyphs, words)
+  const read = { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures, icons }
+  return lost.length ? { ...read, lost } : read
 }
 
 // The page as pdftocairo draws it in SVG (0.1–0.8 s a page): the vector layer and the printed view's backdrop.

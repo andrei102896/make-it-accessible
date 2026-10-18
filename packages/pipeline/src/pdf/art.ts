@@ -69,7 +69,7 @@ function grouped(boxes: readonly Box[], joins: (a: Box, b: Box) => boolean, cap 
 }
 
 // A shape painted below OPAQUE shows nothing (pdftocairo's page-sized fill-opacity="0" canvases).
-const paints = (tag: string): boolean =>
+export const paints = (tag: string): boolean =>
   Number(attr(tag, 'opacity') ?? 1) >= OPAQUE &&
   ((attr(tag, 'fill') !== 'none' && Number(attr(tag, 'fill-opacity') ?? 1) >= OPAQUE) ||
     (attr(tag, 'stroke') !== null &&

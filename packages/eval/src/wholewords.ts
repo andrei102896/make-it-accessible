@@ -28,7 +28,12 @@ export async function withWholeWords(pdfPath: string, e: Extraction): Promise<Ex
       return p.success ? [p.data] : []
     })
     const whole = restoreLigatures(e.runs, items, texts, [x0, y0, x1, y1])
-    return { ...e, runs: whole.runs, hidden: [...new Set([...e.hidden, ...whole.hidden])], lost: whole.lost }
+    return {
+      ...e,
+      runs: whole.runs,
+      hidden: [...new Set([...e.hidden, ...whole.hidden])],
+      lost: [...new Set([...(e.lost ?? []), ...whole.lost])],
+    }
   } finally {
     await doc.destroy()
   }

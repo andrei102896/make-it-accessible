@@ -107,6 +107,9 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     const cited = runsOf(path, p.src)
     const amount = amountOf(cited, currency)
     const words = cited.map((r) => r.str).join(' ')
+    // A price whose digits are partly drawn as shapes ("3" + a drawn ".99", La Segunda) reads as another amount.
+    if (cited.some((r) => lost.has(r.id)))
+      errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${words}"` })
     if (amount === null) {
       const printed = asPrinted(cited)
       if (printed === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
