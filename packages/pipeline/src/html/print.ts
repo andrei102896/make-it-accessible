@@ -47,9 +47,11 @@ export const printWidthIn = (html: string): number =>
 export const printCss = (width: number, inks: readonly string[]): string => `
 .view, .backdrop { display: none; }
 @media screen and (min-width: ${String(width)}px) and (forced-colors: none) {
-.view { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; align-items: center; border: 0; margin: 1rem 0; padding: 0; }
-.view legend { float: left; font-weight: 600; padding: 0; }
+.view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem 1.25rem; align-items: center; border: 0;
+  margin: 0 0 .5rem; padding: 0; font-size: .875rem; color: var(--muted); }
+.view legend { float: left; font-weight: 500; padding: 0; }
 .view label { display: inline-flex; gap: .4rem; align-items: center; min-height: 44px; cursor: pointer; }
+${on} .back:not(:focus-within) { ${SR_ONLY} }
 ${on} main { max-width: max(64rem, ${String(width)}px); }
 ${on} ${lead} { display: grid; grid-template-columns: minmax(0, 1fr); }
 ${on} ${lead} > nav { grid-row: 1; } ${on} ${lead} > .legend { grid-row: 2; } ${on} ${lead} > .back { grid-row: 4; }
