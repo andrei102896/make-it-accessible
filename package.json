@@ -33,7 +33,8 @@
     "check:page": "node packages/eval/src/check-page.ts",
     "preview:refresh": "node packages/eval/src/preview-refresh.ts",
     "outreach:due": "node packages/eval/src/outreach-due.ts",
-    "outreach:log": "node packages/eval/src/outreach-log.ts"
+    "outreach:log": "node packages/eval/src/outreach-log.ts",
+    "review:open": "node packages/eval/src/review-open.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

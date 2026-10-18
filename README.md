@@ -158,6 +158,7 @@ packages/eval/src/            evaluation harness, never shipped
   brand.ts                    the document's brand: profile, vendored fonts within budget, drawn lines and ornaments (one render per page)
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
   review-page.ts              CLI: render the PDF pages, screenshot our page, ask the reviewer, write review.json
+  review-open.ts              CLI: out/rebuilt/review.html, each document's PDF pages beside our printed sheets at one scale, opened in Safari (pnpm review:open --all)
   sources.ts                  the measured documents (saved run + PDF, local list) and where rebuilt pages go (out/rebuilt)
   rerender.ts                 CLI: render a saved run again with the current renderer, no model call (pnpm rerender <slug>|--all)
   check-page.ts               CLI: axe, overflow and text-spacing checks of one page at 1280/390/320 and forced colours, with screenshots
