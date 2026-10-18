@@ -3,11 +3,11 @@ import type { Box, RunFont } from './types.ts'
 
 // Common families by typeface class; a font name is a stronger signal than a look at a small render.
 const FAMILIES: [HeadingClass, RegExp][] = [
-  ['condensed', /condensed|narrow|compressed|\bdin|bebas|oswald|leaguegothic|impact|bahnschrift/],
+  ['condensed', /condensed|narrow|compressed|\bdin|bebas|oswald|leaguegothic|impact|bahnschrift|binner/],
   ['script', /script|brush|hand|pacifico|lobster|dancing|greatvibes|edwardian|zapfino|comic|marker/],
-  ['slab', /slab|rockwell|clarendon|archer|arvo|courier|museoslab|serifa|memphis/],
+  ['slab', /slab|rockwell|clarendon|archer|arvo|courier|museoslab|serifa|memphis|glypha/],
   ['didone', /bodoni|didot|playfair|walbaum/],
-  ['oldstyle', /garamond|caslon|palatino|bembo|minion|goudy|jenson|sabon|bookantiqua|plantin|iowan/],
+  ['oldstyle', /garamond|caslon|palatino|bembo|minion|goudy(?!sans)|jenson|sabon|bookantiqua|plantin|iowan/],
   ['transitional', /times|georgia|baskerville|cambria|charter|merriweather|perpetua|bookman|century(?!gothic)/],
   [
     'geometric',
@@ -15,9 +15,12 @@ const FAMILIES: [HeadingClass, RegExp][] = [
   ],
   [
     'humanist',
-    /gillsans|myriad|frutiger|optima|lucida|segoe|calibri|opensans|sourcesans|firasans|verdana|trebuchet|tahoma|corbel|candara/,
+    /gillsans|myriad|frutiger|optima|lucida|segoe|calibri|opensans|sourcesans|firasans|verdana|trebuchet|tahoma|corbel|candara|goudysans|rooneysans|adellesans/,
   ],
-  ['neogrotesque', /helvetica|arial|univers|roboto|inter\b|sfpro|akzidenz|nimbus.?sans|liberationsans|neuehaas/],
+  [
+    'neogrotesque',
+    /helvetica|arial|univers|roboto|^inter|sfpro|akzidenz|nimbus.?sans|liberationsans|neuehaas|franklingothic/,
+  ],
 ]
 
 export function classOf(fontName: string): HeadingClass | null {
@@ -46,9 +49,12 @@ const WEIGHT_WORDS: [string, number][] = [
   ['medium', 500],
   ['heavy', 800],
   ['black', 900],
+  ['demi', 600],
   ['bold', 700],
 ]
-const WEIGHT_SHORT: Record<string, number> = { lt: 300, md: 500, bd: 700, hv: 800, blk: 900 }
+const WEIGHT_SHORT: Record<string, number> = { lt: 300, bk: 400, md: 500, dm: 600, bd: 700, hv: 800, blk: 900 }
+// A style made of short forms only ("CnBk", "DmCd", "BdIt"): width (Cn, Cd: condensed), weight and italic.
+const SHORT_STYLE = /^(cn|cd|lt|bk|md|dm|bd|hv|blk|it)+$/
 
 // Width words kept in the family key, so classOf sees "narrow" and a vendored family is not matched by its base.
 const WIDTH = /narrow|condensed|cond|compressed|extended|expanded/
@@ -65,8 +71,14 @@ export function printedFace(
   const glued = WEIGHT_WORDS.find(([word]) => first.toLowerCase().endsWith(word) && first.length > word.length)?.[0]
   const base = glued ? first.slice(0, first.length - glued.length) : first
   const style = [glued ?? '', ...rest].join('-').toLowerCase()
-  const named = WEIGHT_WORDS.find(([word]) => style.includes(word))?.[1] ?? WEIGHT_SHORT[style.replace(/^-|it$/g, '')]
-  const width = WIDTH.exec(style)?.[0].replace(/^cond$/, 'condensed') ?? ''
+  const bare = style.replace(/^-/, '')
+  const short = SHORT_STYLE.test(bare) ? (bare.match(/cn|cd|lt|bk|md|dm|bd|hv|blk|it/g) ?? []) : []
+  const named =
+    WEIGHT_WORDS.find(([word]) => style.includes(word))?.[1] ??
+    short.map((t) => WEIGHT_SHORT[t]).find((w) => w !== undefined)
+  const width =
+    WIDTH.exec(style)?.[0].replace(/^cond$/, 'condensed') ??
+    (short.some((t) => t === 'cn' || t === 'cd') ? 'condensed' : '')
   return {
     key: `${base}${width}`.toLowerCase().replace(/[^a-z0-9]/g, ''),
     weight: named ?? (bold ? 700 : 400),

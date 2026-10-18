@@ -51,3 +51,6 @@
 - A PDF's shadow or outline is its own contrast aid: reproduce it (a dark copy of the words, an outline, a shadow kept in the backdrop) before computing a halo (Bannatyne raster shadow, Kenny & Ziggy's #231f20 copies, La Segunda extrusion, 2026-10-17).
 - Halo contrast is judged on the rendered pixels: one wide blur on thin strokes covers about 15–20 % (Crimsons, 2026-10-17).
 - Tracking, weight and class come from the PDF's widths and font descriptor for every font, not only the ones we may embed (Boater's Brandon, Lexington Brush Script, 2026-10-17).
+- A stand-in table only helps the faces it can name: probe the name parser on the real names (`Cn`, `Cd`, `Bk`, `Demi`) and count the letters left without a face before calling a remark answered (Lexington's condensed Franklin, 2026-10-18).
+- A brush or hand-lettered stand-in belongs where text keeps its printed size (the printed view), not where a display face may reach dish names on a phone. (Yellowtail, 2026-10-18)
+- A narrower face uncovers what a wider one hid: compare the PDF beside the page after every face change, at 4× on dense sheets (Lexington's false grey shadow, 2026-10-18).

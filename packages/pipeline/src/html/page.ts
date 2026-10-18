@@ -58,7 +58,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     page.flagged.some((f) => f === path || (!exact && (f.startsWith(`${path}.`) || f.startsWith(`${path}[`))))
       ? ' data-review'
       : ''
-  const pl = placer(page, printPx)
+  const pl = placer(page, printPx, ctx.library)
   const place = pl.place
   const attrs = (path: string): string => flagged(path) + place(path)
 

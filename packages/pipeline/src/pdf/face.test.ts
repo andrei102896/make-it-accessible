@@ -28,6 +28,18 @@ test('a printed face: subset prefix dropped, weight from the name before <b>, it
   assert.deepEqual(printedFace('OswaldLight', false, false), { key: 'oswald', weight: 300, italic: false })
   assert.deepEqual(printedFace('Roboto Light', false, false), { key: 'roboto', weight: 300, italic: false })
   assert.equal(printedFace('Helvetica-Narrow-Bold', false, false).key, 'helveticanarrow')
+  // Short forms of width and weight (Lexington's Franklin Gothic, Kenny & Ziggy's Kabel).
+  assert.deepEqual(printedFace('FranklinGothicLTPro-CnBk', false, false), {
+    key: 'franklingothicltprocondensed',
+    weight: 400,
+    italic: false,
+  })
+  assert.deepEqual(printedFace('ITCFranklinGothicStd-DmCd', false, false), {
+    key: 'itcfranklingothicstdcondensed',
+    weight: 600,
+    italic: false,
+  })
+  assert.equal(printedFace('ITCKabelStd-Demi', false, false).weight, 600)
   assert.deepEqual(printedFace('Futura-CondensedMedium', false, false), {
     key: 'futuracondensed',
     weight: 500,

@@ -15,6 +15,8 @@ import { parseVectors } from './vectors.ts'
 const PAD = 0.25
 // The light range is kept per cell of this many points.
 export const CELL = 8
+// backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
+export const BACKDROP_VERSION = 3
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -27,7 +29,7 @@ const Stroke = z.object({ color: Hex, width: z.number().positive() }).strict()
 // placed word its drawn ink and opacity, its printed shadow, and whether it is drawn at all (printedOf).
 const Grid = z
   .object({
-    version: z.literal(2),
+    version: z.literal(BACKDROP_VERSION),
     cell: z.number().positive(),
     cols: z.number().int().positive(),
     rows: z.number().int().positive(),
@@ -39,6 +41,8 @@ const Grid = z
     shadows: z.record(z.string(), Shadow),
     strokes: z.record(z.string(), Stroke),
     undrawn: z.array(z.string()),
+    // Per placed word its printed letter spacing in ems (pdf/tracking.ts), where tracked.
+    tracking: z.record(z.string(), z.number()),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>
@@ -126,7 +130,8 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
       return near(x - nx, y - ny, box.h) ? [[x - nx, y - ny] as const] : []
     })
     const mid = (vs: number[]): number => vs.sort((a, b) => a - b)[Math.floor(vs.length / 2)] ?? 0
-    if (pairs.length * 2 >= other.length)
+    // A shadow redraws most of the word's letters; a neighbour's glyph or two reaching into the zone is none.
+    if (pairs.length * 2 >= other.length && pairs.length * 2 >= inked.length)
       out.shadows[id] = { color, dx: round(mid(pairs.map((p) => p[0]))), dy: round(mid(pairs.map((p) => p[1]))) }
   }
   for (const d of copiesOf(

@@ -57,6 +57,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
   pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (and their redrawn outlines), its light range per 8 pt cell, each word's ink as drawn
+  pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
   pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
@@ -76,7 +77,9 @@ packages/pipeline/src/        product code, reused by the MVP
   html/boxes.ts               the PDF's frames and panels as boxes round the blocks inside them, the page frame, their CSS
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/lines.ts               the PDF's rules where it draws them: under or through a heading, above or below a block, a band's top, between columns; a rule crossing a band's columns splits it into rows
-  html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; ink moved to read on a flat backdrop, a halo only on a varying one; text set on its side or in doubt left printed
+  html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; each line in its printed face and letter spacing; text set on its side or in doubt left printed
+  html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one
+  html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class; files beside the page (fonts/)
   html/print.ts               the printed view's sheet and switch; shown where the body text reads at 12 px or more
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
@@ -134,7 +137,8 @@ packages/eval/src/            evaluation harness, never shipped
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
   backdrop.ts                 renders each page's backdrop in Chromium (JPEG at 2× CSS px) and its light grid (pNN/backdrop.jpg, backdrop.json)
-  fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box, and names the pages where text still overflows or collides (they show the text view)
+  tracking.ts                 reads the PDF with pdf.js (pdfjs-dist, eval only) for pdf/tracking.ts; a page it cannot read is untracked
+  fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
   look.ts                     a document's title, colours, template and heading class (brief kept in brief.json for rescores)
   cost.ts                     model list prices and the cost of a call
   run.ts                      CLI: run and score against the answer keys

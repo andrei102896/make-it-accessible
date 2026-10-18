@@ -89,3 +89,12 @@ test("a shadow is measured glyph by glyph: the next tight line in the zone does 
   const printed = printedOf(page(glyphs, line(110) + line(122)), [word])
   assert.deepEqual(printed.shadows, { '1:0': { color: '#231f20', dx: 1, dy: 1 } })
 })
+
+test("a neighbour's glyph reaching into a word's zone is no shadow of it (Lexington's grey price after Mozzarella)", () => {
+  const ink = (fill: string, x: number): string =>
+    `<g fill="${fill}"><use xlink:href="#glyph-0-1" x="${String(x)}" y="110"/></g>`
+  const word = [100, 104, 108, 112, 116].map((x) => ink('rgb(13.7%, 12.2%, 12.5%)', x)).join('')
+  const price = ink('rgb(39.6%, 40.4%, 41.2%)', 122)
+  const printed = printedOf(page(glyphs, word + price), [{ id: '1:0', box: { x: 98, y: 100, w: 22, h: 12 } }])
+  assert.deepEqual(printed.shadows, {})
+})

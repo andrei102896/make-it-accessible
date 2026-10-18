@@ -65,3 +65,8 @@
 - "Every match satisfies P" is true when nothing matches: a permission join needs at least one match (12 of 177 pdf.js fonts had no raw program by name, 2026-10-17).
 - A typeface class read from a font name misses commercial scripts with no genre word (FeelingPassionate, LindseySignature): gate on a measured property instead (2026-10-17).
 - A text layer can lie over a picture of its words: a word with no glyph drawn where it stands is printed inside an image (Stone House's cover, one raster under invisible text, 2026-10-17).
+- Poppler's word box ends at the last letter's advance without its character spacing (n−1 gaps) and is in MediaBox space; pdf.js puts horizontal scaling (Tz) in `transform[0]`, gives `view` as the CropBox, spaces tracked letters out in its strings ("R I C H"), and lists a non-embedded standard font's widths in an object, not an array. (tracking probe, 2026-10-18)
+- A tall word's box (a script line) also holds the baselines of the lines above it: match a word to the text item that prints it, nearest baseline first (Bannatyne's "Wedding" measured in Crimsons, 2026-10-18).
+- `document.fonts.ready` resolves even when a face fails to load (status `error`): a measurement that depends on a web font checks each face's status. (fit probe, 2026-10-18)
+- A copy-glyph rule needs a quorum of the word's own letters: one grey glyph of the next price inside a word's zone read as its shadow (Lexington's Mozzarella, 2026-10-18).
+- A census read from saved run files sees only what was saved: fields a rerender reads afresh (fonts, colours) are missing there; read the source the build reads. (font census, 2026-10-18)

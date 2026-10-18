@@ -2,10 +2,17 @@ import { rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
 import { placedRuns } from '@make-it-accessible/pipeline/html/source'
-import { backdropSvg, CELL, luminanceGrid, printedOf } from '@make-it-accessible/pipeline/pdf/backdrop'
+import {
+  BACKDROP_VERSION,
+  backdropSvg,
+  CELL,
+  luminanceGrid,
+  printedOf,
+} from '@make-it-accessible/pipeline/pdf/backdrop'
 import { pageSvg } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
+import { pdfTracking } from './tracking.ts'
 
 // Sharp at twice the CSS pixels of the printed size (1 pt = 4/3 px), which covers a retina screen at 100 %; once
 // at the CSS pixels when that runs out of time. Soft masks and filters can stall Chromium (a leaflet with 35
@@ -13,11 +20,11 @@ import type { PageResult } from './process.ts'
 const SCALES = [(2 * 96) / 72, 96 / 72]
 const TIMEOUT_MS = 60_000
 const QUALITY = 0.8
-const VERSION = 2
 
 // Each page's backdrop for the printed view: pNN/backdrop.jpg, and pNN/backdrop.json with its light range per cell.
 // A page that renders at no scale in time gets none, and its document keeps the text view only.
 export async function writeBackdrops(pdf: string, results: readonly PageResult[]): Promise<void> {
+  const tracking = await pdfTracking(pdf)
   const browser = await chromium.launch()
   try {
     for (const r of results) {
@@ -53,10 +60,17 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
       await writeFile(join(r.dir, 'backdrop.jpg'), Buffer.from(drawn.jpeg.slice(drawn.jpeg.indexOf(',') + 1), 'base64'))
       await writeFile(
         join(r.dir, 'backdrop.json'),
-        JSON.stringify({ version: VERSION, cell: CELL, ...grid, ...printedOf(page, words) }),
+        JSON.stringify({
+          version: BACKDROP_VERSION,
+          cell: CELL,
+          ...grid,
+          ...printedOf(page, words),
+          tracking: await tracking.of(r.extraction),
+        }),
       )
     }
   } finally {
+    await tracking.close()
     await browser.close()
   }
 }

@@ -8,6 +8,7 @@ import type { Layout } from './layout.ts'
 import type { Role } from './profile.ts'
 import type { TocEntry } from './nav.ts'
 import type { Strings } from './strings.ts'
+import type { FontManifest } from './webfonts.ts'
 import type { Theme } from './theme.ts'
 
 export type HtmlPage = {
@@ -55,4 +56,6 @@ export type Context = {
   titleWords: readonly string[]
   // The printed view's narrowest page width in CSS px (print.ts printWidth), null without one.
   printPx: number | null
+  // The vendored families (brand.ts), for the printed view's faces (printface.ts); none without a brand.
+  library: readonly FontManifest[]
 }

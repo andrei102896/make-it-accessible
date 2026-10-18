@@ -25,7 +25,12 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
   try {
     const tab = await browser.newPage({ viewport: { width, height: 900 } })
     await tab.goto(`file://${encodeURI(htmlPath)}`)
-    await tab.evaluate(() => document.fonts.ready)
+    // A printed-view face that fails to load would measure its fallback's widths.
+    const broken = await tab.evaluate(async () => {
+      await document.fonts.ready
+      return [...document.fonts].filter((f) => f.status === 'error').map((f) => f.family)
+    })
+    if (broken.length) throw new Error(`${htmlPath}: fonts did not load: ${broken.join(', ')}`)
     const { fits, failing } = await tab.evaluate(
       ({ min, smallest, step, tall, overlap }) => {
         const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]

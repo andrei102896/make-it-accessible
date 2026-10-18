@@ -29,8 +29,8 @@ export const viewSwitch = (ui: Strings): string =>
 
 const SR_ONLY =
   'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;'
-// `--k` and `--z` (eval's fit.ts, measured at build time) narrow, then shrink, a lookalike face to its printed
-// width. The id in `on` outranks the brand's class selectors, so their layout never leaks into the printed view.
+// `--k`, `--z` (fit.ts, measured at build) narrow, then shrink, a lookalike to its printed width; the box grows by
+// one `--ls`, which follows the last letter too. `on`'s id outranks the brand's classes: their layout stays out.
 const on = 'body:has(#view-print:checked)'
 const printed = 'section[data-page][style*="--ar:"]'
 const lead = `.lead:has(> ${printed})`
@@ -69,11 +69,13 @@ ${on} ${page} [data-frame] :is(table, caption, thead, tbody, tr, th, td) { borde
   font-size: 0; }
 ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0)) * 1cqw);
   top: calc((var(--y) - var(--ty, 0)) * 1cqw);
-  width: calc(var(--w) / var(--k, 1) * 1cqw); transform: scaleX(var(--k, 1)); transform-origin: left top;
+  width: calc(var(--w) / var(--k, 1) * 1cqw + var(--ls, 0) * 1em); transform: scaleX(var(--k, 1)); transform-origin: left top;
   display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; list-style: none; max-width: none;
   font-size: calc(var(--fs, var(--h)) * var(--z, 1) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw);
   white-space: var(--ws, normal); text-align: var(--ta, left); color: var(--c, inherit); font-weight: var(--fw, 400); font-style: var(--fi, normal);
-  text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill; }
+  text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill;
+  letter-spacing: calc(var(--ls, 0) * 1em); font-size-adjust: none; }
+${on} ${page} [style*="--ff:"] { font-family: var(--ff); }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }

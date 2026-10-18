@@ -38,7 +38,7 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 2,
+  version: 3,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -50,6 +50,7 @@ const white: Grid = {
   shadows: {},
   strokes: {},
   undrawn: [],
+  tracking: {},
 }
 
 test('each leaf takes its printed box, size, face and drawn ink, moved to read on a flat backdrop; text read from a picture has no spot', () => {
@@ -61,12 +62,12 @@ test('each leaf takes its printed box, size, face and drawn ink, moved to read o
   const title = spots.get('blocks[0]')
   assert.ok(title)
   assert.equal(
-    placement(title, extraction.width, white, 2),
-    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--c:#a69600;--ts:none"',
+    placement(title, extraction.width, white, 2, []),
+    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#a69600;--ts:none"',
   )
   const name = spots.get('blocks[2].items[0].name')
   assert.ok(name)
-  assert.match(placement(name, extraction.width, white, 2), /--ts:none/)
+  assert.match(placement(name, extraction.width, white, 2, []), /--ts:none/)
 })
 
 test('a page with a backdrop renders both views from one document; without one, nothing of the printed view', () => {
@@ -106,7 +107,7 @@ test('on a varying backdrop (a photo) a failing ink keeps its colour and gets a 
   const name = spotsOf(structure.blocks, extraction, photo).get('blocks[2].items[0].name')
   assert.ok(name)
   assert.match(
-    placement(name, extraction.width, photo, 2),
+    placement(name, extraction.width, photo, 2, []),
     /--c:#222222;--ts:0 0 \.04em #ffffff, 0 0 \.08em #ffffff, 0 0 \.3em #ffffff/,
   )
 })
@@ -187,12 +188,35 @@ test('an ink printed at an opacity is blended over its ground; a printed shadow 
   }
   const title = spotsOf(structure.blocks, extraction, olive).get('blocks[0]')
   assert.ok(title)
-  assert.match(placement(title, extraction.width, olive, 2), /--c:#f1f0e6;--ts:0 0 \.04em #[0-9a-f]{6}/)
+  assert.match(placement(title, extraction.width, olive, 2, []), /--c:#f1f0e6;--ts:0 0 \.04em #[0-9a-f]{6}/)
   const shadowed: Grid = { ...olive, alpha: {}, shadows: { '1:0': { color: '#231f20', dx: 0, dy: 2 } } }
   const lifted = spotsOf(structure.blocks, extraction, shadowed).get('blocks[0]')
   assert.ok(lifted)
   assert.match(
-    placement(lifted, extraction.width, shadowed, 2),
+    placement(lifted, extraction.width, shadowed, 2, []),
     /--ts:calc\(0 \* 1cqw\) calc\(0\.333 \* 1cqw\) 0 #231f20"/,
   )
+})
+
+test('a placed line takes its printed face and letter spacing; small text is never set tighter than its face', () => {
+  const jost = {
+    family: 'Jost',
+    key: 'jost',
+    license: 'OFL' as const,
+    copyright: '',
+    category: 'text' as const,
+    files: [{ file: 'jost.woff2', style: 'normal' as const, weight: '100 900', unicodeRange: 'U+0000-00FF' }],
+  }
+  const gothic = { key: 'centurygothic', size: 9, weight: 300, italic: false }
+  const e: Extraction = { ...extraction, runs: extraction.runs.map((r) => ({ ...r, font: gothic })) }
+  const tracked: Grid = { ...white, tracking: { '1:0': 0.157, '1:1': -0.05, '1:2': -0.05, '1:3': -0.05, '1:4': -0.05 } }
+  const spots = spotsOf(structure.blocks, e, tracked)
+  const title = spots.get('blocks[0]')
+  const name = spots.get('blocks[2].items[0].name')
+  assert.ok(title && name)
+  assert.match(
+    placement(title, e.width, tracked, 2, [jost]),
+    /--fw:300;--fi:normal;--ff:'print-jost', sans-serif;--ls:0\.157;/,
+  )
+  assert.match(placement(name, e.width, tracked, 2, [jost]), /--ls:0;/)
 })

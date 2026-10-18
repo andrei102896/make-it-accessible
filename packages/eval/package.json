@@ -8,6 +8,7 @@
   "dependencies": {
     "@axe-core/playwright": "4.13.0",
     "@make-it-accessible/pipeline": "workspace:*",
+    "pdfjs-dist": "4.10.38",
     "playwright": "1.64.0",
     "zod": "4.6.6"
   }

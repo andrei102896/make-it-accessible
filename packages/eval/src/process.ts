@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
@@ -19,6 +19,8 @@ import { costUsd } from './cost.ts'
 import { fitPlaced } from './fit.ts'
 import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
+import { FONTS_DIR } from './paths.ts'
+import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 
 const MAX_UNCOVERED = 0.1
 
@@ -184,21 +186,21 @@ export async function buildHtml(
   }
   const brand = await documentBrand(pdfPath, docDir, pages, look.background, look.theme?.band?.bg ?? null)
   const htmlPath = join(docDir, 'index.html')
-  const write = (): Promise<void> =>
-    writeFile(
-      htmlPath,
-      renderDocument({
-        lang: results[0]?.structure.lang ?? 'en',
-        title: title ?? look.title ?? fallbackTitle,
-        pages,
-        theme: look.theme,
-        kind: look.brief?.type ?? null,
-        headings: look.headings,
-        validity: look.brief?.validity ?? null,
-        brand,
-        logo,
-      }),
-    )
+  const write = async (): Promise<void> => {
+    const html = renderDocument({
+      lang: results[0]?.structure.lang ?? 'en',
+      title: title ?? look.title ?? fallbackTitle,
+      pages,
+      theme: look.theme,
+      kind: look.brief?.type ?? null,
+      headings: look.headings,
+      validity: look.brief?.validity ?? null,
+      brand,
+      logo,
+    })
+    await writeFile(htmlPath, html)
+    await copyPrintFonts(html, docDir)
+  }
   await write()
   const failing = printed ? await fitPlaced(htmlPath) : []
   // A page whose placed text overflows or collides shows the text view; the other pages keep the printed view.
@@ -210,6 +212,18 @@ export async function buildHtml(
     for (const m of still) console.error(`${docDir} p${String(m.page)}: still misplaced after the fallback, ${m.why}`)
   }
   return htmlPath
+}
+
+// The vendored files the printed view's faces name (html/printface.ts), copied beside the page; a file's name starts
+// with its family's key, its folder in the library.
+async function copyPrintFonts(html: string, docDir: string): Promise<void> {
+  const files = new Set(
+    [...html.matchAll(new RegExp(`url\\(${PRINT_FONTS_DIR}/([a-z0-9]+)(-[\\w.-]+\\.woff2)\\)`, 'g'))].map(
+      ([, key, rest]) => `${key ?? ''}${rest ?? ''}`,
+    ),
+  )
+  if (files.size) await mkdir(join(docDir, PRINT_FONTS_DIR), { recursive: true })
+  for (const f of files) await copyFile(join(FONTS_DIR, f.split('-')[0] ?? '', f), join(docDir, PRINT_FONTS_DIR, f))
 }
 
 // The page's backdrop when it rendered (backdrop.ts); a page without one keeps its document in the text view.
