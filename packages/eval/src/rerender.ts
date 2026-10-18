@@ -8,6 +8,7 @@ import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
 import { withIcons } from '@make-it-accessible/pipeline/pdf/icons'
 import { documentLegend } from './legend.ts'
 import { extractWhole } from './wholewords.ts'
+import { moveIconCites } from './iconcites.ts'
 
 // pnpm rerender <slug>... | --all: renders a saved run again, no model call, in out/rebuilt/<slug>; fonts, colours,
 // hidden words and drawn shapes are read afresh from the PDF, lines.json again when its version is behind.
@@ -52,10 +53,11 @@ async function rebuild(s: Source): Promise<string> {
       if (f?.font) r.font = f.font
       if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored })
     })
+    const saved = extraction.runs
     extraction.runs = [...base, ...fresh.runs.filter((r) => r.icon)]
     const structure = parsePage(await readFile(join(dir, 'structure.json'), 'utf8'))
-    if (citesPast(structure, base.length))
-      throw new Error(`${s.slug} ${d}: the saved structure cites icon words, which are read afresh; run adhoc again`)
+    if (!moveIconCites(structure, saved, extraction.runs, base.length))
+      throw new Error(`${s.slug} ${d}: a cited icon word has no fresh icon at its place; run adhoc again`)
     results.push({
       keyPage: extraction.pdfPage,
       pdfPage: extraction.pdfPage,
@@ -80,14 +82,3 @@ async function rebuild(s: Source): Promise<string> {
 }
 
 for (const s of chosen) await rebuild(s)
-
-// Whether any citation reaches past the text layer's runs (into icon words appended to a saved run).
-function citesPast(value: unknown, count: number): boolean {
-  if (Array.isArray(value)) return value.some((v) => citesPast(v, count))
-  if (typeof value !== 'object' || value === null) return false
-  return Object.entries(value).some(([key, v]) =>
-    key === 'src' && Array.isArray(v)
-      ? v.some((r: unknown) => Array.isArray(r) && Number(r[1]) >= count)
-      : citesPast(v, count),
-  )
-}
