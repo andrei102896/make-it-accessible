@@ -7,6 +7,8 @@ import { area, intersection } from '@make-it-accessible/pipeline/pdf/geometry'
 import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
+import { structureScan } from '@make-it-accessible/pipeline/model/scan'
+import { isScan, ocrRuns, readPrinted } from '@make-it-accessible/pipeline/pdf/ocr'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import { pictureIn } from '@make-it-accessible/pipeline/pdf/art'
 import { parseGrid } from '@make-it-accessible/pipeline/pdf/backdrop'
@@ -23,6 +25,7 @@ import { documentLook } from './look.ts'
 import { FONTS_DIR } from './paths.ts'
 import { withIcons, type LegendEntry } from '@make-it-accessible/pipeline/pdf/icons'
 import { extractWhole } from './wholewords.ts'
+import { folderStore } from './readings.ts'
 import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 
 const MAX_UNCOVERED = 0.1
@@ -60,18 +63,25 @@ export async function processPage(
 ): Promise<PageResult | null> {
   const dir = pageDir(docDir, keyPage)
   await mkdir(dir, { recursive: true })
-  const extraction = withIcons(await extractWhole(pdfPath, pdfPage), legend)
+  let extraction = withIcons(await extractWhole(pdfPath, pdfPage), legend)
+  // A page with no text layer is read by OCR and by the model apart (model/scan.ts); OCR reading no word leaves it.
+  const read = isScan(extraction) ? await readPrinted(pdfPath, pdfPage, extraction, folderStore()) : null
+  if (read?.some((w) => /[\p{L}\p{N}]/u.test(w.str)))
+    extraction = { ...extraction, runs: ocrRuns(read, pdfPage), duplicates: [], hidden: [] }
+  const scan = extraction.runs.some((r) => r.ocr)
   const size = fitScale(extraction.width, extraction.height)
   const image = await renderPage(pdfPath, pdfPage, size, join(dir, 'model'))
   await writeFile(join(dir, 'extraction.json'), JSON.stringify(extraction))
   let result: StructureResult
   try {
-    result = await structurePage(extraction, size, image, options, (draft) => {
-      const { uncovered } = validatePage(draft, extraction)
-      if (uncovered.length <= extraction.runs.length * MAX_UNCOVERED) return null
-      const ids = uncovered.slice(0, 40).map((id) => id.split(':')[1])
-      return `${String(uncovered.length)} of ${String(extraction.runs.length)} inventory words are neither used nor dropped, e.g. ids ${ids.join(', ')}. Cover the whole page.`
-    })
+    result = scan
+      ? await structureScan(extraction, size, image, options)
+      : await structurePage(extraction, size, image, options, (draft) => {
+          const { uncovered } = validatePage(draft, extraction)
+          if (uncovered.length <= extraction.runs.length * MAX_UNCOVERED) return null
+          const ids = uncovered.slice(0, 40).map((id) => id.split(':')[1])
+          return `${String(uncovered.length)} of ${String(extraction.runs.length)} inventory words are neither used nor dropped, e.g. ids ${ids.join(', ')}. Cover the whole page.`
+        })
   } catch (error) {
     await writeFile(join(dir, 'failure.txt'), error instanceof Error ? (error.stack ?? error.message) : String(error))
     console.info(`${label}: FAILED ${error instanceof Error ? error.message.slice(0, 200) : String(error)}`)
@@ -109,7 +119,12 @@ export async function buildHtml(
   // text view, a content one is never shown as true); preview:add and preview:refresh refuse a held document.
   for (const r of results) await writeFile(join(r.dir, 'validation.json'), json(r.validation))
   await writeFile(join(docDir, HELD_FILE), json(heldOf(expected, results)))
-  if (printed) await writeBackdrops(pdfPath, results)
+  // A scan's words are in its pixels: it has no backdrop to print over yet, so its document keeps the text view.
+  if (printed)
+    await writeBackdrops(
+      pdfPath,
+      results.filter((r) => !r.extraction.runs.some((w) => w.ocr)),
+    )
   const look = await documentLook(pdfPath, docDir, results, briefModel)
   const named = logoAt(look.brief?.logo ?? null, results)
   let logo: { src: string; share: number } | null = null

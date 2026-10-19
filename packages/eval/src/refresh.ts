@@ -17,6 +17,16 @@ export async function refreshedPage(
   const structureJson = await readFile(join(dir, 'structure.json'), 'utf8').catch(() => null)
   if (structureJson === null) return null
   const fresh = withIcons(await extractWhole(pdf, extraction.pdfPage), legend)
+  // A scan's words are OCR's, saved with the page: the reading stays as the structure cited it.
+  if (extraction.runs.some((r) => r.ocr)) {
+    Object.assign(extraction, {
+      vectors: fresh.vectors,
+      rules: fresh.rules,
+      pictures: fresh.pictures,
+      icons: fresh.icons,
+    })
+    return { extraction, structure: parsePage(structureJson) }
+  }
   // The structure cites the text layer's runs by index; icon words come after them and are read afresh.
   const base = extraction.runs.filter((r) => !r.icon)
   const freshBase = fresh.runs.filter((r) => !r.icon)

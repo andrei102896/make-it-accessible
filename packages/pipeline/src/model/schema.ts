@@ -14,6 +14,8 @@ const Price = z
     src: Src,
     role: z.enum(['current', 'previous', 'unit', 'discount']).default('current'),
     qualifier: Text.optional(),
+    // On a scan, the amount as the model read it where OCR read the words otherwise (model/align.ts).
+    text: z.string().optional(),
   })
   .strict()
 const Cell = z

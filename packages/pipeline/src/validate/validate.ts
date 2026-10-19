@@ -124,6 +124,9 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     // A price whose digits are partly drawn as shapes ("3" + a drawn ".99", La Segunda) reads as another amount.
     if (cited.some((r) => lost.has(r.id)))
       errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${words}"` })
+    // On a scan the two readers' amounts must agree (model/align.ts); neither is believed over the other.
+    if (p.text !== undefined && loose(p.text) !== loose(words))
+      errors.push({ path, problem: `the page image reads "${p.text}" where OCR reads "${words}"` })
     if (amount === null) {
       const printed = asPrinted(cited)
       if (printed === null) errors.push({ path, problem: `price words "${words}" are not an amount` })

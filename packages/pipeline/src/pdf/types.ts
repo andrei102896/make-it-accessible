@@ -21,6 +21,8 @@ const Run = z.object({
   restored: z.literal(true).optional(),
   // A word of an icon's legend label, standing for the icon drawn at its box (pdf/icons.ts): no glyphs of its own.
   icon: z.literal(true).optional(),
+  // Read by OCR from a page with no text layer (pdf/ocr.ts); the model read the page independently.
+  ocr: z.literal(true).optional(),
 })
 const PageImage = z.object({ id: z.string(), box: Box })
 // A box the PDF draws round text (pdf/vectors.ts): a frame (stroke, or a filled ring) or a panel (a fill).
