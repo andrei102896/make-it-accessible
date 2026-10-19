@@ -3,10 +3,14 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { moneyFromParts } from '../text/money.ts'
+import { LIMITS } from './preflight.ts'
 import { copyForbidden, extractPage } from './poppler.ts'
 import { fitScale } from './raster.ts'
 import { centPartner, joinRuns } from './runs.ts'
 import type { Extraction } from './types.ts'
+
+// The stage-0 corpus holds retail leaflets past the product's 10 pages (pdf/preflight.ts); extraction is tested on them.
+const CORPUS = { ...LIMITS, pages: 100 }
 
 const DOCS = join(import.meta.dirname, '..', '..', '..', '..', 'validation', 'testdocs')
 const BILLA = join(DOCS, '01_billa_plus_kw41_wien.pdf')
@@ -35,7 +39,7 @@ test(
   'Poppler extraction on the original test PDFs',
   { skip: !existsSync(BILLA) && 'test PDFs are local-only' },
   async () => {
-    const billa3 = await extractPage(BILLA, 3)
+    const billa3 = await extractPage(BILLA, 3, CORPUS)
     const t3 = text(billa3)
     for (const word of ['Karfiol-Laibchen', 'Pfirsich', 'Lay’s', 'Bio-Gouda-'])
       assert.ok(t3.includes(word), `BILLA p3 lacks ${word}`)
@@ -49,23 +53,23 @@ test(
       `BILLA p3 has ${billa3.images.length} images, expected one per product at least`,
     )
 
-    const billa8 = await extractPage(BILLA, 8)
+    const billa8 = await extractPage(BILLA, 8, CORPUS)
     const t8 = text(billa8)
     assert.ok(t8.includes('HENDL-FILET'), 'BILLA p8 lacks HENDL-FILET')
     assert.ok(!/%45|HENDL%FILET|FR!/.test(t8), 'BILLA p8 has glyph corruption')
 
-    const billa6 = await extractPage(BILLA, 6)
+    const billa6 = await extractPage(BILLA, 6, CORPUS)
     assert.ok(pricePairs(billa6).includes(-10), 'BILLA p6 lacks -0,10 as a pair')
 
-    const extract = await extractPage(BILLA_EXTRACT, 2)
+    const extract = await extractPage(BILLA_EXTRACT, 2, CORPUS)
     assert.ok(/Kar!ol/.test(text(extract)), 'the PDFKit extract no longer shows the known corruption')
 
-    const pollin1 = await extractPage(POLLIN, 1)
+    const pollin1 = await extractPage(POLLIN, 1, CORPUS)
     assert.ok(/€ 222,- € 199,-/.test(text(pollin1)), 'Pollin p1 lacks "€ 222,- € 199,-"')
-    const pollin5 = await extractPage(POLLIN, 5)
+    const pollin5 = await extractPage(POLLIN, 5, CORPUS)
     assert.ok(text(pollin5).includes('-,65'), 'Pollin p5 lacks "-,65"')
 
-    const honda9 = await extractPage(HONDA, 9)
+    const honda9 = await extractPage(HONDA, 9, CORPUS)
     const th = text(honda9)
     assert.equal((th.match(/■/g) ?? []).length, 30, 'Honda p9 ■ count')
     for (const word of ['efficiency', 'benefit', 'fitted']) assert.ok(th.includes(word), `Honda p9 lacks ${word}`)
@@ -73,9 +77,9 @@ test(
     const hiddenWords = honda9.runs.filter((r) => honda9.hidden.includes(r.id)).map((r) => r.str)
     assert.deepEqual(hiddenWords, ['HRX', '537', 'VYEA'])
 
-    const stonehouse1 = await extractPage(STONEHOUSE, 1)
+    const stonehouse1 = await extractPage(STONEHOUSE, 1, CORPUS)
     assert.ok(stonehouse1.runs.length > 0, 'Stone House p1 has no text')
-    const bannatyne1 = await extractPage(BANNATYNE, 1)
+    const bannatyne1 = await extractPage(BANNATYNE, 1, CORPUS)
     assert.ok(bannatyne1.runs.length > 50, 'Bannatyne p1 text layer is nearly empty')
 
     for (const e of [billa3, billa8, billa6, pollin1, pollin5, stonehouse1, bannatyne1])

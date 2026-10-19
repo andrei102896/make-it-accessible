@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { MAX_BUFFER, poppler, popplerBytes } from './exec.ts'
 import { mergeOverlapping } from './geometry.ts'
-import { preflight } from './preflight.ts'
+import { LIMITS, preflight, type Limits } from './preflight.ts'
 import { Refused } from './refused.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
@@ -24,9 +24,9 @@ const MAX_IMAGE_AREA = 0.9
 const VISIBILITY_DPI = 150
 const MAX_VISIBILITY_EDGE = 5000
 
-export async function extractPage(pdf: string, pdfPage: number): Promise<Extraction> {
+export async function extractPage(pdf: string, pdfPage: number, limits: Limits = LIMITS): Promise<Extraction> {
   // Every run path reads a page here: a PDF we may not read, or past the limits, is refused by name.
-  await preflight(pdf)
+  await preflight(pdf, limits)
   const page = String(pdfPage)
   const { stdout } = await poppler('pdftotext', ['-q', '-f', page, '-l', page, '-tsv', pdf, '-'], {
     maxBuffer: MAX_BUFFER,
@@ -135,6 +135,9 @@ export async function popplerVersion(): Promise<string> {
   return stderr.split('\n')[0] ?? 'unknown'
 }
 
+// The page count alone (corpus tools); a conversion is refused past the limits in extractPage.
 export async function pageCount(pdf: string): Promise<number> {
-  return preflight(pdf)
+  const pages = /^Pages:\s+(\d+)/m.exec((await poppler('pdfinfo', [pdf])).stdout)?.[1]
+  if (!pages) throw new Error(`pdfinfo returned no page count for ${pdf}`)
+  return Number(pages)
 }
