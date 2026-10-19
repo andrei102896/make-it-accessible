@@ -24,6 +24,10 @@ const MAX_IMAGE_AREA = 0.9
 const VISIBILITY_DPI = 150
 const MAX_VISIBILITY_EDGE = 5000
 
+// A text layer's control characters print nothing (a font's broken character map: "\u00037.40", "vodka\u0003");
+// a tab is spacing. A word left blank is kept, so ids stay, and counted with the hidden ones.
+export const printedWord = (raw: string): string => raw.replace(/\t/g, ' ').replace(/\p{Cc}/gu, '')
+
 export async function extractPage(pdf: string, pdfPage: number, limits: Limits = LIMITS): Promise<Extraction> {
   // Every run path reads a page here: a PDF we may not read, or past the limits, is refused by name.
   await preflight(pdf, limits)
@@ -47,7 +51,7 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
     } else if (level === 5) {
       runs.push({
         id: `${pdfPage}:${runs.length}`,
-        str: cols.slice(11).join('\t'),
+        str: printedWord(cols.slice(11).join('\t')),
         box: { x: x ?? 0, y: y ?? 0, w: w ?? 0, h: h ?? 0 },
         flow: flow ?? 0,
         line,
@@ -66,7 +70,8 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
   // RGB pixels within MAX_BUFFER whatever the page's shape (a square A0 page at the edge cap would exceed it).
   const fits = Math.sqrt(MAX_BUFFER / 3 / (width * height)) * 72
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height), fits)
-  const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
+  const blank = runs.filter((r) => !r.str.trim()).map((r) => r.id)
+  const hidden = [...new Set([...hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72), ...blank])]
   const { boxes, rules, art, placed, glyphs } = parseVectors(await pageSvg(pdf, pdfPage))
   const shown = new Set(hidden)
   const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())

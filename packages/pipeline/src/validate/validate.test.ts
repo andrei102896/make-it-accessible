@@ -264,3 +264,23 @@ test('on a scan, a price the page image reads otherwise than OCR is an error nam
     ['the page image reads "12.80" where OCR reads "$12.50"'],
   )
 })
+
+test('a name read without the comma that ends its words is the same reading; another word is not', () => {
+  const e = page([
+    ['PERONI', 0],
+    ['AZZURRO,', 40],
+    ['5.50', 200],
+  ])
+  const check = (text: string) =>
+    validatePage(
+      parsePage(
+        JSON.stringify({
+          lang: 'en',
+          blocks: [{ kind: 'products', items: [{ name: { src: [[0, 1]], text }, prices: [{ src: [[2, 2]] }] }] }],
+        }),
+      ),
+      e,
+    ).errors.map((f) => f.problem)
+  assert.deepEqual(check('PERONI AZZURRO'), [])
+  assert.deepEqual(check('PERONI ROSSO'), ['"PERONI ROSSO" does not match the cited words "PERONI AZZURRO,"'])
+})

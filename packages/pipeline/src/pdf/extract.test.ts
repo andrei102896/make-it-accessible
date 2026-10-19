@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { LIMITS } from './preflight.ts'
-import { copyForbidden, extractPage } from './poppler.ts'
+import { copyForbidden, extractPage, printedWord } from './poppler.ts'
 import { fitScale } from './raster.ts'
 import { joinRuns } from './runs.ts'
 import type { Extraction } from './types.ts'
@@ -42,7 +42,11 @@ test(
     assert.ok(bannatyne1.runs.length > 50, 'Bannatyne p1 text layer is nearly empty')
 
     for (const e of [pollin1, pollin5, stonehouse1, bannatyne1])
-      assert.deepEqual(e.hidden, [], `p${e.pdfPage} reports visible text as hidden`)
+      assert.deepEqual(
+        e.runs.filter((r) => e.hidden.includes(r.id) && r.str.trim()).map((r) => r.str),
+        [],
+        `p${e.pdfPage} reports visible text as hidden`,
+      )
     for (const e of [pollin1, pollin5, honda9, stonehouse1, bannatyne1]) {
       const size = fitScale(e.width, e.height)
       assert.ok(
@@ -63,4 +67,13 @@ test("a PDF whose owner forbids copying its text is recognised from pdfinfo's re
   )
   assert.equal(copyForbidden('Encrypted:       yes (print:yes copy:yes change:no addNotes:no algorithm:AES)\n'), false)
   assert.equal(copyForbidden('Encrypted:       no\n'), false)
+})
+
+test("a text layer's control characters print nothing and a tab is spacing", () => {
+  assert.deepEqual(['\u00037.40', 'vodka\u0003', '\b', 'spritz\t\t13'].map(printedWord), [
+    '7.40',
+    'vodka',
+    '',
+    'spritz  13',
+  ])
 })

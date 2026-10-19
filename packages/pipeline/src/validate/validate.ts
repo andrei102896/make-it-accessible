@@ -30,6 +30,8 @@ export const flaggedPaths = (v: Validation): string[] => [...v.errors, ...v.revi
 type Range = [number, number]
 
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
+// The punctuation that ends a span parts it from what follows ("PERONI NASTRO AZZURRO," + its strength): not a word.
+const reading = (s: string): string => loose(s).replace(/[,;:]+$/u, '')
 
 // Ligatures a font maps to no text: pdftotext splits the word where the glyph drew ("Pla" + "er", "Truf" + "e").
 // Seen on Gigi (ti, tt) and Noah's (fi, fl); a dropped glyph leaves LOST_GAP em or more, a word space ~0.25 em.
@@ -40,7 +42,7 @@ const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 // Whether the model's text may stand for the cited words: the same characters, or lost ligatures filled in. The
 // page shows nothing else (html/source.ts); every other difference is an error here.
 export const modelTextAccepted = (text: string, cited: readonly Run[]): boolean =>
-  loose(text) === loose(joinRuns(cited)) || ligaturesLost(text, cited)
+  reading(text) === reading(joinRuns(cited)) || ligaturesLost(text, cited)
 
 // The model's text is the cited words with lost ligatures filled in where a word splits on one line (after a comma
 // too: "apricots, " + "gs").
@@ -106,7 +108,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     // A word a dropped glyph leaves unwhole ("Pance a") is an error, its leaf flagged, unless the model read it whole.
     if (t.text === undefined && cited.some((r) => lost.has(r.id)))
       errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${joined}"` })
-    if (t.text !== undefined && loose(t.text) !== loose(joined)) {
+    if (t.text !== undefined && reading(t.text) !== reading(joined)) {
       if (ligaturesLost(t.text, cited))
         generated.push({
           path,
@@ -125,7 +127,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     if (cited.some((r) => lost.has(r.id)))
       errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${words}"` })
     // On a scan the two readers' amounts must agree (model/align.ts); neither is believed over the other.
-    if (p.text !== undefined && loose(p.text) !== loose(words))
+    if (p.text !== undefined && reading(p.text) !== reading(words))
       errors.push({ path, problem: `the page image reads "${p.text}" where OCR reads "${words}"` })
     if (amount === null) {
       const printed = asPrinted(cited)
