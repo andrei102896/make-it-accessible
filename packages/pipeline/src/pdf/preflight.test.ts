@@ -69,8 +69,8 @@ test('preflight refuses too many pages, a page past A0 or a bomb, and passes a m
   try {
     assert.equal(await preflight(await file('menu.pdf', pdf([[612, 792]]))), 1)
     const limits = { ...LIMITS, inflated: 1_000_000 }
-    const many = await file('many.pdf', pdf(Array.from({ length: 11 }, (): [number, number] => [612, 792])))
-    await assert.rejects(preflight(many), /11 pages, more than 10/)
+    const many = await file('many.pdf', pdf(Array.from({ length: 21 }, (): [number, number] => [612, 792])))
+    await assert.rejects(preflight(many), /21 pages, more than 20/)
     await assert.rejects(preflight(await file('huge.pdf', pdf([[14400, 14400]]))), /larger than A0/)
     await assert.rejects(preflight(await file('bomb.pdf', pdf([[612, 792]], [bomb(2_000_000)])), limits), Refused)
   } finally {

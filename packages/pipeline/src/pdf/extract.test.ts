@@ -8,7 +8,7 @@ import { fitScale } from './raster.ts'
 import { joinRuns } from './runs.ts'
 import type { Extraction } from './types.ts'
 
-// The stage-0 corpus holds retail leaflets past the product's 10 pages (pdf/preflight.ts); extraction is tested on them.
+// The stage-0 corpus holds retail leaflets past the product's 20 pages (pdf/preflight.ts); extraction is tested on them.
 const CORPUS = { ...LIMITS, pages: 100 }
 
 const DOCS = join(import.meta.dirname, '..', '..', '..', '..', 'validation', 'testdocs')
