@@ -120,8 +120,11 @@ export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' 
       return [...spots.keys()].some((k) => path.startsWith(`${k}.`)) ? '' : ' data-free'
     },
     apart: (path) => {
+      // Apart too when the price has no spot of its own (its label placed by another price): the amount alone.
       const both =
-        spots?.has(`${path}.amount`) === true && spots.has(`${path}.qualifier`) && !flaggedAt(path, page.flagged)
+        spots?.has(`${path}.amount`) === true &&
+        (spots.has(`${path}.qualifier`) || !spots.has(path)) &&
+        !flaggedAt(path, page.flagged)
       if (both) split.add(path)
       return both
     },

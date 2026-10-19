@@ -136,11 +136,20 @@ export function spotsOf(
       })
   }
   const priced = (p: PriceValue): Run[] => [...words(p), ...words(p.qualifier)]
-  // A price as one spot, and its amount and printed label each where it is printed ("Single" far from its 4).
+  const heads = new Set<string>()
+  // A price as one spot, and its amount and printed label each where it is printed ("Single" far from its 4). A
+  // column head shared by several prices is placed once; the others read it (Scotts' "Bottle", drawn 3 times).
   const price = (path: string, p: PriceValue): void => {
+    const label = words(p.qualifier)
+    const head = label.map((r) => r.id).join()
+    if (head && heads.has(head)) {
+      put(`${path}.amount`, words(p))
+      return
+    }
+    if (head) heads.add(head)
     put(path, priced(p))
     put(`${path}.amount`, words(p))
-    put(`${path}.qualifier`, words(p.qualifier))
+    put(`${path}.qualifier`, label)
   }
   blocks.forEach((b, i) => {
     block(`blocks[${String(i)}]`, b)

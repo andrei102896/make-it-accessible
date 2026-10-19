@@ -170,6 +170,22 @@ test("a price whose label is printed apart from its amount places each where it 
   assert.match(html, /<span class="amount" style="--x:51\.667;--y:16\.667;/)
 })
 
+test("a column head several prices share is placed once; the other prices read it beside their amount (Scotts' Bottle)", () => {
+  const at = (str: string, x: number, y: number, w: number) => ({ str, box: { x, y, w, h: 10 } })
+  const runs = [at('Bottle', 300, 80, 40), at('Zonin', 60, 100, 60), at('33', 310, 100, 14)]
+    .concat([at('Delamotte', 60, 120, 60), at('64', 310, 120, 14)])
+    .map((r, i) => ({ ...r, id: `1:${String(i)}`, flow: 0, line: i, color: '#222222', font }))
+  const e: Extraction = { ...extraction, runs }
+  const head = { qualifier: { src: [[0, 0]] } }
+  const item = (n: number) => ({ name: { src: [[n, n]] }, prices: [{ src: [[n + 1, n + 1]], ...head }] })
+  const menu = parsePage(JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items: [item(1), item(3)] }] }))
+  const page = { keyPage: 1, structure: menu, extraction: e, flagged: [], imageSrc: () => undefined }
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
+  assert.equal(html.match(/<span class="qualifier" style="--x:/g)?.length, 1)
+  assert.match(html, /<span class="qualifier" data-free>Bottle<\/span>/)
+  assert.equal(html.match(/<span class="amount" style="--x:51\.667;/g)?.length, 2)
+})
+
 test('a leaf the validator doubts is read, not placed: the backdrop keeps its printed words', () => {
   const page = { keyPage: 1, structure, extraction, flagged: ['blocks[0]'], imageSrc: () => undefined }
   const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
