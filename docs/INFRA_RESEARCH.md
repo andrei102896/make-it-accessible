@@ -61,6 +61,15 @@ AWS is already a sub-processor if the model runs on Bedrock EU, so one DPA cover
 
 This is the measured cost per page for pricing (M3) and the audit trail for the report. A cache keyed by (page image hash, prompt SHA, model) lets a re-run reuse a completed call.
 
+**Page readings are processed once** (Andrei, 2026-10-19: a content hash finds a completed reading of the same kind, which is reused):
+- the key is the page, not the PDF: a hash of the page's pixels and text layer, so a re-upload with one price changed reprocesses only that page;
+- the key carries the engine version (Tesseract version, DPI and mode for OCR; prompt SHA and model for the model call), so a changed engine never reuses an old reading;
+- scoped per account and deleted with it; one client never receives a reading computed from another's PDF;
+- only completed readings are kept; a failed or absent reading is never stored;
+- the row (account, kind `ocr` | `structure`, page hash, engine version, S3 key, completed time) lives in Postgres, the reading itself in S3 beside the page's other files.
+
+Locally the same cache is a folder of files named by key (`out/cache/`), so moving to RDS + S3 changes storage, not logic. Tesseract (+ eng data, ~30 MB) goes into the `processPage` image beside Poppler.
+
 **Logs:** one structured JSON line per event (`level`, `message`, `file`, `step`, `documentId`, `versionId`, `page`, `executionId`, elapsed seconds), queried with CloudWatch Logs Insights. Level from `LOG_LEVEL` (none / error / info / debug), errors always on.
 
 **Packaging and deploy:**
