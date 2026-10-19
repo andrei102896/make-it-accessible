@@ -2,6 +2,7 @@ import { cp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parsePage } from '@make-it-accessible/pipeline/model/schema'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
+import { Refused } from '@make-it-accessible/pipeline/pdf/refused'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { buildHtml, type PageResult } from './process.ts'
 import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
@@ -86,4 +87,9 @@ async function rebuild(s: Source): Promise<string> {
   return page
 }
 
-for (const s of chosen) await rebuild(s)
+for (const s of chosen)
+  await rebuild(s).catch((e: unknown) => {
+    // A document the engine now refuses (pdf/preflight.ts) is reported, the rest of the set rebuilt.
+    if (!(e instanceof Refused)) throw e
+    console.error(`${s.slug}: refused, ${e.message}`)
+  })

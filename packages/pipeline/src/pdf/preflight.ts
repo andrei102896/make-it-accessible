@@ -3,11 +3,11 @@ import { poppler } from './exec.ts'
 import { Refused } from './refused.ts'
 import { inflatedSize, MAX_DOCUMENT_INFLATED } from './streams.ts'
 
-// What a document may be before any work starts, about 3× the most measured on the 66 test documents (2026-10-19:
-// Lidl DE 73 pages and 89 MB, the largest page Kenny & Ziggy's 684 × 1656 pt); A0 bounds a page's area.
+// What a document may be before any work starts: menus and brochures of at most 10 pages (Andrei, 2026-10-19); the
+// rest about 3× the most measured on the 66 test documents (89 MB Lidl DE, largest page K&Z 684 × 1656 pt; A0 bound).
 export const LIMITS = {
   bytes: 300 * 1000 * 1000,
-  pages: 250,
+  pages: 10,
   pageArea: 2384 * 3370,
   inflated: MAX_DOCUMENT_INFLATED,
 }
