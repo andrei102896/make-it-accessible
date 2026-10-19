@@ -35,14 +35,16 @@ await mkdir(docDir, { recursive: true })
 
 const results: PageResult[] = []
 const legend = await documentLegend(pdfPath)
+const expected: number[] = []
 for (let page = from; page <= Math.min(to, total); page++) {
+  expected.push(page)
   const result = await processPage(pdfPath, page, page, docDir, options, `p${String(page)}`, legend)
   if (result) results.push(result)
 }
 if (results.length) {
   const briefModel = { model: values['brief-model'], effort: 'low' }
   if (!PRICES[briefModel.model]) throw new Error(`unknown model ${briefModel.model}`)
-  const htmlPath = await buildHtml(pdfPath, docDir, results, name, values.title, briefModel, true)
+  const htmlPath = await buildHtml(pdfPath, docDir, results, expected, name, values.title, briefModel, true)
   const axe = await axeReport(htmlPath)
   const keyboard = await keyboardReport(htmlPath)
   const usd = results.reduce((sum, r) => sum + r.usd, 0)

@@ -23,7 +23,7 @@ Result (2026-10-18): 10 of 34 documents held (Carew, Carmine's, Gargiulo's, Kenn
 
 ## Phase 1 — close publication (~3 d)
 
-1. **Page manifest**: a document lists every PDF page; a page that fails extraction, the model or the build holds the document (no silent drop). Fixture: a PDF with one corrupt page.
+1. **Page manifest**: a document lists every PDF page; a page that fails extraction, the model or the build holds the document (no silent drop). Fixture: a PDF with one corrupt page. Done 2026-10-19: buildHtml takes the expected pages (adhoc: the requested range; rerender: every saved page folder, one without structure.json counted missing); a missing page is a held entry (`preview.ts heldOf`, tested); a document where every page failed writes no held.json and reads as held.
 2. **Document budgets** in an isolated worker: wall time, memory, pixels, pages, inflated bytes (cumulative, not per stream), pdf.js calls with deadlines; past a budget the document is refused cleanly, nothing publishable written. Fixture corpus: a zip-bomb stream, a 10,000-page PDF, a 200-inch page, a looping content stream.
 3. **Backdrop cuts per instance**: a glyph reached through a reused definition is cut by cloning that instance, never by editing the definition; synthetic fixture: two uses of one definition, one cut, one kept.
 4. **Image text never published unchecked**: `seen` text without digits goes to review (held under the self-serve policy) until phase 3 verifies it by OCR.

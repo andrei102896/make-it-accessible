@@ -9,6 +9,7 @@ import {
   formatExpiry,
   HELD_FILE,
   heldErrors,
+  heldOf,
   parseExpiry,
   previewFile,
   withAssets,
@@ -72,4 +73,14 @@ test('a document is held while it has content errors, or was built before the ga
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+test('a page that did not convert holds its document, as a content error does', () => {
+  const ok = { pdfPage: 1, validation: { errors: [] } }
+  assert.deepEqual(heldOf([1], [ok]), [])
+  assert.deepEqual(heldOf([1, 2], [ok]), [
+    { pdfPage: 2, path: 'page', problem: 'the page did not convert (failure.txt in its folder)' },
+  ])
+  const wrong = { pdfPage: 1, validation: { errors: [{ path: 'blocks[0]', problem: 'not an amount' }] } }
+  assert.deepEqual(heldOf([1], [wrong]), [{ pdfPage: 1, path: 'blocks[0]', problem: 'not an amount' }])
 })

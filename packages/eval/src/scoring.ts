@@ -8,7 +8,14 @@ import { decisions } from './score/decisions.ts'
 import { scoreDocument } from './score/score.ts'
 
 export async function buildAndScore(key: KeyDoc, docDir: string, results: PageResult[]): Promise<DocScore> {
-  const htmlPath = await buildHtml(key.pdfPath, docDir, results, key.doc)
+  // Scoring reads missing pages as missing; only publication holds a document.
+  const htmlPath = await buildHtml(
+    key.pdfPath,
+    docDir,
+    results,
+    results.map((r) => r.pdfPage),
+    key.doc,
+  )
   const scored = await scoreDocument(
     htmlPath,
     key,

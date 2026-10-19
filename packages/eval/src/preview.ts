@@ -88,6 +88,21 @@ export const formatExpiry = (rows: readonly ExpiryRow[]): string =>
 export const expired = (rows: readonly ExpiryRow[], today: Date): ExpiryRow[] =>
   rows.filter((r) => r.deleteBy <= day(today))
 
+type Held = { pdfPage: number; path: string; problem: string }
+// What holds a document: every expected page that did not convert, and every content error of those that did.
+export function heldOf(
+  expected: readonly number[],
+  pages: readonly { pdfPage: number; validation: { errors: readonly { path: string; problem: string }[] } }[],
+): Held[] {
+  const built = new Set(pages.map((p) => p.pdfPage))
+  return [
+    ...expected
+      .filter((n) => !built.has(n))
+      .map((pdfPage) => ({ pdfPage, path: 'page', problem: 'the page did not convert (failure.txt in its folder)' })),
+    ...pages.flatMap((p) => p.validation.errors.map((f) => ({ pdfPage: p.pdfPage, path: f.path, problem: f.problem }))),
+  ]
+}
+
 // A document's content errors (eval/process.ts): a held document is not published. Missing file: built before the
 // gate, read as held so it is rebuilt first.
 export const HELD_FILE = 'held.json'

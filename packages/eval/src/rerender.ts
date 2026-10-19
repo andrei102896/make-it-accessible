@@ -30,9 +30,14 @@ async function rebuild(s: Source): Promise<string> {
   const pdf = sourcePdf(s)
   const legend = await documentLegend(pdf)
   const results: PageResult[] = []
+  const expected: number[] = []
   for (const d of (await readdir(out)).filter((x) => /^p\d+$/.test(x)).sort()) {
     const dir = join(out, d)
     const extraction = parseExtraction(await readFile(join(dir, 'extraction.json'), 'utf8'))
+    expected.push(extraction.pdfPage)
+    // A page whose model call failed has no structure: it stays missing and holds the document.
+    const structureJson = await readFile(join(dir, 'structure.json'), 'utf8').catch(() => null)
+    if (structureJson === null) continue
     const fresh = withIcons(await extractWhole(pdf, extraction.pdfPage), legend)
     // The structure cites the text layer's runs by index; icon words come after them and are read afresh.
     const base = extraction.runs.filter((r) => !r.icon)
@@ -55,7 +60,7 @@ async function rebuild(s: Source): Promise<string> {
     })
     const saved = extraction.runs
     extraction.runs = [...base, ...fresh.runs.filter((r) => r.icon)]
-    const structure = parsePage(await readFile(join(dir, 'structure.json'), 'utf8'))
+    const structure = parsePage(structureJson)
     if (!moveIconCites(structure, saved, extraction.runs, base.length))
       throw new Error(`${s.slug} ${d}: a cited icon word has no fresh icon at its place; run adhoc again`)
     results.push({
@@ -68,7 +73,7 @@ async function rebuild(s: Source): Promise<string> {
       usd: 0,
     })
   }
-  const html = await readFile(await buildHtml(pdf, out, results, 'doc', s.title, undefined, true), 'utf8')
+  const html = await readFile(await buildHtml(pdf, out, results, expected, 'doc', s.title, undefined, true), 'utf8')
   // Crops ride inline; the printed view's backdrops stay files beside the page (preview.ts withAssets).
   const parts = html.split(/src="(p\d+\/img-\w+\.jpg)"/)
   for (let i = 1; i < parts.length; i += 2)
