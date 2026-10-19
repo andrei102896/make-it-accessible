@@ -1,6 +1,6 @@
 import type { Permitted } from '@make-it-accessible/pipeline/pdf/ownfont'
 import { fsTypeOf, isSfnt, nameOf, permitsEmbedding } from '@make-it-accessible/pipeline/pdf/sfnt'
-import { flateStreams } from './streams.ts'
+import { flateStreams } from '@make-it-accessible/pipeline/pdf/streams'
 
 // The font programs embedded in a PDF as its maker wrote them: pdf.js rebuilds the ones it serves, zeroing their
 // embedding flags and names, so permission and licence text come only from these (the raw FlateDecode streams).

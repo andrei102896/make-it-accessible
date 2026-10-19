@@ -1,9 +1,10 @@
-import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
+import { MAX_BUFFER, poppler, popplerBytes } from './exec.ts'
 import { mergeOverlapping } from './geometry.ts'
+import { preflight } from './preflight.ts'
+import { Refused } from './refused.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
@@ -14,16 +15,8 @@ import { lettersDrawnBeside } from './drawnletters.ts'
 import { parseVectors } from './vectors.ts'
 import { hiddenRuns } from './visibility.ts'
 
-const run = promisify(execFile)
-// Slowest call on the set (2026-10-18): 6.6 s, pdftoppm on Kenny & Ziggy's p1 at 300 dpi; an untrusted PDF that
-// hangs is killed here, never holding the worker.
-const POPPLER_TIMEOUT_MS = 120_000
-const limits = { timeout: POPPLER_TIMEOUT_MS, killSignal: 'SIGKILL' } as const
-export const poppler = (file: string, args: readonly string[], options: { maxBuffer?: number } = {}) =>
-  run(file, args, { ...options, ...limits, encoding: 'utf8' })
-export const popplerBytes = (file: string, args: readonly string[], options: { maxBuffer?: number } = {}) =>
-  run(file, args, { ...options, ...limits, encoding: 'buffer' })
-export const MAX_BUFFER = 64 * 1024 * 1024
+export { MAX_BUFFER, poppler, popplerBytes }
+export { copyForbidden } from './preflight.ts'
 const MIN_IMAGE_AREA = 0.01
 const MAX_IMAGE_AREA = 0.9
 // Enough to see the ink of a light 6 pt word, cheap enough to render every page once more; a poster-sized page
@@ -32,9 +25,8 @@ const VISIBILITY_DPI = 150
 const MAX_VISIBILITY_EDGE = 5000
 
 export async function extractPage(pdf: string, pdfPage: number): Promise<Extraction> {
-  // Every run path reads a page here: a PDF we may not read is refused by name.
-  if (copyForbidden((await poppler('pdfinfo', [pdf])).stdout))
-    throw new Error(`${pdf}: the PDF does not allow copying its text; an unprotected export is needed`)
+  // Every run path reads a page here: a PDF we may not read, or past the limits, is refused by name.
+  await preflight(pdf)
   const page = String(pdfPage)
   const { stdout } = await poppler('pdftotext', ['-q', '-f', page, '-l', page, '-tsv', pdf, '-'], {
     maxBuffer: MAX_BUFFER,
@@ -71,7 +63,9 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
     if (line?.color) r.color = line.color
     if (line?.font) r.font = line.font
   }
-  const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height))
+  // RGB pixels within MAX_BUFFER whatever the page's shape (a square A0 page at the edge cap would exceed it).
+  const fits = Math.sqrt(MAX_BUFFER / 3 / (width * height)) * 72
+  const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height), fits)
   const hidden = hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72)
   const { boxes, rules, art, placed, glyphs } = parseVectors(await pageSvg(pdf, pdfPage))
   const shown = new Set(hidden)
@@ -84,12 +78,16 @@ export async function extractPage(pdf: string, pdfPage: number): Promise<Extract
 }
 
 // The page as pdftocairo draws it in SVG (0.1–0.8 s a page): the vector layer and the printed view's backdrop.
+// A page's SVG: the largest measured is 18.5 MB (Akash's trifold, 2026-10-19), embedded rasters in base64.
+const MAX_SVG_BYTES = 64 * 1024 * 1024
+
 export async function pageSvg(pdf: string, pdfPage: number): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'mia-vectors-'))
   try {
     const page = String(pdfPage)
     const file = join(dir, 'page.svg')
     await poppler('pdftocairo', ['-q', '-svg', '-f', page, '-l', page, pdf, file], { maxBuffer: MAX_BUFFER })
+    if ((await stat(file)).size > MAX_SVG_BYTES) throw new Refused(`page ${page} draws more than any menu measured`)
     return await readFile(file, 'utf8')
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -137,12 +135,6 @@ export async function popplerVersion(): Promise<string> {
   return stderr.split('\n')[0] ?? 'unknown'
 }
 
-// pdfinfo's report of a PDF whose owner forbids copying its text (Hogfish): pdftohtml then stops without a word.
-export const copyForbidden = (info: string): boolean => /^Encrypted:\s+yes\b.*\bcopy:no\b/m.test(info)
-
 export async function pageCount(pdf: string): Promise<number> {
-  const { stdout } = await poppler('pdfinfo', [pdf])
-  const pages = /^Pages:\s+(\d+)/m.exec(stdout)?.[1]
-  if (!pages) throw new Error(`pdfinfo returned no page count for ${pdf}`)
-  return Number(pages)
+  return preflight(pdf)
 }

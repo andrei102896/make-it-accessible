@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import type * as PdfJs from 'pdfjs-dist'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { Browser, BrowserContext } from 'playwright'
+import { withDeadline } from './deadline.ts'
 
 // PDF pages drawn by pdf.js in the browser that captures our sheets: embedded faces load as browser fonts and their
 // text goes through the same rasteriser as ours (Poppler's thin strokes read lighter: Bannatyne p2, 2026-10-18).
@@ -46,10 +47,11 @@ export async function pdfShots(browser: Browser, pdf: string, shots: readonly Sh
     })
     const tab = await context.newPage()
     await tab.goto(`${ORIGIN}/index.html`)
-    await deadline(tab.evaluate(openDocument), `${pdf}: pdf.js did not open the document`)
+    await withDeadline(tab.evaluate(openDocument), TIMEOUT_MS, `${pdf}: pdf.js did not open the document`)
     for (const s of shots) {
-      await deadline(
+      await withDeadline(
         tab.evaluate(drawPage, { n: s.pdfPage, width: s.width }),
+        TIMEOUT_MS,
         `${pdf} p${String(s.pdfPage)}: pdf.js did not draw`,
       )
       await tab.locator('canvas').screenshot({ path: s.out, type: 'jpeg', quality: 85 })
@@ -61,20 +63,6 @@ export async function pdfShots(browser: Browser, pdf: string, shots: readonly Sh
     await context?.close()
   }
   return done
-}
-
-async function deadline<T>(work: Promise<T>, why: string): Promise<T> {
-  let timer: NodeJS.Timeout | undefined
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(why))
-    }, TIMEOUT_MS)
-  })
-  try {
-    return await Promise.race([work, late])
-  } finally {
-    clearTimeout(timer)
-  }
 }
 
 // pdf.mjs sets `pdfjsLib` on the page's global (loaded by index.html as a module).

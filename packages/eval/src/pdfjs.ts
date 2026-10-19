@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { PDFJS_TIMEOUT_MS, withDeadline } from './deadline.ts'
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { z } from 'zod'
 import { ownFonts, type Drawn, type OwnFonts } from '@make-it-accessible/pipeline/pdf/ownfont'
@@ -23,9 +24,11 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
   const data = new Uint8Array(await readFile(pdf))
   // Before pdf.js: it may take over the buffer it is given.
   const permitted = permittedFonts(data)
-  const doc = await getDocument({ data, fontExtraProperties: true, disableFontFace: true, verbosity: 0 }).promise.catch(
-    (err: unknown) => {
+  const task = getDocument({ data, fontExtraProperties: true, disableFontFace: true, verbosity: 0 })
+  const doc = await withDeadline(task.promise, PDFJS_TIMEOUT_MS, 'pdf.js did not open it in time').catch(
+    async (err: unknown) => {
       console.error(`${pdf}: pdf.js could not read it, no tracking or own faces: ${String(err)}`)
+      await task.destroy()
       return null
     },
   )
@@ -34,12 +37,17 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
       if (!doc) return NONE()
       let page: Awaited<ReturnType<typeof doc.getPage>> | null = null
       try {
-        page = await doc.getPage(e.pdfPage)
+        page = await withDeadline(doc.getPage(e.pdfPage), PDFJS_TIMEOUT_MS, 'pdf.js did not open the page in time')
         const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = page.view
         if (Math.abs(x1 - x0 - e.width) > SAME_FRAME || Math.abs(y1 - y0 - e.height) > SAME_FRAME) return NONE()
         // The operator list loads the page's fonts into commonObjs, and says which code draws each letter.
-        const ops = await page.getOperatorList()
-        const items = (await page.getTextContent()).items.flatMap((i) => {
+        const ops = await withDeadline(page.getOperatorList(), PDFJS_TIMEOUT_MS, 'pdf.js did not draw the page in time')
+        const content = await withDeadline(
+          page.getTextContent(),
+          PDFJS_TIMEOUT_MS,
+          'pdf.js did not read the text in time',
+        )
+        const items = content.items.flatMap((i) => {
           const p = PdfItem.safeParse(i)
           return p.success ? [p.data] : []
         })
