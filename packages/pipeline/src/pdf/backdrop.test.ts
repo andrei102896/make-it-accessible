@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { backdropSvg, luminanceGrid, printedOf, tiltedOf } from './backdrop.ts'
+import { backdropSvg, luminanceGrid, printedOf, sharedGlyphWords, tiltedOf } from './backdrop.ts'
 
 const page = (defs: string, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="612pt" height="792pt" viewBox="0 0 612 792"><defs>${defs}</defs>${body}</svg>`
@@ -222,4 +222,17 @@ test("a word's ink is its first letter's: a glyph drawn after its letters in ano
   const space = at('rgb(100%, 100%, 100%)', 112, 110)
   const printed = printedOf(page(glyphs, gold + space), [{ id: '&', box: { x: 100, y: 96, w: 18, h: 18 } }])
   assert.deepEqual(printed.inks, { '&': '#f9a72d' })
+})
+
+test('a glyph drawn through a reused definition is cut only where every instance goes; its word stays printed', () => {
+  // One definition holding a word's glyph, drawn at two places (pdftocairo's sources: Bernini, Pastabilities).
+  const defs = `${glyphs}<g id="source-5">${ink(0, 10)}</g>`
+  const svg = page(defs, '<use xlink:href="#source-5" x="100" y="100"/><use xlink:href="#source-5" x="300" y="400"/>')
+  const word = { x: 98, y: 100, w: 20, h: 12 }
+  assert.match(backdropSvg(svg, [word]), /<g id="source-5"><g fill="rgb\(0%, 0%, 0%\)"><use xlink:href="#glyph-0-1"/)
+  assert.deepEqual(sharedGlyphWords(svg, [word]), [0])
+  // Both instances placed: the definition's glyph goes.
+  const both = [word, { x: 298, y: 400, w: 20, h: 12 }]
+  assert.doesNotMatch(backdropSvg(svg, both), /source-5"><g fill="rgb\(0%, 0%, 0%\)"><use/)
+  assert.deepEqual(sharedGlyphWords(svg, both), [])
 })

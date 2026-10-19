@@ -5,6 +5,7 @@ import { placedRuns } from '@make-it-accessible/pipeline/html/source'
 import {
   BACKDROP_VERSION,
   backdropSvg,
+  sharedGlyphWords,
   tiltedOf,
   CELL,
   luminanceGrid,
@@ -17,6 +18,7 @@ import { keptAsPrinted, PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/htm
 import { bodySize, faceKey } from '@make-it-accessible/pipeline/pdf/face'
 import { caseFilled } from '@make-it-accessible/pipeline/pdf/ownfont'
 import { turned } from '@make-it-accessible/pipeline/pdf/runs'
+import type { Run } from '@make-it-accessible/pipeline/pdf/types'
 import { fontLibrary } from './brand.ts'
 import { faceMetrics, type Cache } from './facemetrics.ts'
 import { pdfFacts } from './pdfjs.ts'
@@ -65,12 +67,26 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           .map((w) => w.id),
       )
       // An icon's words (pdf/icons.ts) have no glyphs to take out: the drawing stays in the backdrop.
-      const words = placedRuns(
-        r.structure,
-        r.extraction,
-        flaggedPaths(r.validation),
-        (w) => turned(w) || kept.has(w.id),
-      ).filter((w) => !w.icon)
+      const place = (): Run[] =>
+        placedRuns(r.structure, r.extraction, flaggedPaths(r.validation), (w) => turned(w) || kept.has(w.id)).filter(
+          (w) => !w.icon,
+        )
+      // A word holding a reused glyph drawn elsewhere too stays printed, never twice (each pass places fewer words).
+      let words = place()
+      for (
+        let shared = sharedGlyphWords(
+          page,
+          words.map((w) => w.box),
+        );
+        shared.length;
+      ) {
+        for (const i of shared) kept.add(words[i]?.id ?? '')
+        words = place()
+        shared = sharedGlyphWords(
+          page,
+          words.map((w) => w.box),
+        )
+      }
       const placed = new Set(words.map((w) => w.id))
       const svg = backdropSvg(
         page,
