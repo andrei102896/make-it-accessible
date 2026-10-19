@@ -110,7 +110,7 @@ test('the printed view needs a width that shows the body text at 12 px, never a 
   assert.equal(printWidth([{ extraction: cover, backdrop: {} }]), null)
 })
 
-test('on a varying backdrop (a photo) a failing ink keeps its colour and gets a halo of the opposite lightness', () => {
+test("on a varying backdrop (a photo) a failing ink keeps its colour and gets a halo in the ground's own colour", () => {
   const photo: Grid = { ...white, min: white.min.map(() => 0.1), max: white.max.map(() => 0.9) }
   const name = spotsOf(structure.blocks, extraction, photo).get('blocks[2].items[0].name')
   assert.ok(name)
@@ -252,7 +252,7 @@ test("a placed text stands on its first line's printed baseline, where most of t
   assert.doesNotMatch(placement(unmeasured, extraction.width, white, 2, []), /--bl:/)
 })
 
-test("a line's ink is its unmarked words'; a word in another brand ink shows it where it reads, on a whole leaf and on each printed line (Almond's red Micky's)", () => {
+test("a line's ink is its unmarked words'; a word in another brand ink shows it where it reads or where the ground is flat, on a whole leaf and on each printed line (Almond's red Micky's)", () => {
   const runs = [
     { str: "Micky's", box: { x: 60, y: 200, w: 40, h: 10 }, line: 0, color: '#c00000' },
     { str: 'Ramen', box: { x: 104, y: 200, w: 34, h: 10 }, line: 0, color: '#000000' },
@@ -293,8 +293,9 @@ test("a line's ink is its unmarked words'; a word in another brand ink shows it 
   const lines = pl.lined('blocks[1]', text, visibleText(text, e), (s) => inkedHtml(s, inks, (x) => x)) ?? ''
   assert.match(
     lines,
-    /<span class="pl" style="[^"]*--c:#000000[^"]*--ink-c00000:#c00000"><span class="ink-c00000">Farm/,
+    /<span class="pl" style="[^"]*--c:#000000[^"]*--ink-c00000:#c00000[^"]*"><span class="ink-c00000">Farm/,
   )
-  assert.doesNotMatch(lines, /--ink-ffee00/)
+  // Yellow does not read on white, but the ground is flat: it stays as printed, as a whole yellow line would.
+  assert.match(lines, /--ink-ffee00:#ffee00/)
   assert.doesNotMatch(pl.place('blocks[2]'), /--ink-/)
 })

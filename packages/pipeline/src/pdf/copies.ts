@@ -13,6 +13,9 @@ const PAD = 0.25
 // A shape copying placed words is at least this share of their height: a letter is; a speck of an engraving inside
 // their box is not (Boater's lobster under THE MENU; Moosewood's next line inside the tall box of "entrees").
 const MIN_COPY = 0.3
+// And at most this share: a copy is word-sized; a drawing spanning lines of text is not (Howies' fish watermark,
+// one path under 154 words, 2026-10-19).
+const MAX_COPY = 2
 // A word's zone and a shape share at least this part of the smaller one for the word to be under the shape; a word
 // whose zone only touches it is not (Kenny & Ziggy's red badge round a "4", touched by the line below's zone).
 const MOSTLY = 0.25
@@ -55,7 +58,7 @@ export function copiesOf(svg: string, words: readonly Box[]): Drawn[] {
     const b = d.bound
     return b !== null && covers.some((c) => c.range[0] > d.range[0] && c.bound !== null && within(b, c.bound))
   }
-  const redrawn = (b: Box): boolean => {
+  const redrawn = (d: Drawn, b: Box): boolean => {
     const under = words.filter((w) => {
       const z = zoneOf(w)
       return intersection(z, b) >= Math.min(area(z), area(b)) * MOSTLY
@@ -64,12 +67,17 @@ export function copiesOf(svg: string, words: readonly Box[]): Drawn[] {
     const hull = under.map(zoneOf).reduce(union)
     const covered = under.reduce((sum, w) => sum + intersection(w, b), 0)
     const tallest = Math.max(...under.map((w) => w.h))
+    // A fill and the words it copies cover each other: a sliver of a drawing inside their boxes copies nothing
+    // (Howies' fish scales); an outline is drawn round each letter and spans one.
+    const spanned = outline(d) ? 0 : area(under.reduce(union))
     return (
       holds(hull, [b.x, b.y]) &&
       holds(hull, [b.x + b.w, b.y + b.h]) &&
       covered >= area(b) * COVERED &&
-      b.h >= tallest * MIN_COPY
+      covered >= spanned * COVERED &&
+      b.h >= tallest * MIN_COPY &&
+      b.h <= tallest * MAX_COPY
     )
   }
-  return art.filter((d) => d.bound && (outline(d) || !plainBox(d)) && !hidden(d) && redrawn(d.bound))
+  return art.filter((d) => d.bound && (outline(d) || !plainBox(d)) && !hidden(d) && redrawn(d, d.bound))
 }

@@ -1,9 +1,9 @@
 # Make It Accessible — Progress
 
-Last updated: 2026-10-16. Read this first in every new session.
+Last updated: 2026-10-19. Read this first in every new session.
 
 ## Status
-Stage 0 verdict GO (Andrei, 2026-10-12); hardening (`docs/HARDENING.md`) reached A4 and is paused since 2026-10-14 for a demand test: is there a buyer at all? 56 cold emails sent 14–15 Oct (UK pubs and restaurants, US agencies and restaurants; lists and templates in `outreach/`, gitignored); one real reply (Kendells Bistro, Leeds), whose page is a private preview; Andrei's reply with the price goes out on 2026-10-16. Meanwhile the page became the brand's own (fonts, colours, sizes, rules and ornaments measured from the PDF; `docs/DESIGN.md`). On 2026-10-16 Andrei set one price ($29 / £25 a month per venue, updates included) and the target (independent restaurants with a PDF menu, New York and Florida first); see Decisions. Next: a wave of 20 NY/FL restaurants, each email linking its page already made; follow-ups to the first 56 on 19–21 Oct; continue or rethink at the thresholds in `outreach/emails.md`. Hardening, the SPEC rewrite and the MVP resume only after that.
+First paying customer on 2026-10-19: Howies, Edinburgh (Louis Scott), £900 a year for three venues after seeing the Victoria Street page; Louis said "like the ai crawl ability", so every next email names AI readability. All 12 Howies menus (38 pages) are converted; Andrei's live review of them found six printed-view defects the content gate had called clean (`docs/CASES.md`, ROADMAP "Howies live review"): five fixed as engine rules the same day, and the lesson is that the engine needs a fidelity gate that measures our page against the PDF before anything is called clean (`docs/EXECUTION_PLAN.md` phase 2.1, next). The engine programme (since 2026-10-18): self-serve replica by measurement, phases 0–2 done (safety limits, publication closed, injected-defect calibration, verification set of 53 unseen menus), phase 3 in progress (scans read twice by OCR and the model; price grammar; consistency). Scope: menus and brochures, at most 20 pages a document, Tesseract as the only OCR, Stripe for payment. Outreach resumes this week.
 
 Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre-registration recorded 2026-10-12).
 

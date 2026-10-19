@@ -181,22 +181,27 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     if (foot) out.baselines[id] = round(foot.at[1])
     // Each copy glyph against its nearest inked glyph: on tight lines the zone also holds the next line's glyphs, so
     // a mean over the zone drifts by a line (Kenny & Ziggy's paragraph doubled one line down).
-    const inked = mine.filter((g) => g.fill === letter.fill).map((g) => g.at)
+    const inked = mine.filter((g) => g.fill === letter.fill)
     const other = around.filter((g) => g.fill !== null && g.fill !== letter.fill && (g.owner === -1 || g.owner === i))
     const color = other[0]?.fill
     if (!color) continue
-    const pairs = other.flatMap(({ at: [x, y] }) => {
-      const [nx, ny] = [...inked].sort(
-        (a, b) => Math.hypot(a[0] - x, a[1] - y) - Math.hypot(b[0] - x, b[1] - y),
-      )[0] ?? [x, y]
+    // A copy is the same glyph again: an ornament font's glyphs under the word (Howies' fish) pair with none. A
+    // shadow set in a second font resource has other ids and goes unseen (none on the set, 2026-10-19).
+    const pairs = other.flatMap(({ at: [x, y], id: glyph }) => {
+      const [nx, ny] = inked
+        .filter((g) => g.id === glyph)
+        .map((g) => g.at)
+        .sort((a, b) => Math.hypot(a[0] - x, a[1] - y) - Math.hypot(b[0] - x, b[1] - y))[0] ?? [x, y]
       return near(x - nx, y - ny, box.h) ? [[x - nx, y - ny] as const] : []
     })
     const mid = (vs: number[]): number => vs.sort((a, b) => a - b)[Math.floor(vs.length / 2)] ?? 0
     const [dx, dy] = [mid(pairs.map((p) => p[0])), mid(pairs.map((p) => p[1]))]
     // A shadow redraws the word letter by letter at one offset, at least two of them and most, in an ink that
     // shows: a neighbour's glyph on the line, or the same ink drawn twice, is none (Almond, Osteria, Moosewood).
-    const copied = inked.filter(([x, y]) =>
-      other.some((g) => Math.abs(g.at[0] - x - dx) <= SAME_SPOT && Math.abs(g.at[1] - y - dy) <= SAME_SPOT),
+    const copied = inked.filter(({ at: [x, y], id: glyph }) =>
+      other.some(
+        (g) => g.id === glyph && Math.abs(g.at[0] - x - dx) <= SAME_SPOT && Math.abs(g.at[1] - y - dy) <= SAME_SPOT,
+      ),
     ).length
     if (copied >= 2 && copied * 2 >= inked.length && pairs.length * 2 >= other.length && !sameInk(color, letter.fill))
       out.shadows[id] = { color, dx: round(dx), dy: round(dy) }

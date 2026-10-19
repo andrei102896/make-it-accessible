@@ -55,12 +55,16 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
           const fits = (slack = 1): boolean =>
             nowrap ? el.scrollWidth <= el.clientWidth * slack + 1 : el.offsetHeight <= printed * tall * slack + 1
           const round = (v: number): number => Math.round(v * 100) / 100
-          // A lookalike narrower than the printed box takes letter spacing up to the box (cqw per letter).
+          // A lookalike narrower than the printed box takes letter spacing up to the box (cqw per letter). The
+          // content's own width: a block's scrollWidth never reads below its box (Scotts' STARTERS, never spread).
           const hidden = [...el.querySelectorAll('.sr-only, .icon')].reduce((n, h) => n + h.textContent.length, 0)
           const letters = el.textContent.replace(/\s/g, '').length - hidden
-          if (nowrap && !own && letters > 1 && el.scrollWidth < el.clientWidth * (1 - narrow)) {
+          const range = document.createRange()
+          range.selectNodeContents(el)
+          const content = range.getBoundingClientRect().width
+          if (nowrap && !own && letters > 1 && content < el.clientWidth * (1 - narrow)) {
             const em = parseFloat(style.fontSize)
-            const gap = Math.min(maxFill * em, (el.clientWidth - el.scrollWidth) / letters)
+            const gap = Math.min(maxFill * em, (el.clientWidth - content) / letters)
             return { k: 1, z: 1, lx: round((gap / page.clientWidth) * 100 * 100) / 100 }
           }
           for (let k = 1; k >= floor; k = Math.max(floor, k - step)) {

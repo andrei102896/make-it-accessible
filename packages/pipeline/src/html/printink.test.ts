@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
 import { printCss } from './print.ts'
-import { asDrawn, inkOn } from './printink.ts'
+import { asDrawn, inkOn, inlineInk } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
@@ -81,7 +81,11 @@ test('a hairline or a panel edge inside a cell leaves the ground flat: the ink s
   assert.equal(inkOn(gold, framed, 4.5, u).shadow, 'none')
   assert.deepEqual(inkOn(gold, framed, 4.5, u), { color: '#d69f65', shadow: 'none' })
   const photo: Grid = { ...blank, cols: 2, min: [0.05, 0.9], max: [0.3, 1], mean: ['#333333', '#f0f0f0'] }
-  assert.match(inkOn(gold, photo, 4.5, u).shadow, /0 0 \.04em/)
+  // On a busy ground the halo is the ground's own colour (the cells' mean), never one moved dark to a target.
+  assert.equal(inkOn(gold, photo, 4.5, u).shadow, '0 0 .04em #929292, 0 0 .08em #929292, 0 0 .3em #929292')
+  // A word in its own brand ink inside a line keeps it on a flat ground, as the line would (Howies' gold gins).
+  assert.equal(inlineInk(gold, framed, 4.5), '#d69f65')
+  assert.equal(inlineInk(gold, photo, 4.5), null)
 })
 
 test("the cells under a word's letters decide, not the row its box shares with a QR code or the page below (BOOK NOW)", () => {

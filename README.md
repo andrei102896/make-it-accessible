@@ -13,7 +13,7 @@ The repository currently holds **stage 0**: the processing pipeline and the harn
 - ESLint 10 (`typescript-eslint` strict type-checked) + Prettier, `node:test`
 
 ## Run / validate
-Requires Node 26, Poppler (`brew install poppler`) and, for model runs, a logged-in Claude Code.
+Requires Node 26, Poppler (`brew install poppler`), Tesseract with its English data (`brew install tesseract`; pages with no text layer are read by it) and, for model runs, a logged-in Claude Code.
 
 ```
 pnpm install
@@ -47,6 +47,10 @@ The test PDFs are not in git (see [validation/SOURCES.md](validation/SOURCES.md)
 packages/pipeline/src/        product code, reused by the MVP
   pdf/types.ts                Box, Run, Extraction schemas and types
   pdf/poppler.ts              text runs and image positions from Poppler
+  pdf/preflight.ts            what a document may be before any work: ≤300 MB, ≤20 pages, pages ≤A0, inflated streams ≤600 MB; copy-protection
+  pdf/refused.ts              Refused: a document turned away by name, never half-processed
+  pdf/exec.ts                 Poppler calls bounded in time (120 s, SIGKILL) and output (64 MB)
+  pdf/streams.ts              the PDF's flate streams inflated within a budget, every attempt charged
   pdf/raster.ts               model image size budget, page and crop rendering
   pdf/runs.ts                 joining words, euro/cent pairing, amount of cited words, overprint duplicates
   pdf/paragraphs.ts           grouping printed lines into paragraphs
@@ -57,6 +61,8 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
   pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (glyphs by baseline ownership), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
+  pdf/drawnletters.ts         letters the PDF draws as shapes beside a word (lost from the text layer): the word is marked lost
+  pdf/ocr.ts                  Tesseract on the rendered page (stored once per page hash and engine version); a page reads as a scan when its layer holds under a third of the printed words
   pdf/copies.ts               the shapes that draw placed words again (outlines, letter-shaped fills): under the words they mostly cover, never hidden by a later opaque box
   pdf/printedfaces.ts         per printed face, the pdf.js program printing most of its letters, rebuilt for a browser (measured by eval/facemetrics.ts)
   pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
@@ -74,7 +80,10 @@ packages/pipeline/src/        product code, reused by the MVP
   model/prompt.ts             system prompt and the text inventory sent with the image
   model/client.ts             model call (Claude Code headless in stage 0)
   model/structure.ts          one page: call, parse, single retry
+  model/scan.ts               a scan transcribed blind from the image with its own prompt, never shown OCR's reading
+  model/align.ts              the model's transcription aligned with OCR's words: agreement cites them, disagreement keeps both readings
   validate/validate.ts        provenance, price, coverage and alt-text checks
+  validate/consistency.ts     page self-consistency: two dishes given each other's prices or details cannot make the page more coherent
   html/document.ts            deterministic accessible HTML renderer: menus as rows, products with pictures as cards, galleries, contents on long documents
   html/style.ts               the page's CSS (no generated text: screen readers would hear it, the scorer would not)
   html/profile.ts             the document's printed style per role and heading signature, from the words each element cites
@@ -145,6 +154,12 @@ packages/eval/src/            evaluation harness, never shipped
   score/axe.ts                axe summary for any HTML
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
+  refresh.ts                  a saved page as the build sees it today (rerender, inject): fonts, colours, hidden words read afresh; OCR runs kept
+  readings.ts                 OCR readings on disk, one file per key (a database row and S3 object when live)
+  inject.ts                   injected content defects (price swap, shift, role, name, heading, detail and item moves, drops, icons)
+  inject-run.ts               CLI: pnpm inject [--per] [--verify [--sealed]] — the share of injected defects the gates catch
+  iconcites.ts                a saved structure's icon citations moved onto icon words read afresh
+  deadline.ts                 withDeadline for pdf.js calls (60 s)
   backdrop.ts                 renders each page's backdrop in Chromium (JPEG at 2× CSS px) and its light grid (pNN/backdrop.jpg, backdrop.json)
   facemetrics.ts              measures each printed face beside its lookalike in a browser (x-height, cap height, stem): the size scale and weight placed.ts applies (backdrop.json metrics)
   pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page tracking and own faces; a page it cannot read has neither

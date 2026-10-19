@@ -1,13 +1,11 @@
 import { sameInk, type Grid } from '../pdf/backdrop.ts'
 import type { Box, Run } from '../pdf/types.ts'
-import { contrast, fromHex, hex, luminance, readableOn, type Rgb } from './color.ts'
+import { contrast, fromHex, hex, luminance, type Rgb } from './color.ts'
 import { unionOf } from './profile.ts'
 import type { HtmlPage } from './types.ts'
 
-// MID: the luminance as far from black as from white in contrast terms.
-const MID = 0.179
-// A backdrop this even under a box (spread of its cells' mean luminance) is flat: its ink can move instead of
-// taking a halo, unless the box's extremes are further apart than a hairline or a panel's edge makes them.
+// A backdrop this even under a box (spread of its cells' mean luminance) is flat: its ink stays as printed with no
+// halo, unless the box's extremes are further apart than a hairline or a panel's edge makes them.
 const FLAT = 0.08
 const EDGE = 0.35
 // The letters' bodies sit in the middle of a word's box: a cell counts when at least half of it lies within the
@@ -40,14 +38,14 @@ export function inkOn(
     : 'none'
   const m = measured(spot, grid)
   if (!m) return { color: spot.color ?? '#000000', shadow: printed }
-  const { ink, ground, lo, hi, spread } = m
+  const { ink, ground } = m
   if (reads(spot, m, target)) return { color: hex(ink), shadow: printed }
-  const l = luminance(ink)
   // On a flat ground the printed ink stays as printed, however faint (Andrei, 2026-10-18: Howies' gold prices
   // darkened to brown read as the wrong colour); the text view is the conforming version. Elsewhere a halo.
-  const flat = spread <= FLAT && hi - lo <= EDGE
-  if (flat) return { color: hex(ink), shadow: printed }
-  const glow = hex(readableOn(ground, ink, target) ?? (l < MID ? [255, 255, 255] : [0, 0, 0]))
+  if (isFlat(m)) return { color: hex(ink), shadow: printed }
+  // The halo covers the busy ground in the ground's own colour: one moved to a contrast target turns dark round a
+  // gold or grey word on a white page and reads as a smear (Howies' "Vegan", 2026-10-19).
+  const glow = hex(ground)
   const halo = `0 0 .04em ${glow}, 0 0 .08em ${glow}, 0 0 .3em ${glow}`
   return { color: hex(ink), shadow: spot.shadow ? `${printed}, ${halo}` : halo }
 }
@@ -56,8 +54,11 @@ export function inkOn(
 // and it keeps its line's colour (never moved or haloed on its own).
 export function inlineInk(spot: Inked, grid: Grid | null, target: number): string | null {
   const m = measured(spot, grid)
-  return m && reads(spot, m, target) ? hex(m.ink) : null
+  return m && (reads(spot, m, target) || isFlat(m)) ? hex(m.ink) : null
 }
+
+// A ground this even keeps the printed ink as printed (Andrei, 2026-10-18), for a line and for a word in it alike.
+const isFlat = ({ lo, hi, spread }: Measured): boolean => spread <= FLAT && hi - lo <= EDGE
 
 type Measured = { ink: Rgb; ground: Rgb; lo: number; hi: number; spread: number }
 function measured(spot: Inked, grid: Grid | null): Measured | null {

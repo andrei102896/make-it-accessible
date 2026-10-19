@@ -34,7 +34,7 @@ const word = (id: string, str: string, x: number, w: number): Run => ({
   color: '#ed1b24',
 })
 const baseline = (x: number, w: number): Glyph[] =>
-  [0.2, 0.5, 0.8].map((k) => ({ at: [x + w * k, 818.09], range: [0, 0], alpha: 1 }))
+  [0.2, 0.5, 0.8].map((k) => ({ at: [x + w * k, 818.09], range: [0, 0], alpha: 1, id: 'glyph-0-1' }))
 
 // Kenny & Ziggy's p05: "Hungarian" printed as three spaces, then "ungarian", the H drawn as two stems and a bar.
 const H = [rect(84.93, 809.52, 87.93, 818.15), rect(90.36, 809.52, 93.36, 818.15), rect(86.93, 811.39, 92.4, 812.25)]

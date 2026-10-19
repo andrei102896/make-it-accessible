@@ -99,6 +99,31 @@ test("a word's ink is its last glyph drawn, the black copy under it its shadow (
   assert.deepEqual(printed.undrawn, ['1:1'])
 })
 
+test("another font's glyphs under a word at one offset are no shadow (Howies' fish under 154 words)", () => {
+  const at = (fill: string, glyph: string, x: number, y: number): string =>
+    `<g fill="${fill}" fill-opacity="1"><use xlink:href="#${glyph}" x="${String(x)}" y="${String(y)}"/></g>`
+  const fish = at('rgb(11%, 29%, 40%)', 'glyph-19-3', 92, 115) + at('rgb(11%, 29%, 40%)', 'glyph-19-3', 98, 115)
+  const word = at('rgb(0%, 0%, 0%)', 'glyph-0-1', 100, 110) + at('rgb(0%, 0%, 0%)', 'glyph-0-1', 106, 110)
+  const printed = printedOf(page(glyphs, fish + word), [{ id: '1:0', box: { x: 98, y: 100, w: 20, h: 12 } }])
+  assert.deepEqual(printed.inks, { '1:0': '#000000' })
+  assert.deepEqual(printed.shadows, {})
+})
+
+test("a drawing spanning lines of text under the words is no shadow of theirs (the fish under Howies' group menu)", () => {
+  const at = (x: number, y: number): string =>
+    `<g fill="rgb(0%, 0%, 0%)" fill-opacity="1"><use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/></g>`
+  const lines = [100, 120, 140].flatMap((y) => [at(100, y), at(106, y)]).join('')
+  // Inside the words' zones and mostly under their boxes, as a fill copying them would be; only its height tells.
+  const fish = '<path fill="rgb(11%, 29%, 40%)" fill-opacity="1" d="M 99 89 L 117 90 L 116 143 L 100 142 L 98 118 Z"/>'
+  const words = [100, 120, 140].map((y, i) => ({ id: `1:${String(i)}`, box: { x: 98, y: y - 10, w: 20, h: 12 } }))
+  const printed = printedOf(page(glyphs, fish + lines), words)
+  assert.deepEqual(printed.shadows, {})
+  assert.deepEqual(printed.undrawn, [])
+  // A sliver of the drawing inside one line's boxes copies nothing either.
+  const scale = '<path fill="rgb(11%, 29%, 40%)" fill-opacity="1" d="M 101 94 L 115 93 L 116 96 L 100 97 Z"/>'
+  assert.deepEqual(printedOf(page(glyphs, scale + lines), words).shadows, {})
+})
+
 test("a stroke drawn round each placed letter is their printed outline: taken out and kept as the words' stroke (La Segunda)", () => {
   const word = { id: '1:0', box: { x: 98, y: 100, w: 20, h: 12 } }
   const letterI =

@@ -184,7 +184,7 @@ const ref = (value: string | null): string =>
 // draws it with <use>: it counts where it is used, never where it is defined (Claudio's art at the foot, not the top).
 // A glyph drawn from the text layer: the point it is drawn at (its baseline start) and its place in the SVG text.
 // `alpha`: the opacity a uniform mask gives it (Gigi's title, white at 84 % over its band); 1 under any other mask.
-export type Glyph = { at: Point; range: [number, number]; alpha: number }
+export type Glyph = { at: Point; range: [number, number]; alpha: number; id: string }
 export function drawnElements(svg: string): {
   width: number
   height: number
@@ -289,7 +289,7 @@ export function drawnElements(svg: string): {
       const target = ref(attr(n.tag, 'xlink:href') ?? attr(n.tag, 'href'))
       const node = byId.get(target)
       const at = multiply(here, [1, 0, 0, 1, Number(attr(n.tag, 'x') ?? 0), Number(attr(n.tag, 'y') ?? 0)])
-      if (target.startsWith('glyph')) glyphs.push({ at: [at[4], at[5]], range: n.range, alpha: fade })
+      if (target.startsWith('glyph')) glyphs.push({ at: [at[4], at[5]], range: n.range, alpha: fade, id: target })
       if (!node || using.has(target) || target.startsWith('glyph') || target.startsWith('compositing-group')) return
       walk(node, at, visible, new Set([...using, target]), hidden, filter, fade)
       return
