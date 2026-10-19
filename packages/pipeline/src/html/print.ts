@@ -40,7 +40,8 @@ const SR_ONLY =
 // narrow one with letter spacing; the box grows by
 // one `--ls`, which follows the last letter too. `on`'s id outranks the brand's classes: their layout stays out.
 const on = 'body:has(#view-print:checked)'
-const printed = 'section[data-page][style*="--ar:"]'
+export const SHEET = 'section[data-page][style*="--ar:"]'
+const printed = SHEET
 const lead = `.lead:has(> ${printed})`
 const page = `:is(${printed}, ${lead} > header.masthead)`
 // Containers keep no box of their own; their loose text (a comma between two prices) is read, not shown.

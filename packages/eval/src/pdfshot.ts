@@ -3,7 +3,7 @@ import { dirname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type * as PdfJs from 'pdfjs-dist'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import type { Browser, BrowserContext } from 'playwright'
+import type { Browser, BrowserContext, Page } from 'playwright'
 import { withDeadline } from './deadline.ts'
 
 // PDF pages drawn by pdf.js in the browser that captures our sheets: embedded faces load as browser fonts and their
@@ -15,18 +15,30 @@ const ORIGIN = 'http://pdf.review'
 // One document's parse or one page's render; past it the tab is closed (a stuck evaluate keeps the CPU busy).
 const TIMEOUT_MS = 60_000
 
-export type Shot = { pdfPage: number; width: number; out: string }
+// The desktop width our sheets are captured at (review-open, fidelity).
+export const CAPTURE_PX = 1440
 
-// Renders each page at its CSS width into its `out` JPEG; returns the pages drawn (others keep their fallback).
-export async function pdfShots(browser: Browser, pdf: string, shots: readonly Shot[]): Promise<Set<number>> {
-  const done = new Set<number>()
-  if (!shots.length) return done
-  const width = Math.max(...shots.map((s) => s.width))
-  let context: BrowserContext | null = null
+export type Shot = { pdfPage: number; width: number; out: string }
+// A document open in pdf.js: `draw` leaves the page's canvas in the tab (its pixels can be read there).
+export type PdfTab = {
+  tab: Page
+  draw: (pdfPage: number, width: number) => Promise<void>
+  // A PNG the tab can fetch at /files/<name> (our sheet's renders, read beside the PDF's).
+  serve: (name: string, png: Buffer) => void
+  close: () => Promise<void>
+}
+
+export async function openPdf(browser: Browser, pdf: string, width: number): Promise<PdfTab> {
+  const context: BrowserContext = await browser.newContext({ viewport: { width, height: 900 } })
+  const files = new Map<string, Buffer>()
   try {
-    context = await browser.newContext({ viewport: { width, height: 900 } })
     await context.route(`${ORIGIN}/**`, async (route) => {
       const path = new URL(route.request().url()).pathname
+      const served = path.startsWith('/files/') ? files.get(path.slice('/files/'.length)) : undefined
+      if (served) {
+        await route.fulfill({ contentType: 'image/png', body: served })
+        return
+      }
       const file =
         path === '/doc.pdf'
           ? pdf
@@ -48,19 +60,39 @@ export async function pdfShots(browser: Browser, pdf: string, shots: readonly Sh
     const tab = await context.newPage()
     await tab.goto(`${ORIGIN}/index.html`)
     await withDeadline(tab.evaluate(openDocument), TIMEOUT_MS, `${pdf}: pdf.js did not open the document`)
+    return {
+      tab,
+      draw: (pdfPage, w) =>
+        withDeadline(
+          tab.evaluate(drawPage, { n: pdfPage, width: w }),
+          TIMEOUT_MS,
+          `${pdf} p${String(pdfPage)}: pdf.js did not draw`,
+        ),
+      serve: (name, png) => files.set(name, png),
+      close: () => context.close(),
+    }
+  } catch (e) {
+    await context.close()
+    throw e
+  }
+}
+
+// Renders each page at its CSS width into its `out` JPEG; returns the pages drawn (others keep their fallback).
+export async function pdfShots(browser: Browser, pdf: string, shots: readonly Shot[]): Promise<Set<number>> {
+  const done = new Set<number>()
+  if (!shots.length) return done
+  let open: PdfTab | null = null
+  try {
+    open = await openPdf(browser, pdf, Math.max(...shots.map((s) => s.width)))
     for (const s of shots) {
-      await withDeadline(
-        tab.evaluate(drawPage, { n: s.pdfPage, width: s.width }),
-        TIMEOUT_MS,
-        `${pdf} p${String(s.pdfPage)}: pdf.js did not draw`,
-      )
-      await tab.locator('canvas').screenshot({ path: s.out, type: 'jpeg', quality: 85 })
+      await open.draw(s.pdfPage, s.width)
+      await open.tab.locator('canvas').screenshot({ path: s.out, type: 'jpeg', quality: 85 })
       done.add(s.pdfPage)
     }
   } catch (e) {
     console.error(`${pdf}: pdf.js render stopped (${e instanceof Error ? e.message : String(e)}); Poppler raster kept`)
   } finally {
-    await context?.close()
+    await open?.close()
   }
   return done
 }

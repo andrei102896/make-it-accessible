@@ -4,9 +4,9 @@ import { basename, dirname, join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { chromium } from 'playwright'
-import { GUTTER_PX } from '@make-it-accessible/pipeline/html/print'
+import { GUTTER_PX, SHEET } from '@make-it-accessible/pipeline/html/print'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
-import { pdfShots } from './pdfshot.ts'
+import { CAPTURE_PX, pdfShots } from './pdfshot.ts'
 import { loadSources, REBUILT_DIR, sourcePdf } from './sources.ts'
 
 // pnpm review:open [--all | <slug>…] [--with <page.html> <file.pdf>]: out/rebuilt/review.html, each document's PDF
@@ -15,9 +15,7 @@ const run = promisify(execFile)
 const RENDER_DPI = 100
 // The width our page is captured at: a desktop window, where every page shows its printed view (small body text
 // reflows below ~1050 px: Frankie & Johnnie's 7 pt).
-const CAPTURE_PX = 1440
 // A printed page of ours (html/print.ts).
-const SHEET = 'section[data-page][style*="--ar:"]'
 const OUT = join(REBUILT_DIR, 'review.html')
 
 type Doc = { title: string; page: string; pdf: string; dir: string }

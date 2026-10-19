@@ -62,6 +62,7 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
   pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (glyphs by baseline ownership), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
   pdf/drawnletters.ts         letters the PDF draws as shapes beside a word (lost from the text layer): the word is marked lost
+  pdf/fidelity.ts             scorePage: the printed view measured against the PDF per placed line (ink mass, colour, span) and per cell outside text; runs in the browser and in tests
   pdf/ocr.ts                  Tesseract on the rendered page (stored once per page hash and engine version); a page reads as a scan when its layer holds under a third of the printed words
   pdf/copies.ts               the shapes that draw placed words again (outlines, letter-shaped fills): under the words they mostly cover, never hidden by a later opaque box
   pdf/printedfaces.ts         per printed face, the pdf.js program printing most of its letters, rebuilt for a browser (measured by eval/facemetrics.ts)
@@ -155,6 +156,8 @@ packages/eval/src/            evaluation harness, never shipped
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
   refresh.ts                  a saved page as the build sees it today (rerender, inject): fonts, colours, hidden words read afresh; OCR runs kept
+  fidelity-measure.ts         measureDocument: the sheet, its ground and the PDF rendered in one Chromium at one scale, scored in the tab
+  fidelity.ts                 CLI: pnpm fidelity [--verify [--sealed]] [<slug>…] — numbers per page and the set's distributions
   readings.ts                 OCR readings on disk, one file per key (a database row and S3 object when live)
   inject.ts                   injected content defects (price swap, shift, role, name, heading, detail and item moves, drops, icons)
   inject-run.ts               CLI: pnpm inject [--per] [--verify [--sealed]] — the share of injected defects the gates catch
@@ -180,7 +183,7 @@ packages/eval/src/            evaluation harness, never shipped
   fonts-add.ts                CLI: vendor one open-licensed Google Fonts family into packages/pipeline/fonts
   review-page.ts              CLI: render the PDF pages, screenshot our page, ask the reviewer, write review.json
   review-open.ts              CLI: out/rebuilt/review.html, each document's PDF pages beside our printed sheets at one scale, opened in Safari (pnpm review:open --all)
-  pdfshot.ts                  PDF pages drawn by pdf.js in Chromium at a given width, for review-open (same rasteriser as our sheets)
+  pdfshot.ts                  openPdf: a document open in pdf.js on a routed origin, its page drawn to a canvas kept in the tab; pdfShots: JPEGs for the review
   sources.ts                  the measured documents (saved run + PDF, local list) and where rebuilt pages go (out/rebuilt)
   rerender.ts                 CLI: render a saved run again with the current renderer, no model call (pnpm rerender <slug>|--all)
   check-page.ts               CLI: axe, overflow and text-spacing checks of one page at 1280/390/320 and forced colours, with screenshots

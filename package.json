@@ -35,7 +35,8 @@
     "outreach:due": "node packages/eval/src/outreach-due.ts",
     "outreach:log": "node packages/eval/src/outreach-log.ts",
     "review:open": "node packages/eval/src/review-open.ts",
-    "inject": "node packages/eval/src/inject-run.ts"
+    "inject": "node packages/eval/src/inject-run.ts",
+    "fidelity": "node packages/eval/src/fidelity.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

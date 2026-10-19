@@ -3,16 +3,19 @@ import { join } from 'node:path'
 import { Refused } from '@make-it-accessible/pipeline/pdf/refused'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
 import { buildHtml, type PageResult } from './process.ts'
-import { loadSources, REBUILT_DIR, sourcePdf, type Source } from './sources.ts'
+import { loadSources, REBUILT_DIR, sourcePdf, VERIFY_FILE, type Source } from './sources.ts'
 import { documentLegend } from './legend.ts'
 import { refreshedPage, savedPdfPage } from './refresh.ts'
 
 // pnpm rerender <slug>... | --all: renders a saved run again, no model call, in out/rebuilt/<slug>; fonts, colours,
 // hidden words and drawn shapes are read afresh from the PDF, lines.json again when its version is behind.
 const args = process.argv.slice(2)
-if (!args.length) throw new Error('usage: pnpm rerender <slug>... | --all')
-const sources = await loadSources()
-const chosen = args.includes('--all') ? sources : args.map((slug) => byslug(sources, slug))
+if (!args.length) throw new Error('usage: pnpm rerender <slug>... | --all [--verify [--sealed]]')
+// `--verify` rebuilds the verification set (`--sealed`: its sealed half, aggregates only in any report).
+const all = await loadSources(args.includes('--verify') ? VERIFY_FILE : undefined)
+const sources = args.includes('--sealed') ? all.filter((s) => s.group === 'verify-sealed') : all
+const slugs = args.filter((a) => !a.startsWith('--'))
+const chosen = args.includes('--all') ? sources : slugs.map((slug) => byslug(sources, slug))
 
 function byslug(all: readonly Source[], slug: string): Source {
   const s = all.find((x) => x.slug === slug)
