@@ -39,7 +39,7 @@ export type Spot = {
 }
 export type Drawn = Pick<
   Grid,
-  'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces' | 'baselines'
+  'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces' | 'baselines' | 'ends'
 >
 export const NOTHING_DRAWN: Drawn = {
   inks: {},
@@ -51,6 +51,7 @@ export const NOTHING_DRAWN: Drawn = {
   tracking: {},
   faces: {},
   baselines: {},
+  ends: {},
 }
 
 // The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
@@ -65,8 +66,18 @@ export function spotsOf(
   const pictured = new Set([...drawn.undrawn, ...drawn.kept])
   const hidden = new Set(e.hidden)
   const out = new Map<string, Spot>()
+  // A word's box ends where its letters do (a tab read into it would stretch its line: `drawn.ends`).
+  const trimmed = (r: Run): Run => {
+    const end = drawn.ends[r.id]
+    return end === undefined ? r : { ...r, box: { ...r.box, w: end - r.box.x } }
+  }
   const words = (t: TextValue | PriceValue | undefined): Run[] =>
-    !t || 'seen' in t ? [] : t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
+    !t || 'seen' in t
+      ? []
+      : t.src
+          .flatMap(([from, to]) => e.runs.slice(from, to + 1))
+          .filter((r) => !hidden.has(r.id))
+          .map(trimmed)
   // Text with a word set on its side, printed inside a picture or kept as printed has no spot: ours is read.
   const put = (path: string, runs: readonly Run[]): void => {
     if (runs.some((r) => turned(r) || pictured.has(r.id))) return

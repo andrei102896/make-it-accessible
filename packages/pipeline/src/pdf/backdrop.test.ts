@@ -261,3 +261,11 @@ test('a glyph drawn through a reused definition is cut only where every instance
   assert.doesNotMatch(backdropSvg(svg, both), /source-5"><g fill="rgb\(0%, 0%, 0%\)"><use/)
   assert.deepEqual(sharedGlyphWords(svg, both), [])
 })
+
+test('a word whose layer box runs past its letters (a tab read into it) ends one step past its last letter', () => {
+  const box = { x: 100, y: 100, w: 200, h: 12 }
+  const space = '<g id="glyph-0-3">\n</g>'
+  const svg = page(glyphs + space, ink(100, 110) + ink(106, 110) + ink(112, 110) + ink(118, 110) + ink(290, 110, '3'))
+  assert.deepEqual(printedOf(svg, [{ id: '1:0', box, str: '2022  ' }]).ends, { '1:0': 124 })
+  assert.deepEqual(printedOf(svg, [{ id: '1:0', box, str: '2022' }]).ends, {})
+})

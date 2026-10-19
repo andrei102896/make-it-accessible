@@ -6,7 +6,7 @@ import type { Spot } from './spots.ts'
 import type { FontManifest } from './webfonts.ts'
 
 const grid = (metrics: Grid['metrics']): Grid => ({
-  version: 7,
+  version: 8,
   cell: 8,
   cols: 1,
   rows: 1,
@@ -19,6 +19,7 @@ const grid = (metrics: Grid['metrics']): Grid => ({
   strokes: {},
   undrawn: [],
   baselines: {},
+  ends: {},
   kept: [],
   tracking: {},
   faces: {},

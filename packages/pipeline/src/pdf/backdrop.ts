@@ -12,7 +12,7 @@ import type { Box } from './types.ts'
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 7
+export const BACKDROP_VERSION = 8
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -72,6 +72,8 @@ const Grid = z
     undrawn: z.array(z.string()),
     // Per placed word its printed baseline (pt from the page's top): its first letter's origin.
     baselines: z.record(z.string(), z.number()),
+    // Per placed word whose layer box runs past its letters (a tab read into it: Howies' "2022\t"), where they end.
+    ends: z.record(z.string(), z.number()),
     // Words the backdrop keeps as printed and ours only read: set at an angle, or in a hand we cannot draw
     // (keptRuns, eval: a script face neither embeddable nor stood in for; Fig's stamp and signature).
     kept: z.array(z.string()),
@@ -89,10 +91,10 @@ const Grid = z
   })
   .strict()
 export type Grid = z.infer<typeof Grid>
-export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'baselines'>
+export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'baselines' | 'ends'>
 export const parseGrid = (json: string): Grid => Grid.parse(JSON.parse(json))
 
-type Word = { id: string; box: Box }
+type Word = { id: string; box: Box; str?: string }
 // The page's SVG without the glyphs of `placed` words and the copies drawn round or under them; `unplaced` words,
 // boxes, rules and pictures stay. A glyph on an unplaced word's baseline is that word's, even inside a placed zone.
 export function backdropSvg(svg: string, placed: readonly Box[], unplaced: readonly Box[] = []): string {
@@ -146,7 +148,8 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const between = svg.slice(open, g.range[0])
     return { ...g, fill: open >= 0 && !between.includes('</g>') ? colourOf(attr(between, 'fill')) : null }
   })
-  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], baselines: {} }
+  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], baselines: {}, ends: {} }
+  const blank = new Set([...svg.matchAll(/<g id="(glyph-[^"]+)">\s*<\/g>/g)].map((m) => m[1]))
   // A word's own glyphs: origins in the lower part of its box, as its top reaches the line above's baseline (Kenny &
   // Ziggy's tight lines). Another word's glyph is never its ink or copy (Ferrara's black asterisks by the red SYRUPS).
   const boxes = words.map(({ box: b }) => ({
@@ -162,7 +165,7 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const shortest = Math.min(...held.map(({ b }) => b.h))
     return held.filter(({ b }) => b.h <= shortest * SAME_LINE).sort((p, q) => q.b.x - p.b.x)[0]?.k ?? -1
   })
-  for (const [i, { id, box }] of words.entries()) {
+  for (const [i, { id, box, str }] of words.entries()) {
     const zone = zoneOf(box)
     const around = glyphs.flatMap((g, k) => (holds(zone, g.at) ? [{ ...g, owner: owner[k] ?? -1 }] : []))
     const mine = around.filter((g) => g.owner === i)
@@ -179,6 +182,15 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     if (letter.fill) out.inks[id] = letter.fill
     if (letter.alpha < 1) out.alpha[id] = Math.round(letter.alpha * 1000) / 1000
     if (foot) out.baselines[id] = round(foot.at[1])
+    // Letters end one mean step past the last origin; the box of a word with outer spacing ends wherever its tab did
+    // (a space is a drawn glyph too, an empty one: Howies' tab drawn as a space 206 pt on).
+    const xs = mine
+      .filter((g) => !blank.has(g.id))
+      .map((g) => g.at[0])
+      .sort((a, b) => a - b)
+    const [first, last] = [xs[0] ?? 0, xs.at(-1) ?? 0]
+    const end = last + (last - first) / Math.max(1, xs.length - 1)
+    if (str !== undefined && str !== str.trim() && xs.length >= 2 && end < box.x + box.w) out.ends[id] = round(end)
     // Each copy glyph against its nearest inked glyph: on tight lines the zone also holds the next line's glyphs, so
     // a mean over the zone drifts by a line (Kenny & Ziggy's paragraph doubled one line down).
     const inked = mine.filter((g) => g.fill === letter.fill)

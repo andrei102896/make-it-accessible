@@ -40,7 +40,7 @@ const structure = parsePage(
 )
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 7,
+  version: 8,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -54,6 +54,7 @@ const white: Grid = {
   undrawn: [],
   kept: [],
   baselines: {},
+  ends: {},
   tracking: {},
   faces: {},
   metrics: {},

@@ -7,7 +7,7 @@ import { asDrawn, inkOn, inlineInk } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
-  version: 7,
+  version: 8,
   cell: 8,
   cols: 1,
   rows: 1,
@@ -21,6 +21,7 @@ const blank: Grid = {
   undrawn: [],
   kept: [],
   baselines: {},
+  ends: {},
   tracking: {},
   faces: {},
   metrics: {},
