@@ -99,7 +99,8 @@ test('digits of one price split at the separator join across a word gap; separat
     currency: null,
     fromBareDigits: false,
   })
-  assert.equal(amountOf([run(0, '18.', 539.4, 690, 13.56, 10.97), run(1, '50', 557, 690, 11.27, 10.97)]), null)
+  // Past the near gap the separator still joins: a decimal separator cannot end a price (price grammar, 2026-10-19).
+  assert.equal(amountOf([run(0, '18.', 539.4, 690, 13.56, 10.97), run(1, '50', 557, 690, 11.27, 10.97)])?.cents, 1850)
   assert.equal(amountOf([run(0, '2', 0, 0, 5, 10), run(1, '8', 5, 0, 5, 10)]), null)
   // A third decimal is never joined: "£8.95" stays the amount and the "12" beside it is another word.
   assert.deepEqual(amountOf([run(0, '£8.95', 0, 0, 25, 10), run(1, '12', 27, 0, 10, 10)]), {
@@ -125,4 +126,17 @@ test('printed amounts keep the citation order and join split digits; as-printed 
 test('a page prints fused cents only when a euro number has small cents beside it', () => {
   assert.equal(printsFusedCents([run(0, '2', 100, 100, 32, 78), run(1, '69', 132, 109, 34, 40)]), true)
   assert.equal(printsFusedCents([run(0, 'Crudo', 0, 0, 30, 10), run(1, '19', 100, 0, 10, 10)]), false)
+})
+
+test('price grammar, not layout: tracked cents join, fused leaders and words drop, invisible characters go', () => {
+  // A separator cannot end a price: "$9." and "30" are one amount even 0.6 of a line apart.
+  assert.equal(amountOf([run(0, '$9.', 100, 0, 12, 10), run(1, '30', 118, 0, 9, 10)])?.cents, 930)
+  assert.equal(amountOf([run(0, 'roll....$7.95', 100, 0, 50, 10)])?.cents, 795)
+  assert.deepEqual(amountOf([run(0, 'Egg…12', 100, 0, 30, 10)]), amountOf([run(0, '12', 100, 0, 10, 10)]))
+  assert.equal(amountOf([run(0, 'sauce17.49', 100, 0, 40, 10)])?.cents, 1749)
+  assert.equal(amountOf([run(0, '£31.50​', 100, 0, 30, 10)])?.cents, 3150)
+  // No separator between the digits: "$1 6" may be one price or two; it stays unread.
+  assert.equal(amountOf([run(0, '$1', 100, 0, 8, 10), run(1, '6', 115, 0, 5, 10)]), null)
+  // Leader dots before a leading zero are garbled text, not an amount.
+  assert.equal(amountOf([run(0, '.....044', 100, 0, 30, 10)]), null)
 })

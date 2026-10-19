@@ -59,9 +59,16 @@ function joinPriceGlyphs(runs: readonly Run[], sorted = true): Run[] {
     const atSeparator =
       prev !== undefined &&
       (/[.,]$/.test(prev.str) || /^[.,]\d/.test(r.str) || (/[.,]/.test(prev.str) && /^\d+$/.test(r.str)))
-    const near =
-      prev !== undefined && prev.line === r.line && Math.abs(r.box.x - (prev.box.x + prev.box.w)) < r.box.h * NEAR_GAP
-    if (prev && near && sameHeight && atSeparator && !/[.,]\d{3}/.test(str)) {
+    // One visual row by geometry: a text layer may give a price's two halves two line numbers (Superdawg's cents).
+    const row =
+      prev !== undefined &&
+      Math.min(prev.box.y + prev.box.h, r.box.y + r.box.h) - Math.max(prev.box.y, r.box.y) >=
+        Math.min(prev.box.h, r.box.h) / 2
+    const near = prev !== undefined && row && Math.abs(r.box.x - (prev.box.x + prev.box.w)) < r.box.h * NEAR_GAP
+    // A decimal separator cannot end a price: "9." then two digits on its line are one amount however wide the
+    // letter-spacing (a text layer splits tracked digits: "$9. 30", "18. 99").
+    const cents = prev !== undefined && row && /[.,]$/.test(prev.str) && /^\d{2}$/.test(r.str)
+    if (prev && (near || cents) && sameHeight && atSeparator && !/[.,]\d{3}/.test(str)) {
       const right = Math.max(prev.box.x + prev.box.w, r.box.x + r.box.w)
       out[out.length - 1] = { ...prev, str, box: { ...prev.box, w: right - prev.box.x } }
     } else out.push(r)
@@ -86,7 +93,14 @@ export function centPartner(euros: Run, runs: readonly Run[]): Run | undefined {
   return candidates.sort((a, b) => distance(a) - distance(b))[0]
 }
 
-const bare = (word: string): string => word.replace(/^\(+/, '').replace(/[)*,;]+$/, '')
+// A price word without what is not its amount: invisible format characters, brackets, and leader dots or a word the
+// text layer fused before it ("roll....$7.95", "Egg…12", "sauce17.49"); a leading zero stays (no amount starts so).
+const bare = (word: string): string =>
+  word
+    .replace(/\p{Cf}/gu, '')
+    .replace(/^\(+/, '')
+    .replace(/^(?:\p{L}*(?:[.…·_]{2,}|…)|\p{L}+)(?=[€£$]|[1-9])/u, '')
+    .replace(/[)*,;]+$/, '')
 
 // The price as printed, its split digits joined ("21.9" + "5" → "21.95"), in citation order.
 export const printedAmount = (cited: readonly Run[]): string => joinRuns(joinPriceGlyphs(cited, false))
