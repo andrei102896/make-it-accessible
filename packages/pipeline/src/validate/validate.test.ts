@@ -237,3 +237,30 @@ test('a price whose digits are partly drawn as shapes is an error, the price bei
     ['blocks[0].items[0].prices[0]'],
   )
 })
+
+test('on a scan, a price the page image reads otherwise than OCR is an error naming both; an agreeing one is not', () => {
+  const e = page([
+    ['Soup', 0],
+    ['$12.50', 200],
+    ['Fish', 0],
+    ['$20', 200],
+  ])
+  const structure = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [
+            { name: { src: [[0, 0]] }, prices: [{ src: [[1, 1]], text: '12.80' }] },
+            { name: { src: [[2, 2]] }, prices: [{ src: [[3, 3]], text: '$20' }] },
+          ],
+        },
+      ],
+    }),
+  )
+  assert.deepEqual(
+    validatePage(structure, e).errors.map((f) => f.problem),
+    ['the page image reads "12.80" where OCR reads "$12.50"'],
+  )
+})

@@ -65,7 +65,13 @@ export async function processPage(
   await mkdir(dir, { recursive: true })
   let extraction = withIcons(await extractWhole(pdfPath, pdfPage), legend)
   // A page with no text layer is read by OCR and by the model apart (model/scan.ts); OCR reading no word leaves it.
-  const read = isScan(extraction) ? await readPrinted(pdfPath, pdfPage, extraction, folderStore()) : null
+  // A reading that fails leaves the page unread by OCR, so held, never the document stopped.
+  const read = isScan(extraction)
+    ? await readPrinted(pdfPath, pdfPage, extraction, folderStore()).catch((error: unknown) => {
+        console.error(`${label}: OCR failed, the page stays held: ${error instanceof Error ? error.message : ''}`)
+        return null
+      })
+    : null
   if (read?.some((w) => /[\p{L}\p{N}]/u.test(w.str)))
     extraction = { ...extraction, runs: ocrRuns(read, pdfPage), duplicates: [], hidden: [] }
   const scan = extraction.runs.some((r) => r.ocr)
