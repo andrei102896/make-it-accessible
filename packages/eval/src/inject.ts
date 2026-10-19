@@ -11,6 +11,7 @@ import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 // swap, or the words it orphans added to `dropped`), so a gate can only catch it by checking the defect itself.
 export const DEFECTS = [
   'price-swap',
+  'price-shift',
   'price-role',
   'qualifier-swap',
   'cell-price-swap',
@@ -83,6 +84,25 @@ export function mutants(
       const [x, y] = [at(s, a.path)?.item.prices[0], at(s, b.path)?.item.prices[0]]
       if (x && y) [x.src, y.src] = [y.src, x.src]
     })
+  // Three dishes in a row, each with the next one's price (a column read one row off), rotated to keep coverage.
+  const runs3 = page.blocks.flatMap((_, i) =>
+    all
+      .filter((x) => x.path.startsWith(`blocks[${String(i)}].items[`) && x.item.prices.length === 1)
+      .flatMap((x, k, xs) => (k + 2 < xs.length && xs[k + 1] && xs[k + 2] ? [[x, xs[k + 1], xs[k + 2]]] : [])),
+  )
+  // Equal prices rotated mislead no one: only trios whose prices differ.
+  const differ = (t: (At | undefined)[]): boolean =>
+    new Set(t.map((x) => words(e, x?.item.prices[0]?.src ?? []))).size === t.length
+  for (const trio of pick(runs3.filter(differ), per))
+    make(
+      'price-shift',
+      trio.flatMap((x) => (x ? [x.path] : [])),
+      (s) => {
+        const ps = trio.map((x) => (x ? at(s, x.path)?.item.prices[0] : undefined))
+        const [p0, p1, p2] = ps
+        if (p0 && p1 && p2) [p0.src, p1.src, p2.src] = [p2.src, p0.src, p1.src]
+      },
+    )
   for (const a of pick(onePrice, per))
     make('price-role', [a.path], (s) => {
       const p = at(s, a.path)?.item.prices[0]

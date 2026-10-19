@@ -14,7 +14,10 @@ const SOURCES_FILE = join(ROOT, 'validation', 'private', 'wiki-sources.json')
 // Rebuilt pages (pnpm rerender) live here, one folder per slug; local only.
 export const REBUILT_DIR = join(ROOT, 'out', 'rebuilt')
 
-export const loadSources = async (): Promise<Source[]> =>
-  SourceSchema.parse(JSON.parse(await readFile(SOURCES_FILE, 'utf8')))
+// The verification set (Andrei, 2026-10-19): menus never looked at while a rule is built; rules are judged on it.
+export const VERIFY_FILE = join(ROOT, 'validation', 'private', 'verify-sources.json')
+
+export const loadSources = async (file = SOURCES_FILE): Promise<Source[]> =>
+  SourceSchema.parse(JSON.parse(await readFile(file, 'utf8')))
 
 export const sourcePdf = (s: Source): string => join(ROOT, s.pdf)
