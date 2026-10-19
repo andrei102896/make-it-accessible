@@ -101,20 +101,21 @@ thead tr:last-child > * { border-bottom: 2px solid var(--fg); }
 .table tr > th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); box-shadow: inset -1px 0 var(--line); }
 td.num { text-align: right; white-space: nowrap; }
 .validity { margin: .5rem 0 0; font-weight: 600; }
-nav.chips { background: var(--bg); border-bottom: 1px solid var(--line); margin: 0 0 1rem; }
-nav.chips ul { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: 0; padding: .5rem 0; }
+nav.chips { background: var(--bg); margin: 0 0 1.25rem; }
+nav.chips ul { display: flex; flex-wrap: wrap; gap: 0 1.25rem; list-style: none; margin: 0; padding: .25rem 0; }
 nav.chips li { flex: none; max-width: 100%; }
-nav.chips a { display: inline-block; max-width: 100%; padding: .35rem .8rem; min-height: 2.75rem; line-height: 2rem;
-  border: 1px solid var(--line); border-radius: 999px; color: var(--fg); text-decoration: none; }
-nav.chips a:hover { border-color: var(--accent); }
+/* Section links in the document's own heading face and ink, not generic UI chrome (Andrei, 2026-10-19). */
+nav.chips a { display: inline-block; max-width: 100%; min-height: 2.75rem; line-height: 2.75rem; color: var(--fg);
+  font-family: var(--heading-font, inherit); font-weight: 600; letter-spacing: .02em; text-decoration: none;
+  border-bottom: 2px solid transparent; }
+nav.chips a:hover { border-bottom-color: var(--accent); }
 nav.chips .chips-fold { display: none; }
 nav.chips .chips-fold summary { cursor: pointer; font-weight: 600; min-height: 2.75rem; line-height: 2.75rem; }
 @media (max-width: 39.99rem) {
   nav.chips:has(.chips-fold) > ul { display: none; }
   nav.chips .chips-fold { display: block; }
-  nav.chips { position: sticky; top: 0; z-index: 2; margin: 0 -1rem 1rem; padding: 0 1rem; }
-  nav.chips ul { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: .4rem; }
-  nav.chips a { min-height: 2.25rem; line-height: 1.5rem; padding: .35rem .75rem; font-size: .875rem; white-space: nowrap; }
+  nav.chips ul { gap: 0 1rem; }
+  nav.chips a { font-size: .9375rem; }
 }
 @media (min-width: 60rem) {
   nav.chips.pinned { position: sticky; top: 0; z-index: 1; }

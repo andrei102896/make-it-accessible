@@ -68,7 +68,11 @@ export function renderDocument(doc: HtmlDocument): string {
   const parts = doc.title.split(' · ')
   // The band already names the document; a contents entry saying the same again is left out.
   const same = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
-  const seen = new Set([doc.title, ...parts].map(same))
+  // Nor an entry repeating the masthead's title, shown right above the chips (Howies' "DINNER MENU", 2026-10-19).
+  const mastheadBlock = segments[0]?.title != null ? doc.pages[0]?.structure.blocks[segments[0].title] : undefined
+  const mastheadName =
+    mastheadBlock?.kind === 'heading' && doc.pages[0] ? visibleText(mastheadBlock.text, doc.pages[0].extraction) : ''
+  const seen = new Set([doc.title, ...parts, mastheadName].filter(Boolean).map(same))
   const toc = rendered.flatMap((r) => r.toc).filter((t) => !seen.has(same(t.name)) && seen.add(same(t.name)))
   const kind = doc.kind ?? null
   const nav = navigation(kind, toc, long, ui)
