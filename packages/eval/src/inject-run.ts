@@ -4,28 +4,26 @@ import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { Refused } from '@make-it-accessible/pipeline/pdf/refused'
 import { unverified, validatePage } from '@make-it-accessible/pipeline/validate/validate'
-import { consistencyFindings } from '@make-it-accessible/pipeline/validate/consistency'
 import { DEFECTS, mutants, type Defect } from './inject.ts'
 import { documentLegend } from './legend.ts'
 import { OUT_DIR } from './paths.ts'
 import { refreshedPage } from './refresh.ts'
 import { loadSources, sourcePdf, VERIFY_FILE } from './sources.ts'
 
-// pnpm inject [--per 3] [--verify]: every saved page of the set, refreshed as the build sees it, takes injected content defects
+// pnpm inject [--per 3] [--verify [--sealed]]: every saved page of the set, refreshed as the build sees it, takes injected content defects
 // (inject.ts); on pages the gates leave clean, a defect is caught when the page becomes held. Prints the catch rate
 // per defect and writes out/inject.json (no timestamps: a run repeats).
 const at = process.argv.indexOf('--per')
 const PER = at >= 0 ? Number(process.argv[at + 1]) : 3
 // `--verify`: the verification set instead of the working set (sources.ts).
 const SET = process.argv.includes('--verify') ? VERIFY_FILE : undefined
+// `--sealed`: only the verification menus never looked at (group verify-sealed), the judge of a rule learned elsewhere.
+const SEALED = process.argv.includes('--sealed')
 
 type Page = { structure: PageStructure; extraction: Extraction }
 // A gate: whether it holds the page. More gates (geometry, icon shape, OCR, pixels) join this list.
 const GATES: { name: string; holds: (p: Page) => boolean }[] = [
   { name: 'validator', holds: (p) => unverified(validatePage(p.structure, p.extraction)).length > 0 },
-  ...(process.argv.includes('--consistency')
-    ? [{ name: 'consistency', holds: (p: Page) => consistencyFindings(p.structure, p.extraction).length > 0 }]
-    : []),
 ]
 
 // mulberry32 over a string's hash: the same page draws the same defects every run.
@@ -52,7 +50,7 @@ const tally = new Map<Defect, { injected: number; caught: number; missed: string
 )
 let clean = 0
 let held = 0
-for (const s of await loadSources(SET)) {
+for (const s of (await loadSources(SET)).filter((x) => !SEALED || x.group === 'verify-sealed')) {
   const pdf = sourcePdf(s)
   const legend = await documentLegend(pdf).catch((e: unknown) => {
     if (e instanceof Refused) return null

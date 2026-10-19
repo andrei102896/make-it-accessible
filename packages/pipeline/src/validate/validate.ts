@@ -3,6 +3,7 @@ import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
+import { consistencyFindings } from './consistency.ts'
 
 const MAX_ALT_LENGTH = 250
 
@@ -205,5 +206,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const uncovered = e.runs.filter((r, i) => !citations.has(i) && !skipped.has(r.id)).map((r) => r.id)
   const doubleCited = [...citations].filter(([, n]) => n > 1).flatMap(([i]) => e.runs[i]?.id ?? [])
   if (uncovered.length) review.push({ path: 'page', problem: `${uncovered.length} words neither used nor dropped` })
+  // Prices and details that the page's own geometry gives to another dish (consistency.ts).
+  review.push(...consistencyFindings(page, e))
   return { errors, review, generated, uncovered, doubleCited }
 }
