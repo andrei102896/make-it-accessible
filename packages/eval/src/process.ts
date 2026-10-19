@@ -8,7 +8,7 @@ import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { structurePage, type StructureResult } from '@make-it-accessible/pipeline/model/structure'
 import { structureScan } from '@make-it-accessible/pipeline/model/scan'
-import { isScan, ocrRuns, readPrinted } from '@make-it-accessible/pipeline/pdf/ocr'
+import { ocrRuns, readPrinted, readsAsScan } from '@make-it-accessible/pipeline/pdf/ocr'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import { pictureIn } from '@make-it-accessible/pipeline/pdf/art'
 import { parseGrid } from '@make-it-accessible/pipeline/pdf/backdrop'
@@ -64,15 +64,13 @@ export async function processPage(
   const dir = pageDir(docDir, keyPage)
   await mkdir(dir, { recursive: true })
   let extraction = withIcons(await extractWhole(pdfPath, pdfPage), legend)
-  // A page with no text layer is read by OCR and by the model apart (model/scan.ts); OCR reading no word leaves it.
-  // A reading that fails leaves the page unread by OCR, so held, never the document stopped.
-  const read = isScan(extraction)
-    ? await readPrinted(pdfPath, pdfPage, extraction, folderStore()).catch((error: unknown) => {
-        console.error(`${label}: OCR failed, the page stays held: ${error instanceof Error ? error.message : ''}`)
-        return null
-      })
-    : null
-  if (read?.some((w) => /[\p{L}\p{N}]/u.test(w.str)))
+  // A page whose text the layer mostly lacks is read by OCR and by the model apart (model/scan.ts).
+  const read = await readPrinted(pdfPath, pdfPage, extraction, folderStore()).catch((error: unknown) => {
+    // A failed reading leaves the page as its layer reads it: a scan then stays held, never the document stopped.
+    console.error(`${label}: OCR failed: ${error instanceof Error ? error.message : ''}`)
+    return null
+  })
+  if (read && readsAsScan(extraction, read))
     extraction = { ...extraction, runs: ocrRuns(read, pdfPage), duplicates: [], hidden: [] }
   const scan = extraction.runs.some((r) => r.ocr)
   const size = fitScale(extraction.width, extraction.height)
