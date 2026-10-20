@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage, type TextValue } from '../model/schema.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
-import { inkedHtml, inkSegments, lineParts, placedRuns, visibleText } from './source.ts'
+import { inkedHtml, inkSegments, lineParts } from './segments.ts'
+import { placedRuns, visibleText } from './source.ts'
 
 test('the placed words are every shown word a text cites, prices and nested names too; dropped ones are not', () => {
   const runs = ['MENU', 'ghost', 'Soup', '$9', 'p.2'].map((str, i) => ({
@@ -188,4 +189,30 @@ test('a text is cut where its cited words are printed apart on one line, never b
   )
   // Words a space apart stay one piece: nothing to cut.
   assert.equal(lineParts({ src: [[2, 3]] }, e, 'supplement if'), null)
+})
+
+test("only the words in another face than their placed element's are wrapped with it", () => {
+  const run = (id: string, weight: number): Run => ({
+    id,
+    str: '',
+    box: { x: 0, y: 0, w: 1, h: 1 },
+    flow: 0,
+    line: 0,
+    font: { key: 'gotham', size: 9, weight, italic: false },
+  })
+  const [bold, plain] = [run('1:0', 700), run('1:1', 400)]
+  const segments = [
+    { text: 'GAELIC ', color: null, icon: null, run: bold },
+    { text: '(Monkey Shoulder)', color: null, icon: null, run: plain },
+  ]
+  const face = (r: Run): string | null => (r === bold ? '--fw:700' : null)
+  assert.equal(
+    inkedHtml(segments, new Set(), (s) => s, face),
+    '<span class="face" style="--fw:700">GAELIC </span>(Monkey Shoulder)',
+  )
+  // Without a placed element (no printed view), the text is as before.
+  assert.equal(
+    inkedHtml(segments, new Set(), (s) => s),
+    'GAELIC (Monkey Shoulder)',
+  )
 })

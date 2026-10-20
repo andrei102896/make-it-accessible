@@ -7,7 +7,8 @@ import { renderDocument } from './document.ts'
 import { placement, placer } from './placed.ts'
 import { spotsOf } from './spots.ts'
 import { printWidth } from './print.ts'
-import { inkedHtml, visibleText } from './source.ts'
+import { inkedHtml } from './segments.ts'
+import { visibleText } from './source.ts'
 
 const font = { key: 'serif', size: 9, weight: 400, italic: false }
 const words = ['MENU', 'Soup', 'of', 'the', 'day', '$9']
@@ -244,17 +245,6 @@ test('a placed line takes its printed face and letter spacing; small text is nev
     /--fw:300;--fi:normal;--ff:'print-jost', sans-serif;--ls:0\.157;/,
   )
   assert.match(placement(name, e.width, tracked, 2, [jost]), /--ls:0;/)
-})
-
-test("a line whose words share one of the PDF's own faces takes it first, its stand-in after", () => {
-  const owned: Grid = { ...white, faces: { '1:0': 'pdf-0123456789ab' } }
-  const title = spotsOf(structure.blocks, extraction, owned).get('blocks[0]')
-  assert.ok(title)
-  assert.match(placement(title, extraction.width, owned, 2, []), /--ff:'pdf-0123456789ab';/)
-  const mixed: Grid = { ...white, faces: { '1:1': 'pdf-0123456789ab' } }
-  const name = spotsOf(structure.blocks, extraction, mixed).get('blocks[2].items[0].name')
-  assert.ok(name)
-  assert.doesNotMatch(placement(name, extraction.width, mixed, 2, []), /--ff:/)
 })
 
 test("a placed text stands on its first line's printed baseline, where most of that line's letters stand (Moosewood's entrees)", () => {

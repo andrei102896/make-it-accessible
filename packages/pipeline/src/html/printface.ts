@@ -111,9 +111,10 @@ export function printFaces(
 
 // The PDF's own face a placement's `--ff` names first, if any.
 export const ownFaceIn = (ff: string): string | null => /^'(pdf-[0-9a-f]+)'/.exec(ff.trim())?.[1] ?? null
-// A placement's style without its own face: its stand-in stays, or no family at all (the role's face).
+// A placement's markup without its own faces (the element's and its words'): their stand-ins stay, or no family at
+// all (the role's face).
 export const withoutOwnFace = (style: string): string =>
-  style.replace(/--ff:'pdf-[0-9a-f]+', /, '--ff:').replace(/;?--ff:'pdf-[0-9a-f]+'(?=[;"]|$)/, '')
+  style.replace(/--ff:'pdf-[0-9a-f]+', /g, '--ff:').replace(/;?--ff:'pdf-[0-9a-f]+'(?=[;"]|$)/g, '')
 
 // Whether a face's unicode-range ("U+41-5A, U+61") holds every letter of the shown text (spaces aside).
 export function covers(range: string, text: string): boolean {

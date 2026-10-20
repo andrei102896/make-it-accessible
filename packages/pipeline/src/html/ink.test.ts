@@ -5,7 +5,11 @@ import type { Extraction, Run } from '../pdf/types.ts'
 import type { Brand } from './brand.ts'
 import { renderDocument } from './document.ts'
 import { profileOf } from './profile.ts'
-import { inkedHtml, inkSegments } from './source.ts'
+import { inkedHtml, inkSegments, type Segment } from './segments.ts'
+
+// A segment's text, ink and icon (its run is the fixture's own).
+const inked = (s: readonly Segment[]): Pick<Segment, 'text' | 'color' | 'icon'>[] =>
+  s.map(({ text, color, icon }) => ({ text, color, icon }))
 
 // Almond-like: small-caps names split into runs, a red farm name inside a black description, a dark teal note.
 const words: [string, string, number][] = [
@@ -69,28 +73,28 @@ test("the profile's inks are the brand colours inside a role's words: the red fa
 test('colours map onto the shown text letter by letter, whitespace and case aside; else the common colour only', () => {
   const desc = structure.blocks[1]?.kind === 'products' ? structure.blocks[1].items[0]?.details[0] : undefined
   if (desc?.kind !== 'paragraph') throw new Error('fixture')
-  assert.deepEqual(inkSegments(desc.text, extraction, "chauncey's greens, lemon"), [
+  assert.deepEqual(inked(inkSegments(desc.text, extraction, "chauncey's greens, lemon")), [
     { text: "chauncey's ", color: '#c00000', icon: null },
     { text: 'greens, lemon', color: '#000000', icon: null },
   ])
   const name = structure.blocks[1]?.kind === 'products' ? structure.blocks[1].items[0]?.name : undefined
   if (!name) throw new Error('fixture')
   // The model's text stands in for the split small caps; every letter still finds its run.
-  assert.deepEqual(inkSegments(name, extraction, 'Curried Mussels'), [
+  assert.deepEqual(inked(inkSegments(name, extraction, 'Curried Mussels')), [
     { text: 'Curried Mussels', color: '#000000', icon: null },
   ])
   // Letters that differ (a repaired word) give one segment, coloured only when every run agrees.
-  assert.deepEqual(inkSegments(desc.text, extraction, 'Chauncy greens'), [
+  assert.deepEqual(inked(inkSegments(desc.text, extraction, 'Chauncy greens')), [
     { text: 'Chauncy greens', color: null, icon: null },
   ])
-  assert.deepEqual(inkSegments({ src: [[7, 7]] }, extraction, 'Chauncy'), [
+  assert.deepEqual(inked(inkSegments({ src: [[7, 7]] }, extraction, 'Chauncy')), [
     { text: 'Chauncy', color: '#c00000', icon: null },
   ])
   const html = inkedHtml(
     [
-      { text: 'a ', color: '#000000', icon: null },
-      { text: 'b', color: '#111111', icon: null },
-      { text: ' c', color: '#c00000', icon: null },
+      { text: 'a ', color: '#000000', icon: null, run: null },
+      { text: 'b', color: '#111111', icon: null, run: null },
+      { text: ' c', color: '#c00000', icon: null, run: null },
     ],
     new Set(['#c00000']),
     (s) => `[${s}]`,

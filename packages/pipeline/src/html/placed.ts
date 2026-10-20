@@ -1,11 +1,12 @@
 import type { TextValue } from '../model/schema.ts'
 import type { FaceMetrics, Grid } from '../pdf/backdrop.ts'
 import { faceKey } from '../pdf/face.ts'
-import type { Box } from '../pdf/types.ts'
+import type { Box, RunFont } from '../pdf/types.ts'
 import { inkOn, inlineInk } from './printink.ts'
 import { unionOf } from './profile.ts'
 import { printFaceOf } from './printface.ts'
-import { flaggedAt, inkSegments, lineParts, type Segment } from './source.ts'
+import { inkSegments, lineParts, type FaceOf, type Segment } from './segments.ts'
+import { flaggedAt } from './source.ts'
 import { NOTHING_DRAWN, spotOf, spotsOf, trimmedRun, type Drawn, type Spot } from './spots.ts'
 import type { Context, HtmlPage } from './types.ts'
 import type { FontManifest } from './webfonts.ts'
@@ -38,21 +39,14 @@ export function placement(
   const u = (v: number): string => String(Math.round((v / pageWidth) * 100_000) / 1000)
   const { box } = spot
   const props = [`--x:${u(box.x)}`, `--y:${u(box.y)}`, `--w:${u(box.w)}`, `--h:${u(box.h)}`]
-  // A lookalike is sized to the printed face's x-height and cap height and set in the weight whose stem matches
-  // (the backdrop's metrics); the PDF's own face is the printed glyphs and keeps the printed size.
-  const metrics = spot.font && !spot.own ? grid?.metrics[faceKey(spot.font)] : undefined
-  const scale = metrics ? blend(metrics, spot.lowercase) : 1
-  const size = (spot.size ?? (box.h / spot.lines) * BOX_TO_SIZE) * scale
+  const { size, scale, large } = sized(spot, grid, pxPerPt)
   props.push(`--fs:${u(size)}`, `--lh:${u(box.h / spot.lines)}`)
   props.push(`--ws:${spot.lines === 1 ? 'nowrap' : 'normal'}`, `--ta:${spot.align}`)
-  const large = size * pxPerPt >= LARGE_PX
-  const matched = metrics && !large ? Math.max(metrics.weight, MIN_SMALL_WEIGHT) : metrics?.weight
-  const face = spot.font ? printFaceOf(spot.font, library, matched) : null
+  const face = spot.font ? faceIn(spot.font, spot.own, grid, library, large) : null
   const weight = face?.weight ?? spot.weight
   props.push(`--fw:${String(weight)}`, `--fi:${spot.italic ? 'italic' : 'normal'}`)
   // The PDF's own face first, its stand-in after: fit.ts drops the own face where it lacks a letter of the line.
-  const families = [spot.own ? `'${spot.own}'` : null, face?.family ?? null].filter((f) => f !== null)
-  if (families.length) props.push(`--ff:${families.join(', ')}`)
+  if (face?.families.length) props.push(`--ff:${face.families.join(', ')}`)
   if (spot.baseline !== null) props.push(`--bl:${u(spot.baseline)}`)
   // Letters printed tighter than their face only where large: running text never closes up. Tracking is in ems
   // of the printed size; a scaled face keeps the printed spacing in points.
@@ -74,6 +68,53 @@ export function placement(
   return ` style="${props.join(';')}"`
 }
 
+// A lookalike is sized to the printed face's x-height and cap height (the backdrop's metrics); the PDF's own face is
+// the printed glyphs and keeps the printed size.
+function sized(spot: Spot, grid: Grid | null, pxPerPt: number): { size: number; scale: number; large: boolean } {
+  const metrics = spot.font && !spot.own ? grid?.metrics[faceKey(spot.font)] : undefined
+  const scale = metrics ? blend(metrics, spot.lowercase) : 1
+  const size = (spot.size ?? (spot.box.h / spot.lines) * BOX_TO_SIZE) * scale
+  return { size, scale, large: size * pxPerPt >= LARGE_PX }
+}
+
+// A printed face as drawn: its own program first, then its stand-in in the weight whose stem matches the print's.
+function faceIn(
+  font: RunFont,
+  own: string | null,
+  grid: Grid | null,
+  library: readonly FontManifest[],
+  large: boolean,
+): { families: string[]; weight: number } {
+  const metrics = own ? undefined : grid?.metrics[faceKey(font)]
+  const matched = metrics && !large ? Math.max(metrics.weight, MIN_SMALL_WEIGHT) : metrics?.weight
+  const face = printFaceOf(font, library, matched)
+  const families = [own ? `'${own}'` : null, face?.family ?? null].filter((f) => f !== null)
+  return { families, weight: face?.weight ?? font.weight }
+}
+
+// A word of the element's family printed in another weight, style or program keeps it (GAELIC bold before its
+// regular note); another family's word keeps the element's face.
+function wordFace(
+  spot: Spot,
+  drawn: Drawn,
+  grid: Grid | null,
+  pxPerPt: number,
+  library: readonly FontManifest[],
+): FaceOf | undefined {
+  const line = spot.font
+  if (!line) return undefined
+  const { large } = sized(spot, grid, pxPerPt)
+  const mine = faceIn(line, spot.own, grid, library, large)
+  return (run) => {
+    if (!run.font || run.font.key !== line.key) return null
+    const own = drawn.faces[run.id] ?? null
+    const word = faceIn(run.font, own, grid, library, large)
+    if (own === spot.own && word.weight === mine.weight && run.font.italic === spot.italic) return null
+    const ff = word.families.length ? `--ff:${word.families.join(', ')};` : ''
+    return `${ff}--fw:${String(word.weight)};--fi:${run.font.italic ? 'italic' : 'normal'}`
+  }
+}
+
 // A line's size scale: the x-height scale to the power of its lowercase share, the cap-height scale to the rest
 // (running text takes the printed x-height, a price or a capitals heading the printed cap height).
 const blend = ({ lower, caps }: FaceMetrics, lowercase: number): number =>
@@ -89,9 +130,11 @@ export type Placer = {
     path: string,
     t: TextValue,
     shown: string,
-    html: (s: readonly Segment[]) => string,
+    html: (s: readonly Segment[], face?: FaceOf) => string,
     tail?: string,
   ) => string | null
+  // The faces of a placed leaf's words where they differ from its own (segments.ts `.face`).
+  faceOf: (path: string) => FaceOf | undefined
   // Whether a price's amount and label are placed each on its own (both have a printed spot); then the price is not.
   apart: (path: string) => boolean
   // ` data-free` on a page in the printed view (text inside a placed leaf that the print does not show there).
@@ -108,6 +151,10 @@ export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' 
   const split = new Set<string>()
   return {
     free: spots ? ' data-free' : '',
+    faceOf: (path) => {
+      const spot = spots?.get(path)
+      return spot ? wordFace(spot, drawn, backdrop?.grid ?? null, pxPerPt, library) : undefined
+    },
     place: (path) => {
       if (!spots) return ''
       if (split.has(path)) return ' data-pl'
@@ -157,7 +204,8 @@ export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' 
           const first = p.runs[0]
           const ground = (first ? unionOf(grounds.get(row(first)) ?? []) : null) ?? box ?? undefined
           const style = spot ? placement(spot, e.width, backdrop?.grid ?? null, pxPerPt, library, ground) : ''
-          return `<span class="pl"${style}>${html(p.segments)}${p === last ? tail : ''}</span>`
+          const face = spot ? wordFace(spot, drawn, backdrop?.grid ?? null, pxPerPt, library) : undefined
+          return `<span class="pl"${style}>${html(p.segments, face)}${p === last ? tail : ''}</span>`
         })
         .join('')
     },

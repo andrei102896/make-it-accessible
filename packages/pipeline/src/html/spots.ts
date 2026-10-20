@@ -30,7 +30,7 @@ export type Spot = {
   tracking: number
   // Its lowercase letters as a share of its letters and digits (a lookalike's size blends by it, placed.ts).
   lowercase: number
-  // The PDF's own face every word is printed in (pdf/ownfont.ts), when they share one.
+  // The PDF's own face most of its letters are printed in (pdf/ownfont.ts); a word in another carries its own.
   own: string | null
   // Its first line's printed baseline (pt from the page's top): fit.ts sets ours on it.
   baseline: number | null
@@ -225,8 +225,8 @@ export function spotOf(box: Box, all: readonly Run[], drawn: Drawn, inks: Readon
     font: runs.find((r) => r.font && faceKey(r.font) === face)?.font ?? null,
     tracking: median(runs.map((r) => [drawn.tracking[r.id] ?? 0, r.str.length])),
     lowercase: lowercaseShare(runs.map((r) => r.str).join('')),
-    own:
-      new Set(runs.map((r) => drawn.faces[r.id] ?? null)).size === 1 ? (drawn.faces[runs[0]?.id ?? ''] ?? null) : null,
+    // Most of its letters' own program: a word printed in another keeps it (segments.ts `.face`).
+    own: most((r) => drawn.faces[r.id] ?? null),
     baseline: first.length ? median(first) : null,
     inline: inlinesOf(runs, drawn, inks, color),
   }

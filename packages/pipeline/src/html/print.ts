@@ -92,9 +92,10 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill;
   letter-spacing: calc(var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); font-size-adjust: none; }
 ${on} ${page} ${leaf}[style*="--ti:"] { text-align: left; text-indent: calc(var(--ti) * 1cqw); }
-${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: none; }
+${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: small-caps; }
 ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
-${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
+${on} ${page} ${leaf} * { color: inherit; white-space: inherit; font-weight: inherit; font-style: inherit; }
+${on} ${page} ${leaf} .face { font-weight: var(--fw); font-style: var(--fi); }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} ${leaf} .icon { display: inline-block; width: calc(var(--iw) * 1cqw); height: 1px; border: 0; padding: 0;
   margin: 0; vertical-align: baseline; font-size: inherit; line-height: inherit; }
