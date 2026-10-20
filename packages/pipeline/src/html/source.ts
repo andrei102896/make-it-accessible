@@ -81,7 +81,11 @@ export function visibleText(
     t.text !== undefined && t.text.toLowerCase() === printed.toLowerCase() && caseReliable(printed) && !modelCase
   // Text the validator rejects never shows: the cited words do (a content error holds the page, eval/process.ts).
   const accepted = t.text !== undefined && modelTextAccepted(t.text, cited)
-  const shown = t.text !== undefined && accepted && words.length === cited.length && !recased ? t.text : printed
+  // A separator the model dropped from the printed words ("STOUT," before its note) shows: the print's words are
+  // drawn. Not in a small-caps role, whose layer case is not the printed one.
+  const separated = !modelCase && t.text !== printed && printed.replace(/[,;:]+$/, '') === t.text
+  const kept = accepted && words.length === cited.length && !recased && !separated
+  const shown = kept && t.text !== undefined ? t.text : printed
   const allCaps = words.length > 0 && words.every((r) => r.font !== undefined && capsFaces.has(faceKey(r.font)))
   return allCaps ? shown.toUpperCase() : shown
 }

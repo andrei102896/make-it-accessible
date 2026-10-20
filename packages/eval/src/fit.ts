@@ -72,7 +72,10 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
             const own = el.style.getPropertyValue('--ff').trim().startsWith("'pdf-")
             // A lookalike narrower than the printed box takes letter spacing up to the box (cqw per letter). The
             // content's own width: a block's scrollWidth never reads below its box (Scotts' STARTERS, never spread).
-            const hidden = [...el.querySelectorAll('.sr-only, .icon')].reduce((n, h) => n + h.textContent.length, 0)
+            const hidden = [...el.querySelectorAll('.sr-only, .icon, .sign')].reduce(
+              (n, h) => n + h.textContent.length,
+              0,
+            )
             const range = document.createRange()
             range.selectNodeContents(el)
             return {
@@ -150,7 +153,7 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
             const rects = [...el.querySelectorAll('.icon')].map((i) => i.getBoundingClientRect())
             const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
             for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-              if (n.parentElement?.closest('.sr-only, .icon, [data-free]')) continue
+              if (n.parentElement?.closest('.sr-only, .icon, .sign, [data-free]')) continue
               const range = document.createRange()
               range.selectNodeContents(n)
               rects.push(...[...range.getClientRects()].filter((r) => r.width > 0))

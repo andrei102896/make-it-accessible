@@ -96,6 +96,12 @@ test('bare digits on a page without euro/cent pairs are shown as printed, never 
   assert.doesNotMatch(html, /0\.17/)
 })
 
+test("digits printed without the page's sign show as printed, the sign added for reading; a printed sign stays", () => {
+  const html = render([], withPrices('£12.50', '9.50', '£4'), 'en-GB')
+  assert.match(html, /data-amount="950"><span class="amount"><span class="sign">£<\/span>9\.50<\/span>/)
+  assert.match(html, /<span class="amount">£12\.50<\/span>/)
+})
+
 test('a price with no currency is shown as printed; prices are one phrase for VoiceOver (role="text")', () => {
   const html = render([], withPrices('2,99', '3,99', '4,99'))
   assert.match(html, /"prices"><span role="text"><span class="price" data-role="current"><span class="amount">2,99</)

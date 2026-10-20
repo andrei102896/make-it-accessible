@@ -2,7 +2,7 @@ import { amountOf, joinRuns, printedAmount, printsFusedCents } from '../pdf/runs
 import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
-import { formatMoney, pageCurrency } from '../text/money.ts'
+import { formatMoney, pageCurrency, signAround } from '../text/money.ts'
 import { inkedHtml, inkSegments } from './segments.ts'
 import { visibleText } from './source.ts'
 import { listNotes } from './notes.ts'
@@ -20,6 +20,8 @@ const SMALL_FIGURE = 1 / 3
 const LARGE_FIGURE = 0.6
 // A separator the print puts after a price or its label ("ea," "20,") belongs to neither: it stands between the prices.
 const SEPARATOR = /[,;]$/
+// An amount printed as digits alone: shown as printed, its sign (printed elsewhere on the page) added for reading.
+const DIGITS = /^\d(?:[\d.,]*\d)?$/
 
 export function renderPage(page: HtmlPage, ctx: Context): Rendered {
   const { ui, lang, index, long, legend, running, classes } = ctx
@@ -90,6 +92,11 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const whole = wholeHere && amount !== null && amount.cents % 100 === 0
     const shown = (amount && proven ? formatMoney(amount.cents, lang, proven, whole) : printed).replace(SEPARATOR, '')
     const data = amount && proven ? ` data-amount="${String(amount.cents)}"` : ''
+    const digits = printed.replace(SEPARATOR, '')
+    const sign = amount && proven && !amount.fromBareDigits && DIGITS.test(digits) ? signAround(lang, proven) : null
+    // The printed view draws the print's words only: the added sign is read, never drawn (print.ts).
+    const signed = (s: string): string => (s ? `<span class="sign">${esc(s)}</span>` : '')
+    const amountText = sign ? signed(sign.before) + esc(digits) + signed(sign.after) : esc(shown)
     const printedLabel = p.qualifier ? raw(p.qualifier) : ''
     const label = p.qualifier ? printedLabel.replace(SEPARATOR, '') : p.role === 'previous' ? ui.previous : ''
     const apart = pl.apart(path)
@@ -105,7 +112,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const amountBox = unionOf(words)
     const after = labelBox !== null && amountBox !== null && labelBox.x > amountBox.x
     const sep = SEPARATOR.exec(after ? printedLabel : printed)?.[0] ?? ''
-    const amountHtml = `<span class="amount"${own('amount')}>${esc(shown)}</span>`
+    const amountHtml = `<span class="amount"${own('amount')}>${amountText}</span>`
     const parts = (after ? [amountHtml, qualifier] : [qualifier, amountHtml]).filter(Boolean).join(' ')
     return `<span class="price${inkOf(words)}" data-role="${p.role}"${data}${attrs(path)}>${parts}</span>${sep}`
   }

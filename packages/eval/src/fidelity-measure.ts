@@ -158,8 +158,10 @@ function inventory({ sheetSelector, mutate }: { sheetSelector: string; mutate: M
     const keyPage = Number(sheet.getAttribute('data-page'))
     const rect = sheet.getBoundingClientRect()
     const mine = placed.flatMap((el) => {
-      // Words a reader hears but the print draws as icons (sr-only) are in the backdrop: nothing of ours to measure.
-      const shown = [...el.childNodes]
+      // Words a reader hears but the print draws as icons (sr-only) are in the backdrop, an added sign nowhere.
+      const drawn = el.cloneNode(true)
+      if (drawn instanceof HTMLElement) for (const s of drawn.querySelectorAll('.sign')) s.remove()
+      const shown = [...drawn.childNodes]
         .map((n) =>
           n instanceof HTMLElement ? (n.matches('.sr-only, .icon') ? '' : n.textContent) : (n.textContent ?? ''),
         )

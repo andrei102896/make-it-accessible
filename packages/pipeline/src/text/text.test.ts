@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { currenciesIn, moneyFromParts, pageCurrency, parseMoney } from './money.ts'
+import { currenciesIn, moneyFromParts, pageCurrency, parseMoney, signAround } from './money.ts'
 import { canon, norm } from './normalize.ts'
 
 test('norm and canon', () => {
@@ -73,4 +73,11 @@ test('moneyFromParts pairs large euros with small cents', () => {
     ]),
     7495,
   )
+})
+
+test('signAround: the sign and only the space between it and the digits', () => {
+  assert.deepEqual(signAround('en-GB', 'GBP'), { before: '£', after: '' })
+  assert.deepEqual(signAround('de-DE', 'EUR'), { before: '', after: '\u00a0€' })
+  assert.deepEqual(signAround('nl-NL', 'EUR'), { before: '€\u00a0', after: '' })
+  assert.deepEqual(signAround('en-US', 'USD'), { before: '$', after: '' })
 })

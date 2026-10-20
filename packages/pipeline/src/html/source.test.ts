@@ -151,6 +151,18 @@ test("the model's text shows only where the validator accepts it: a rejected tex
   assert.equal(visibleText(text('Lobster'), e), 'Truf e')
 })
 
+test('a separator the model dropped from the printed words shows as printed, never in a small-caps role', () => {
+  const runs: Run[] = [
+    { id: '1:0', str: 'NEWBARNS', box: { x: 0, y: 0, w: 60, h: 10 }, flow: 0, line: 0 },
+    { id: '1:1', str: 'STOUT,', box: { x: 64, y: 0, w: 40, h: 10 }, flow: 0, line: 0 },
+  ]
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  const text = (t: string): TextValue => ({ src: [[0, 1]], text: t })
+  assert.equal(visibleText(text('NEWBARNS STOUT'), e), 'NEWBARNS STOUT,')
+  assert.equal(visibleText(text('NEWBARNS STOUT'), e, true), 'NEWBARNS STOUT')
+  assert.equal(visibleText(text('Newbarns Stout'), e), 'Newbarns Stout')
+})
+
 test('a text is cut where its cited words are printed apart on one line, never between neighbouring words', () => {
   const font = { key: 'brandon', size: 10, weight: 400, italic: false }
   const run = (id: string, str: string, x: number, w: number): Run => ({

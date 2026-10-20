@@ -15,7 +15,7 @@ export async function ownFacesKept(tab: Page): Promise<{ index: number; why: str
     const shownIn = (el: HTMLElement, also: string): string => {
       const shown = el.cloneNode(true)
       if (shown instanceof HTMLElement)
-        for (const hidden of shown.querySelectorAll(`.sr-only, [data-free], .icon${also}`)) hidden.remove()
+        for (const hidden of shown.querySelectorAll(`.sr-only, [data-free], .icon, .sign${also}`)) hidden.remove()
       const text = shown.textContent ?? ''
       return getComputedStyle(el).textTransform === 'uppercase' ? text.toUpperCase() : text
     }

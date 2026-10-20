@@ -59,6 +59,21 @@ export const formatMoney = (cents: number, lang: string, currency: Currency, who
     cents / 100,
   )
 
+// The sign a locale writes round an amount, with only the space between it and the digits: added to printed
+// digits whose sign the page prints elsewhere ("4.25" on a £ menu reads "£4.25", "4,25 €" in German).
+export function signAround(lang: string, currency: Currency): { before: string; after: string } {
+  const parts = new Intl.NumberFormat(lang, { style: 'currency', currency }).formatToParts(1)
+  const at = parts.findIndex((p) => p.type === 'currency')
+  const digits = parts.flatMap((p, i) => (p.type === 'integer' || p.type === 'fraction' ? [i] : []))
+  const [first = 0, last = 0] = [digits[0], digits.at(-1)]
+  const join = (from: number, to: number): string =>
+    parts
+      .slice(from, to)
+      .map((p) => p.value)
+      .join('')
+  return at < first ? { before: join(at, first), after: '' } : { before: '', after: join(last + 1, at + 1) }
+}
+
 // Bare digits without a currency sign follow the leaflet convention of fused euros and cents ("269" = 2,69);
 // callers keep such amounts in review and never show them reformatted.
 export function parseMoney(s: string): number | null {
