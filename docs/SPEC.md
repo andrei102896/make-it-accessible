@@ -151,20 +151,23 @@ Out of initial focus: pure B2B companies and EU microenterprises (outside EAA sc
 
 ---
 
-## 6. Pricing *(proposal)*
+## 6. Pricing *(decided for restaurants, Andrei, 2026-10-20)*
 
-| Plan | Monthly | Annual (−20%) | Documents | Max pages/doc | Extras |
-|---|---|---|---|---|---|
-| **Free** | €0 | — | 3 total (lifetime) | 20 | badge on hosted version |
-| **Starter** | €29 | €279/yr | 10 / month | 60 | no badge |
-| **Pro** | €79 | €759/yr | 40 / month | 200 | multilingual (v2), embed without branding, priority processing |
-| **Single document** | €15 one-off | — | 1 | 100 | no badge, kept 12 months |
+The unit is the **venue** (one address). A venue's plan covers every menu it publishes up to **60 live pages**, every update, the same link for each new version and the report.
+
+| | Monthly, per venue | Annual, per venue (the default) |
+|---|---|---|
+| **Founding rate**: Howies, Kendells and the next ~5 buyers, locked while they stay | £25 / $29 | £300 / $350 |
+| **List price, UK** | £35 | £350 (two months free) |
+| **List price, US** | $45 | $450 |
+| **Groups of 5+ venues** | — | 20 % off, annual only |
 
 Rules:
-- Quotas reset on the billing date. Unused documents do not roll over.
-- Over quota: buy single documents at €15 or upgrade (prorated by Stripe).
-- Re-processing the same document after edits does **not** consume quota. A new file does.
-- Prices in EUR and USD. VAT handled by Stripe Tax (EU OSS).
+- Annual is offered first ("nothing changed this month, why pay?" has no answer on a monthly plan); monthly stays available.
+- More than 60 live pages counts as a second venue. Updates are not counted: a fair-use clause (~30 uploads a month) is logged and stated in the terms only, never in the price.
+- A price once quoted is honoured; the list price goes only to people who reply from now on. The US list price is higher on the ADA lawsuit risk, an assumption until a US buyer.
+- Stripe Checkout and Stripe Tax; whether the UK price includes VAT is open (accountant).
+- Dropped: document quotas (€29 for 10 documents) and page credits for restaurants, and an "N uploads a month" quota (Andrei's idea, attacked 2026-10-20): every restaurant tool prices per location (Popmenu, BentoBox, Owner, MenuTiger by store count); a venue holds 4–5 PDFs, so one seasonal change would use a quota up; and a quota makes the owner ration fixes, so the page drifts from the menu, the one thing sold. A full Howies re-run costs about $2.70 in model calls (`docs/COSTS.md`): cost never needs a quota.
 
 ### 6.1 Cancellation policy
 - Cancel anytime from the billing portal; access continues until the end of the paid period.

@@ -89,7 +89,7 @@ export const formatExpiry = (rows: readonly ExpiryRow[]): string =>
 export const expired = (rows: readonly ExpiryRow[], today: Date): ExpiryRow[] =>
   rows.filter((r) => r.deleteBy <= day(today))
 
-type Held = { pdfPage: number; path: string; problem: string }
+export type Held = { pdfPage: number; path: string; problem: string }
 // What holds a document: every expected page that did not convert, and all that is unverified in those that did.
 export function heldOf(
   expected: readonly number[],

@@ -19,7 +19,8 @@ import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { writeBackdrops } from './backdrop.ts'
 import { costUsd } from './cost.ts'
-import { fitPlaced } from './fit.ts'
+import { checkPrinted } from './printcheck.ts'
+import { REPORT_FILE, reportOf } from './report.ts'
 import { documentBrand } from './brand.ts'
 import { documentLook } from './look.ts'
 import { FONTS_DIR } from './paths.ts'
@@ -121,8 +122,13 @@ export async function buildHtml(
   const pages: HtmlPage[] = []
   // A content error holds the document from publication (Andrei, 2026-10-18: a fidelity failure falls back to the
   // text view, a content one is never shown as true); preview:add and preview:refresh refuse a held document.
-  for (const r of results) await writeFile(join(r.dir, 'validation.json'), json(r.validation))
-  await writeFile(join(docDir, HELD_FILE), json(heldOf(expected, results)))
+  for (const r of results) {
+    await writeFile(join(r.dir, 'validation.json'), json(r.validation))
+    // A rerender refreshes the extraction in memory; the printed view's fidelity measure reads it from the folder.
+    if (printed) await writeFile(join(r.dir, 'extraction.json'), JSON.stringify(r.extraction))
+  }
+  const held = heldOf(expected, results)
+  await writeFile(join(docDir, HELD_FILE), json(held))
   // A scan's words are in its pixels: it has no backdrop to print over yet, so its document keeps the text view.
   if (printed)
     await writeBackdrops(
@@ -238,15 +244,22 @@ export async function buildHtml(
     await copyPrintFonts(html, docDir)
   }
   await write()
-  const failing = printed ? await fitPlaced(htmlPath) : []
-  // A page whose placed text overflows or collides shows the text view; the other pages keep the printed view.
-  if (failing.length) {
-    for (const m of failing) console.info(`${docDir} p${String(m.page)}: text view, ${m.why}`)
-    for (const p of pages) if (failing.some((m) => m.page === p.keyPage)) p.backdrop = null
-    await write()
-    const still = await fitPlaced(htmlPath)
-    for (const m of still) console.error(`${docDir} p${String(m.page)}: still misplaced after the fallback, ${m.why}`)
-  }
+  if (!printed) return htmlPath
+  // A page whose placed text misfits, or whose print misinforms against its PDF, shows the text view (printcheck.ts).
+  const check = await checkPrinted(pdfPath, htmlPath, docDir, pages, write)
+  const shown = new Set(pages.flatMap((p) => (p.backdrop ? [p.keyPage] : [])))
+  // Every page the document must hold, the ones that failed to convert included.
+  const rows = expected.map((pdfPage) => {
+    const r = results.find((x) => x.pdfPage === pdfPage)
+    return {
+      keyPage: r?.keyPage ?? pdfPage,
+      pdfPage,
+      printed: r !== undefined && shown.has(r.keyPage),
+      scan: r?.extraction.runs.some((w) => w.ocr) ?? false,
+      converted: r !== undefined,
+    }
+  })
+  await writeFile(join(docDir, REPORT_FILE), json(reportOf(rows, check, held)))
   return htmlPath
 }
 

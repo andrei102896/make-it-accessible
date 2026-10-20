@@ -2,7 +2,7 @@
 
 Source for the SPEC.md rewrite. Changes against the original SPEC are listed at the end.
 
-**Superseded in part on 2026-10-16** (PROGRESS, Decisions): the first buyer is a restaurant with a PDF menu, and what it pays for is the kept page, not a conversion: one price per venue ($29 / £25 a month), documents up to 10 pages, every update included, the same link for every new version. Sections 2, 3, 6 and 7 below describe page credits and a self-serve trial for long documents; they stand for later segments and are rewritten with the SPEC after the demand test.
+**Superseded in part on 2026-10-16 and 2026-10-20** (PROGRESS, Decisions; SPEC §6): the buyer is a restaurant with PDF menus, and what it pays for is the kept page, not a conversion: one price per venue (founding £25 / $29 a month, list £35 / $45; annual by default), up to 60 live pages, every update included, the same link for every new version, Stripe. Sections 2, 3, 6 and 7 below describe page credits and a self-serve trial for long documents; they stand for later segments and are rewritten with the SPEC.
 
 ## 1. Landing: a converted example, and a free check (decided 2026-10-13)
 The landing page shows a **sample PDF already converted**: the original next to the accessible page, with the three labels and the report, served from a file we keep. No upload and no AI cost; it is what convinces the visitor that the tool is useful.
@@ -24,20 +24,20 @@ Split view: original page left, accessible version right. Every element carries 
 Editable: text, alt text, order, heading levels, product grouping (split / merge).
 
 ## 5. Per-document report
-What was checked automatically, what AI generated, what the user confirmed, what remains open. Never "compliant" or "certified".
+What was checked automatically, what AI generated, what the user confirmed, what remains open. Never "compliant" or "certified". First version built (2026-10-20, `eval/report.ts`, `report.json` beside held.json): per page whether it opens As printed or as Text only and why, in the switch's words ("Page 2 opens as Text only, where every word reads clearly. Nothing for you to do."), how many details on it wait for the owner's confirmation, and once per document the details As printed still differ from the print ("the letter spacing of some lines", "a dotted line or frame"). The wording of each held detail for the owner is the review editor's (§4).
 
 ## 6. Publish (paid plans only)
 The trial shows the result and the report but cannot publish: a partial document cannot replace the PDF. Paid plans: hosted link, embed snippet, ZIP export; a short guide "replace the link to the PDF with this page" (a PDF left online is assessed on its own); a new version at the same URL for next week's leaflet.
 
 ## 7. Billing
-Monthly subscription through Paddle as merchant of record (it handles US sales tax, UK VAT and EU VAT; `docs/COSTS.md`) with page credits (by page area: 1 credit per A4 equivalent, so a spread costs 2 whatever the layout setting), add-on credits, one-click cancel in Paddle's customer portal.
+Restaurants: one subscription per venue, annual by default, monthly available (SPEC §6), through Stripe Checkout and Stripe Tax; one-click cancel in Stripe's Customer Portal (`docs/COSTS.md`). Later segments: page credits (by page area: 1 credit per A4 equivalent, so a spread costs 2 whatever the layout setting) and add-on credits.
 
 ## Changes against the original SPEC
 | Original SPEC | Now |
 |---|---|
 | 3 free documents | a converted example on the landing page; one PDF of up to 10 pages in the trial, with an account; no publishing |
 | quotas per document | page credits |
-| Stripe and Stripe Tax | Paddle as merchant of record |
+| Stripe and Stripe Tax | Stripe and Stripe Tax (Paddle considered 2026-10-12, dropped 2026-10-18) |
 | tagged PDF in v2 | HTML as the replacement only; tagged PDF depends on the onboarding answers |
 | "needs review" for every AI decision | three labels; only what needs a human decision goes to review |
 | free check scored out of 100 | "N issues in M checks" |
@@ -56,9 +56,9 @@ Raised by the design of the restaurant flow (landing, check, preview, publish). 
 | Path A: anyone with the email link opens the preview. Can someone else (a manager on another address) keep and pay for it? | Yes: whoever pays owns the venue's account; the address we wrote to is told it was taken. |
 | Menu updates: live when the automatic checks pass, or after the owner confirms "needs you" items? Turnaround? | Live at once when nothing needs the owner; otherwise the current version stays live until the owner confirms, so an uncertain price is never published. Minutes on the batch lane, with an email. |
 | After cancelling: does the link stop, redirect to the PDF, or show a notice? | SPEC §6.1: live to the end of the paid period and 30 days more, with reminders; then a notice linking to the venue's own site, never a dead link. |
-| More than 10 pages in all (lunch, dinner, drinks): what is offered, at what price? | Open: a second allowance priced from the measured cost per page (`docs/COSTS.md`); until then, say plainly that 10 pages is the limit. |
+| More than 10 pages in all (lunch, dinner, drinks): what is offered, at what price? | Decided 2026-10-20 (SPEC §6): a venue covers up to 60 live pages; more counts as a second venue. |
 | Unsupported pages (a photographed drinks board): can the owner type the items in, and does that fit "never retyped"? | Yes, labelled "entered by the venue" in the page and the report, outside "checked against the PDF": "never retyped" is about us, not the owner. |
 | Link domain: is menus.makeitaccessible.com right; can a venue use its own domain? | Domain not chosen yet (SPEC §5.5, "domain TBD"); own domains later (SPEC §4.3). |
-| Pricing: is £25 VAT-inclusive, is US sales tax added, any minimum term or first-month offer? | Paddle is the seller and adds US sales tax and UK VAT (`docs/COSTS.md`); whether £25 includes VAT is Andrei's call. No minimum term (cancel anytime); no first-month offer decided. |
+| Pricing: is the price VAT-inclusive, is US sales tax added, any minimum term or first-month offer? | Stripe Tax computes VAT and sales tax; whether the UK price includes VAT is Andrei's call, after the accountant. Annual by default, monthly available, cancel anytime; no first-month offer. |
 | The 30-day deletion of an unkept preview: a reminder before deleting? | Yes, one reminder a few days before, sent only once Andrei has approved the product's own emails. |
 | UK spelling ("colour", "cancelled") as well as £ on the UK version? | Yes: the UK version reads as British English. |
