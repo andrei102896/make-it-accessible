@@ -36,9 +36,9 @@ export const viewSwitch = (ui: Strings): string =>
 
 const SR_ONLY =
   'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;'
-// `--k`, `--z` (fit.ts, measured at build) narrow, then shrink, a lookalike to its printed width, `--lx` spreads a
-// narrow one with letter spacing; the box grows by
-// one `--ls`, which follows the last letter too. `on`'s id outranks the brand's classes: their layout stays out.
+// fit.ts: `--k`, `--z` narrow, then shrink, a lookalike to its printed width, `--lx` spreads a narrow one (the box
+// grows by one `--ls`, which follows the last letter), `--ti` starts a one-line row on its printed edge (rows.ts).
+// `on`'s id outranks the brand's classes: their layout stays out.
 const on = 'body:has(#view-print:checked)'
 export const SHEET = 'section[data-page][style*="--ar:"]'
 const printed = SHEET
@@ -91,6 +91,7 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   white-space: var(--ws, normal); text-align: var(--ta, left); color: var(--c, inherit); font-weight: var(--fw, 400); font-style: var(--fi, normal);
   text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill;
   letter-spacing: calc(var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); font-size-adjust: none; }
+${on} ${page} ${leaf}[style*="--ti:"] { text-align: left; text-indent: calc(var(--ti) * 1cqw); }
 ${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: none; }
 ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }

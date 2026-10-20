@@ -78,6 +78,10 @@ test('ragged column edges, a narrower heading and a missing dotted side are cosm
   const a = line({ extent: { ours: span(0, 10), pdf: span(0, 10) } })
   const b = line({ box: { x: 100, y: 130, w: 200, h: 20 }, extent: { ours: span(0.6, 10), pdf: span(0, 10) } })
   assert.deepEqual(kinds(page([a, b])).cosmetic, ['ragged'])
+  // A price column shares its right edge: ours ending apart is ragged too.
+  const c = line({ extent: { ours: span(2, 10), pdf: span(2, 10) } })
+  const d = line({ box: { x: 100, y: 130, w: 200, h: 20 }, extent: { ours: span(3, 10.6), pdf: span(3, 10) } })
+  assert.deepEqual(kinds(page([c, d])).cosmetic, ['ragged'])
   assert.deepEqual(kinds(page([line({ extent: { ours: span(0, 7), pdf: span(0, 10) } })])).cosmetic, ['narrower'])
   assert.deepEqual(kinds(page([line()], 3)).cosmetic, ['drawing-missing'])
 })

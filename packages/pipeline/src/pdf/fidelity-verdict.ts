@@ -79,23 +79,30 @@ export function judgePage(score: PageScore, limits = LIMITS): Verdict {
   return { misinforming: pick(MISINFORMING), cosmetic: pick(COSMETIC) }
 }
 
-// Lines whose PDF ink starts at one edge (a column's left) while ours do not.
+// Lines whose PDF ink shares an edge (a column's left, a centred axis, a price column's right) while ours do not.
+const EDGES: ((s: { start: number; end: number }) => number)[] = [
+  (s) => s.start,
+  (s) => (s.start + s.end) / 2,
+  (s) => s.end,
+]
 function raggedLines(score: PageScore, limits: typeof LIMITS): number[] {
-  const starts = score.lines.flatMap((l, i) =>
-    l.extent?.pdf && l.extent.ours
-      ? [{ i, pdf: l.box.x + l.extent.pdf.start * l.box.h, ours: l.box.x + l.extent.ours.start * l.box.h, em: l.em }]
-      : [],
-  )
   const out = new Set<number>()
-  for (const a of starts)
-    for (const b of starts)
-      if (
-        a.i < b.i &&
-        Math.abs(a.pdf - b.pdf) <= limits.edge &&
-        Math.abs(a.ours - b.ours) > limits.ragged * Math.min(a.em, b.em)
-      ) {
-        out.add(a.i)
-        out.add(b.i)
-      }
+  for (const edge of EDGES) {
+    const at = score.lines.flatMap((l, i) =>
+      l.extent?.pdf && l.extent.ours
+        ? [{ i, pdf: l.box.x + edge(l.extent.pdf) * l.box.h, ours: l.box.x + edge(l.extent.ours) * l.box.h, em: l.em }]
+        : [],
+    )
+    for (const a of at)
+      for (const b of at)
+        if (
+          a.i < b.i &&
+          Math.abs(a.pdf - b.pdf) <= limits.edge &&
+          Math.abs(a.ours - b.ours) > limits.ragged * Math.min(a.em, b.em)
+        ) {
+          out.add(a.i)
+          out.add(b.i)
+        }
+  }
   return [...out]
 }

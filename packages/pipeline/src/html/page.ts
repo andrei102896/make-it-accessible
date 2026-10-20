@@ -94,9 +94,9 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const seen = p.qualifier !== undefined && 'seen' in p.qualifier
     const own = (part: string): string =>
       apart ? place(`${path}.${part}`) : part === 'qualifier' && seen ? pl.free : ''
-    const qualifier = label
-      ? `<span class="qualifier"${own('qualifier')}>${p.qualifier ? inked(p.qualifier, label) : esc(label)}</span>`
-      : ''
+    // Its words first: placed by its own pieces (a label printed round its amount), it is not placed whole.
+    const labelHtml = p.qualifier ? inked(p.qualifier, label, esc, apart ? `${path}.qualifier` : undefined) : esc(label)
+    const qualifier = label ? `<span class="qualifier"${own('qualifier')}>${labelHtml}</span>` : ''
     // The label sits where it is printed: "Bowl 8" before the amount, "3.5 ea" after it.
     const labelBox = p.qualifier && 'src' in p.qualifier ? unionOf(visibleRuns(p.qualifier)) : null
     const amountBox = unionOf(words)

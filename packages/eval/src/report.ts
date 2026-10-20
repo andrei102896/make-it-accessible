@@ -32,7 +32,7 @@ const WHY: Record<TextWhy | 'scan' | 'no-print', string> = {
 }
 // The details still differing from the print on pages kept As printed, named once per document.
 const COSMETIC: Record<Kind, string | null> = {
-  ragged: 'some lines start a little off their column',
+  ragged: 'some lines sit a little off their column',
   narrower: 'the letter spacing of some lines',
   'drawing-missing': 'a dotted line or frame',
   'ground-differs': 'a shaded panel behind some words',

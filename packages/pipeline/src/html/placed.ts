@@ -6,7 +6,7 @@ import { inkOn, inlineInk } from './printink.ts'
 import { unionOf } from './profile.ts'
 import { printFaceOf } from './printface.ts'
 import { flaggedAt, inkSegments, lineParts, type Segment } from './source.ts'
-import { NOTHING_DRAWN, spotOf, spotsOf, type Drawn, type Spot } from './spots.ts'
+import { NOTHING_DRAWN, spotOf, spotsOf, trimmedRun, type Drawn, type Spot } from './spots.ts'
 import type { Context, HtmlPage } from './types.ts'
 import type { FontManifest } from './webfonts.ts'
 
@@ -25,13 +25,15 @@ const BOX_TO_SIZE = 0.8
 const MIN_SMALL_WEIGHT = 300
 
 // A leaf's (or a line's) placement as custom properties, in hundredths of the page width; every property written,
-// so a placed line never inherits its leaf's. `pxPerPt`: the page's scale at the printed view's narrowest width.
+// so a placed line never inherits its leaf's. `pxPerPt`: the page's scale at the printed view's narrowest width;
+// `ground`: the box whose backdrop decides the ink (a piece of a printed line reads its whole line's).
 export function placement(
   spot: Spot,
   pageWidth: number,
   grid: Grid | null,
   pxPerPt: number,
   library: readonly FontManifest[],
+  ground: Box = spot.box,
 ): string {
   const u = (v: number): string => String(Math.round((v / pageWidth) * 100_000) / 1000)
   const { box } = spot
@@ -59,7 +61,7 @@ export function placement(
   if (spot.color) {
     const readLarge = large || (weight >= 700 && size * pxPerPt >= LARGE_BOLD_PX)
     const target = readLarge ? READABLE_LARGE : READABLE
-    const { color, shadow } = inkOn(spot, grid, target, u)
+    const { color, shadow } = inkOn({ ...spot, box: ground }, grid, target, u)
     props.push(`--c:${color}`, `--ts:${shadow}`)
     // The printed outline is centred on the letter's edge with its inner half under the fill, as `paint-order:
     // stroke fill` draws ours: the same width shows the same.
@@ -130,7 +132,10 @@ export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' 
     },
     lined: (path, t, shown, html, tail = '') => {
       if (!spots?.has(path) || flaggedAt(path, page.flagged)) return null
-      const parts = lineParts(t, e, shown)
+      // Each piece's words end where their letters do (spots.ts), as a whole leaf's.
+      const parts = lineParts(t, e, shown)?.map((p) =>
+        'runs' in p ? { ...p, runs: p.runs.map((r) => trimmedRun(r, drawn)) } : p,
+      )
       const lines = parts?.flatMap((p) => ('runs' in p ? [p] : [])) ?? []
       // Split only where every link stays whole on one line: the text view must keep the same links.
       const links = (h: string): string[] => h.match(/<a [^>]*>.*?<\/a>/g) ?? []
@@ -138,12 +143,20 @@ export function placer(page: HtmlPage, ctx: Pick<Context, 'printPx' | 'library' 
       if (!parts || lines.flatMap((l) => links(html(l.segments))).join() !== whole) return null
       split.add(path)
       const last = lines.at(-1)
+      // Pieces of one printed line share its ground: cutting a line moves its words, never changes their ink.
+      const row = (r: { flow: number; line: number }): string => `${String(r.flow)}:${String(r.line)}`
+      const grounds = Map.groupBy(
+        lines.flatMap((l) => l.runs),
+        row,
+      )
       return parts
         .map((p) => {
           if (!('runs' in p)) return p.gap
           const box = unionOf(p.runs)
           const spot = box ? spotOf(box, p.runs, drawn, inks) : null
-          const style = spot ? placement(spot, e.width, backdrop?.grid ?? null, pxPerPt, library) : ''
+          const first = p.runs[0]
+          const ground = (first ? unionOf(grounds.get(row(first)) ?? []) : null) ?? box ?? undefined
+          const style = spot ? placement(spot, e.width, backdrop?.grid ?? null, pxPerPt, library, ground) : ''
           return `<span class="pl"${style}>${html(p.segments)}${p === last ? tail : ''}</span>`
         })
         .join('')

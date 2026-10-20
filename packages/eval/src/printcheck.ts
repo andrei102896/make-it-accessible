@@ -45,8 +45,11 @@ export async function checkPrinted(
         }
         const v = judgePage(f)
         const first = v.misinforming[0]
-        if (first) judged.set(page, first.kind)
-        else for (const c of v.cosmetic) found.add(c.kind)
+        if (first) {
+          judged.set(page, first.kind)
+          const line = f.lines[first.lines[0] ?? -1]
+          console.info(`${docDir} p${String(page)}: ${first.kind} first at ${JSON.stringify(line?.text ?? '')}`)
+        } else for (const c of v.cosmetic) found.add(c.kind)
       }
     }
     if (!judged.size) {

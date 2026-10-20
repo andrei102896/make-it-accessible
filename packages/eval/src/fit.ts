@@ -1,8 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises'
-import { chromium, type Page } from 'playwright'
+import { chromium } from 'playwright'
 import { printWidthIn } from '@make-it-accessible/pipeline/html/print'
-import { covers, ownFaceIn, withoutOwnFace } from '@make-it-accessible/pipeline/html/printface'
+import { withoutOwnFace } from '@make-it-accessible/pipeline/html/printface'
+import { rowStarts, type RowText } from '@make-it-accessible/pipeline/html/rows'
 import { withDeadline } from './deadline.ts'
+import { ownFacesKept } from './ownfaces.ts'
 
 // Narrowest fit tried; past it the face is set smaller too (a condensed print: La Segunda's "12.99", 23 pt wide at
 // 16 pt), down to MIN_SIZE; a text that still needs less does not fit, and its page fails.
@@ -30,6 +32,16 @@ const FIT_TIMEOUT_MS = 300_000
 // where placed text still overflows or collides (Carmine's 4.49 beside the wrong dish): they must show the text
 // view, since text in the wrong place misinforms.
 export type Misfit = { page: number; why: string }
+// An image or a text outside any page: nothing to set on a row.
+const NOTHING: RowText = {
+  page: -1,
+  printed: { x: 0, y: 0, w: 0, h: 0 },
+  drawn: { x: 0, w: 0 },
+  em: 0,
+  nowrap: false,
+  icon: null,
+  price: false,
+}
 export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
   const html = await readFile(htmlPath, 'utf8')
   const width = printWidthIn(html)
@@ -38,11 +50,12 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
   try {
     const tab = await browser.newPage({ viewport: { width, height: 900 } })
     await tab.goto(`file://${encodeURI(htmlPath)}`)
+    const started = Date.now()
     const drops = await ownFacesKept(tab)
     for (const d of drops) console.info(`${htmlPath}: ${d.why}`)
-    const { fits, shifts, failing } = await withDeadline(
+    const { fits, rows, bad } = await withDeadline(
       tab.evaluate(
-        ({ min, minOwn, smallest, step, tall, overlap, maxShift, narrow, maxFill }) => {
+        ({ min, minOwn, smallest, step, tall, narrow, maxFill }) => {
           const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
           const firstPage = document.querySelector('section[data-page]')?.getAttribute('data-page') ?? ''
           const pageOf = (el: Element): string =>
@@ -86,7 +99,9 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
             if (!it) return
             if (it.nowrap && !it.own && it.letters > 1 && it.content < it.client * (1 - narrow)) {
               const gap = Math.min(maxFill * it.em, (it.client - it.content) / it.letters)
-              fits[i] = { k: 1, z: 1, lx: round((gap / it.pageWidth) * 100 * 100) / 100 }
+              const lx = round((gap / it.pageWidth) * 100 * 100) / 100
+              fits[i] = { k: 1, z: 1, lx }
+              it.el.style.setProperty('--lx', String(lx))
             } else pending.push(i)
           })
           const at = (i: number): Item => {
@@ -124,6 +139,88 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
                 `${say(it.el)} overflows its printed box (${it.nowrap ? `${String(it.el.scrollWidth)} of ${String(it.el.clientWidth)} px wide` : `${String(it.el.offsetHeight)} of ${String(Math.round(it.printed))} px high`})`,
               )
           }
+          // Where each text's letters are drawn now, against its printed box (rows.ts sets one-line rows on their edge).
+          const containers = [...new Set(placed.map((el) => el.closest('section, header')))]
+          const rows = placed.map((el, i) => {
+            const page = el.closest('section, header')
+            if (el.tagName === 'IMG' || !page) return null
+            const c = page.getBoundingClientRect()
+            const u = (name: string): number => (Number(el.style.getPropertyValue(name)) * c.width) / 100
+            // What is drawn: shown text and icon tags; screen-reader-only words have glyph boxes but no ink.
+            const rects = [...el.querySelectorAll('.icon')].map((i) => i.getBoundingClientRect())
+            const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+            for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+              if (n.parentElement?.closest('.sr-only, .icon, [data-free]')) continue
+              const range = document.createRange()
+              range.selectNodeContents(n)
+              rects.push(...[...range.getClientRects()].filter((r) => r.width > 0))
+            }
+            const left = Math.min(...rects.map((r) => r.left))
+            const icons = [...el.querySelectorAll<HTMLElement>('.icon[style*="--ix:"]')]
+            const cqw = (icon: HTMLElement, name: string): number =>
+              (Number(icon.style.getPropertyValue(name)) * c.width) / 100
+            return {
+              page: containers.indexOf(page),
+              printed: { x: u('--x'), y: u('--y'), w: u('--w'), h: u('--h') },
+              drawn: rects.length
+                ? { x: left - c.left, w: Math.max(...rects.map((r) => r.right)) - left }
+                : { x: u('--x'), w: 0 },
+              em: items[i]?.em ?? 0,
+              nowrap: items[i]?.nowrap === true && rects.length > 0,
+              icon: (() => {
+                const [first, last] = [icons[0], icons.at(-1)]
+                if (!first || !last) return null
+                return {
+                  printed: cqw(first, '--ix'),
+                  drawn: first.getBoundingClientRect().left - c.left,
+                  end: {
+                    printed: cqw(last, '--ix') + cqw(last, '--iw'),
+                    drawn: last.getBoundingClientRect().right - c.left,
+                  },
+                }
+              })(),
+              price: el.matches('.price, .amount'),
+              box: el.getBoundingClientRect().left - c.left,
+              pageWidth: c.width,
+            }
+          })
+          return { fits, rows, bad: [...bad] }
+        },
+        {
+          min: MIN_FIT,
+          minOwn: MIN_FIT_OWN,
+          smallest: MIN_SIZE,
+          step: STEP,
+          tall: TALL,
+          narrow: NARROW,
+          maxFill: MAX_FILL,
+        },
+      ),
+      FIT_TIMEOUT_MS,
+      `${htmlPath}: the placed text did not fit in ${String(FIT_TIMEOUT_MS / 1000)} s`,
+    )
+    // Each one-line row on its printed edge (rows.ts): our letters start there, the element's box never moves (the
+    // collision check reads boxes). An indent is in the element's own units, which --k scales.
+    const starts = rowStarts(rows.map((r): RowText => r ?? NOTHING))
+    const indents = rows.map((r, i) => {
+      const start = starts[i]
+      if (!r || start === null || start === undefined) return null
+      const indent = (start - r.box) / (fits[i]?.k ?? 1)
+      return Math.round((indent / r.pageWidth) * 100 * 1000) / 1000
+    })
+    const { shifts, failing } = await withDeadline(
+      tab.evaluate(
+        ({ indents, known, overlap, maxShift }) => {
+          const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
+          placed.forEach((el, i) => {
+            const ti = indents[i]
+            if (ti !== null && ti !== undefined) el.style.setProperty('--ti', String(ti))
+          })
+          const firstPage = document.querySelector('section[data-page]')?.getAttribute('data-page') ?? ''
+          const pageOf = (el: Element): string =>
+            el.closest('section[data-page]')?.getAttribute('data-page') ?? (el.closest('header') ? firstPage : '')
+          const bad = new Map<string, string>(known)
+          const say = (el: Element): string => JSON.stringify(el.textContent.trim().slice(0, 40))
           // Each text's drawn box against its printed box, both relative to its page's container; measured before its
           // baseline shift, which sets it where the print does.
           const boxes = placed.flatMap((el) => {
@@ -175,25 +272,15 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
               )
                 bad.set(a.page, `${say(a.el)} collides with ${say(b.el)}`)
           return {
-            fits,
             shifts,
             failing: [...bad].map(([page, why]) => ({ page: Number(page), why })).filter((m) => m.page > 0),
           }
         },
-        {
-          min: MIN_FIT,
-          minOwn: MIN_FIT_OWN,
-          smallest: MIN_SIZE,
-          step: STEP,
-          tall: TALL,
-          overlap: OVERLAP,
-          maxShift: MAX_SHIFT,
-          narrow: NARROW,
-          maxFill: MAX_FILL,
-        },
+        { indents, known: bad, overlap: OVERLAP, maxShift: MAX_SHIFT },
       ),
-      FIT_TIMEOUT_MS,
-      `${htmlPath}: the placed text did not fit in ${String(FIT_TIMEOUT_MS / 1000)} s`,
+      // One budget for both passes: the second has what the first left.
+      Math.max(0, FIT_TIMEOUT_MS - (Date.now() - started)),
+      `${htmlPath}: the placed text did not settle in ${String(FIT_TIMEOUT_MS / 1000)} s`,
     )
     const parts = html.split('style="--x:')
     await writeFile(
@@ -203,66 +290,13 @@ export async function fitPlaced(htmlPath: string): Promise<Misfit[]> {
         // The element's own style comes first in its part.
         const kept = drops.some((d) => d.index === i - 1) ? withoutOwnFace(part) : part
         const dy = shifts[i - 1] ?? 0
-        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}${lx ? `--lx:${String(lx)};` : ''}${dy ? `--dy:${String(dy)};` : ''}--x:${kept}`
+        // A row set on its edge is set from its left, even where it starts at its box's left: `--ti:0`.
+        const ti = indents[i - 1] ?? null
+        return `${out}style="${k < 1 ? `--k:${String(k)};` : ''}${z < 1 ? `--z:${String(z)};` : ''}${lx ? `--lx:${String(lx)};` : ''}${dy ? `--dy:${String(dy)};` : ''}${ti === null ? '' : `--ti:${String(ti)};`}--x:${kept}`
       }),
     )
     return failing
   } finally {
     await browser.close()
   }
-}
-
-// A line in the PDF's own face keeps it only where the face loaded and draws every letter the line shows (model-filled
-// letters and codes included; text read only by screen readers aside); else the whole line takes its stand-in, never
-// a face change mid-word. Then every face the page now uses must load: one that fails would measure a fallback.
-async function ownFacesKept(tab: Page): Promise<{ index: number; why: string }[]> {
-  const seen = await tab.evaluate(async () => {
-    await document.fonts.ready
-    const faces = [...document.fonts].map((f) => ({
-      family: f.family.replace(/^"|"$/g, ''),
-      range: f.unicodeRange,
-      ok: f.status !== 'error',
-    }))
-    const lines = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')].map((el) => {
-      const shown = el.cloneNode(true)
-      if (shown instanceof HTMLElement)
-        for (const hidden of shown.querySelectorAll('.sr-only, [data-free], .icon')) hidden.remove()
-      const text = shown.textContent ?? ''
-      return {
-        ff: el.style.getPropertyValue('--ff'),
-        text: getComputedStyle(el).textTransform === 'uppercase' ? text.toUpperCase() : text,
-      }
-    })
-    return { faces, lines }
-  })
-  const faces = new Map(seen.faces.map((f) => [f.family, f]))
-  const drops = seen.lines.flatMap(({ ff, text }, index) => {
-    const own = ownFaceIn(ff)
-    const face = own ? faces.get(own) : undefined
-    if (!own) return []
-    if (!face?.ok) return [{ index, why: `${own} did not load; ${JSON.stringify(text.slice(0, 30))} in its stand-in` }]
-    return covers(face.range, text)
-      ? []
-      : [{ index, why: `${own} lacks a letter of ${JSON.stringify(text.slice(0, 30))}` }]
-  })
-  const broken = await tab.evaluate(
-    async (indexes) => {
-      const placed = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')]
-      for (const i of indexes) {
-        const el = placed[i]
-        const rest =
-          el?.style
-            .getPropertyValue('--ff')
-            .trim()
-            .replace(/^'pdf-[0-9a-f]+',?\s*/, '') ?? ''
-        if (rest) el?.style.setProperty('--ff', rest)
-        else el?.style.removeProperty('--ff')
-      }
-      await document.fonts.ready
-      return [...document.fonts].filter((f) => f.status === 'error' && !f.family.includes('pdf-')).map((f) => f.family)
-    },
-    drops.map((d) => d.index),
-  )
-  if (broken.length) throw new Error(`${tab.url()}: fonts did not load: ${broken.join(', ')}`)
-  return drops
 }

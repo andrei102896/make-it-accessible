@@ -54,6 +54,12 @@ export const NOTHING_DRAWN: Drawn = {
   ends: {},
 }
 
+// A word's box ends where its letters do (a tab read into it would stretch its line: `drawn.ends`).
+export const trimmedRun = (r: Run, drawn: Pick<Drawn, 'ends'>): Run => {
+  const end = drawn.ends[r.id]
+  return end === undefined ? r : { ...r, box: { ...r.box, w: end - r.box.x } }
+}
+
 // The page's leaves by the path page.ts gives them, each with what the print shows of it; `drawn`: each word's
 // colour as drawn and the words drawn inside a picture (pdf/backdrop.ts); `frames` gets each table's printed box.
 export function spotsOf(
@@ -66,11 +72,7 @@ export function spotsOf(
   const pictured = new Set([...drawn.undrawn, ...drawn.kept])
   const hidden = new Set(e.hidden)
   const out = new Map<string, Spot>()
-  // A word's box ends where its letters do (a tab read into it would stretch its line: `drawn.ends`).
-  const trimmed = (r: Run): Run => {
-    const end = drawn.ends[r.id]
-    return end === undefined ? r : { ...r, box: { ...r.box, w: end - r.box.x } }
-  }
+  const trimmed = (r: Run): Run => trimmedRun(r, drawn)
   const words = (t: TextValue | PriceValue | undefined): Run[] =>
     !t || 'seen' in t
       ? []

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage, type TextValue } from '../model/schema.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
-import { inkedHtml, inkSegments, placedRuns, visibleText } from './source.ts'
+import { inkedHtml, inkSegments, lineParts, placedRuns, visibleText } from './source.ts'
 
 test('the placed words are every shown word a text cites, prices and nested names too; dropped ones are not', () => {
   const runs = ['MENU', 'ghost', 'Soup', '$9', 'p.2'].map((str, i) => ({
@@ -74,7 +74,7 @@ test('text the validator doubts is not placed: the print shows it right (Carmine
   )
 })
 
-test("an icon's words are tagged in both views, the tag carrying the drawing's width (Howies' gluten free)", () => {
+test("an icon's words are tagged in both views, the tag carrying the drawing's place and width (Howies' gluten free)", () => {
   const run = (id: string, str: string, x: number, w: number, icon?: true): Run => ({
     id,
     str,
@@ -112,13 +112,13 @@ test("an icon's words are tagged in both views, the tag carrying the drawing's w
     segments.map((s) => [s.text, s.icon]),
     [
       ['( ', null],
-      ['gluten free', 1.271],
+      ['gluten free', { x: 29.857, w: 1.271 }],
       [' available)', null],
     ],
   )
   assert.equal(
     inkedHtml(segments, new Set(), (s) => s),
-    '( <span class="diet icon" style="--iw:1.271"><span>gluten free</span></span> available)',
+    '( <span class="diet icon" style="--iw:1.271;--ix:29.857"><span>gluten free</span></span> available)',
   )
 })
 
@@ -148,4 +148,44 @@ test("the model's text shows only where the validator accepts it: a rejected tex
   const text = (t: string): TextValue => ({ src: [[0, 1]], text: t })
   assert.equal(visibleText(text('Truffle'), e), 'Truffle')
   assert.equal(visibleText(text('Lobster'), e), 'Truf e')
+})
+
+test('a text is cut where its cited words are printed apart on one line, never between neighbouring words', () => {
+  const font = { key: 'brandon', size: 10, weight: 400, italic: false }
+  const run = (id: string, str: string, x: number, w: number): Run => ({
+    id,
+    str,
+    box: { x, y: 100, w, h: 12 },
+    flow: 0,
+    line: 4,
+    font,
+  })
+  const e: Extraction = {
+    pdfPage: 1,
+    width: 600,
+    height: 800,
+    // "+ 5.95 supplement if part of offer": the label cites "+" and its words round the amount.
+    runs: [
+      run('1:0', '+', 100, 5),
+      run('1:1', '5.95', 108, 18),
+      run('1:2', 'supplement', 130, 45),
+      run('1:3', 'if', 178, 6),
+    ],
+    images: [],
+    duplicates: [],
+    hidden: [],
+  }
+  const label: TextValue = {
+    src: [
+      [0, 0],
+      [2, 3],
+    ],
+  }
+  const parts = lineParts(label, e, '+ supplement if') ?? []
+  assert.deepEqual(
+    parts.map((p) => ('runs' in p ? p.text : `[${p.gap}]`)),
+    ['+', '[ ]', 'supplement if'],
+  )
+  // Words a space apart stay one piece: nothing to cut.
+  assert.equal(lineParts({ src: [[2, 3]] }, e, 'supplement if'), null)
 })

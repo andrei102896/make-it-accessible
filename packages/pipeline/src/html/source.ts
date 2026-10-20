@@ -6,6 +6,7 @@ import { faceKey } from '../pdf/face.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, Item, PageStructure, TextValue } from '../model/schema.ts'
 import { modelTextAccepted } from '../validate/validate.ts'
+import { GAP } from './rows.ts'
 
 // Every run a text cites (none for text read from the image), hidden ones included: geometry wants every box.
 export const citedRuns = (e: Extraction, t: TextValue): Run[] =>
@@ -204,7 +205,9 @@ export function headedLists(blocks: readonly Block[], note: number, raw: (t: Tex
 }
 
 // `icon`: the width of the icon these letters name (hundredths of the page width), null for printed letters.
-export type Segment = { text: string; color: string | null; icon: number | null }
+// `icon`: the drawing's printed left edge and width in hundredths of the page width (the printed view meets it).
+export type Segment = { text: string; color: string | null; icon: { x: number; w: number } | null }
+const sameIcon = (a: Segment['icon'], b: Segment['icon']): boolean => a?.x === b?.x && a?.w === b?.w
 // Each shown character's run, matched to the cited runs' characters (whitespace and case aside): null for
 // whitespace, and null for the whole text when the letters differ (the model's text stands in for a broken layer).
 export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | null)[] | null {
@@ -244,26 +247,34 @@ export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment
 function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[], pageWidth: number): Segment[] {
   const out: Segment[] = []
   let color: string | null = null
-  let icon: number | null = null
+  let icon: Segment['icon'] = null
+  const u = (v: number): number => Math.round((v / pageWidth) * 100_000) / 1000
   letters.forEach((ch, i) => {
     const owner = owners[i]
     if (owner) {
       color = owner.color ?? null
-      icon = owner.icon ? Math.round((owner.box.w / pageWidth) * 100_000) / 1000 : null
+      icon = owner.icon ? { x: u(owner.box.x), w: u(owner.box.w) } : null
     } else if (i === 0) color = null
     // A space after an icon's words is not the tag's: the tag ends with its last word.
     else if (!owners.slice(i + 1).find((o) => o)?.icon) icon = null
     const last = out.at(-1)
-    if (last && last.color === color && last.icon === icon) last.text += ch
+    if (last && last.color === color && sameIcon(last.icon, icon)) last.text += ch
     else out.push({ text: ch, color, icon })
   })
   return out
 }
 
-// The shown text cut at its printed line breaks: each line's characters with their runs, and the whitespace
-// between lines as it is shown (none where a hyphenated word was joined), so the pieces make up `shown` exactly.
-// Null when the text does not follow its runs or prints on one line.
+// The shown text cut at its printed line breaks, and on a line where its words are not printed side by side (`apart`):
+// each piece's characters with their runs, and the whitespace between them as shown, so the pieces make up `shown`
+// exactly. Null when the text does not follow its runs or prints as one piece.
 export type LinePart = { text: string; runs: Run[]; segments: Segment[] } | { gap: string }
+// Two cited words of one line printed apart: the next back to the left (an icon cited before the name it follows) or
+// past a row's gap (another leaf's words between them: "+ … supplement" round its "5.95").
+const apart = (a: Run, b: Run): boolean => {
+  const em = a.font?.size ?? b.font?.size ?? a.box.h
+  const gap = b.box.x - (a.box.x + a.box.w)
+  return gap < -em / 2 || gap > GAP * em
+}
 export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[] | null {
   const owners = shownRuns(t, e, shown)
   if (!owners) return null
@@ -282,13 +293,16 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
     })
   }
   let gap = ''
+  let last: Run | null = null
   letters.forEach((ch, i) => {
     const owner = owners[i]
     if (!owner) {
       gap += ch
       return
     }
-    if (line && line.key === key(owner)) {
+    const before = last
+    last = owner
+    if (line && line.key === key(owner) && (before === owner || !before || !apart(before, owner))) {
       line.end = i + 1
       gap = ''
       return
@@ -314,7 +328,7 @@ export function inkedHtml(
   for (const s of segments) {
     const color = s.color !== null && inks.has(s.color) ? s.color : null
     const last = groups.at(-1)
-    if (last && last.color === color && last.icon === s.icon) last.text += s.text
+    if (last && last.color === color && sameIcon(last.icon, s.icon)) last.text += s.text
     else groups.push({ text: s.text, color, icon: s.icon })
   }
   return groups
@@ -322,7 +336,7 @@ export function inkedHtml(
       const inner = g.color ? `<span class="ink-${g.color.slice(1)}">${each(g.text)}</span>` : each(g.text)
       return g.icon === null
         ? inner
-        : `<span class="diet icon" style="--iw:${String(g.icon)}"><span>${inner}</span></span>`
+        : `<span class="diet icon" style="--iw:${String(g.icon.w)};--ix:${String(g.icon.x)}"><span>${inner}</span></span>`
     })
     .join('')
 }
