@@ -16,3 +16,6 @@ export function norm(s: string): string {
 export function canon(s: string): string {
   return norm(s).replace(/\s/g, '')
 }
+
+// Letters and digits only, case aside: two readings of the same printed words compared.
+export const lettersOf = (s: string): string => canon(s).replace(/[^\p{L}\p{N}]/gu, '')

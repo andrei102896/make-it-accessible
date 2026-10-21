@@ -16,6 +16,7 @@ import { cropPicture, fillToImage, growToPicture, inkBox } from '@make-it-access
 import { renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
+import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { writeBackdrops } from './backdrop.ts'
 import { costUsd } from './cost.ts'
@@ -92,7 +93,9 @@ export async function processPage(
     console.info(`${label}: FAILED ${error instanceof Error ? error.message.slice(0, 200) : String(error)}`)
     return null
   }
-  const validation = validatePage(result.page, extraction)
+  // Judged and drawn as squared with the layer (reconcile.ts); the structure is saved as the model gave it.
+  const structure = reconciled(result.page, extraction)
+  const validation = validatePage(structure, extraction, read ?? [])
   const usd = result.calls.reduce((sum, c) => sum + costUsd(options.model, c.usage), 0)
   const ms = result.calls.reduce((sum, c) => sum + c.ms, 0)
   await writeFile(join(dir, 'response.json'), json(result.calls.map((c) => c.raw)))
@@ -103,7 +106,7 @@ export async function processPage(
   console.info(
     `${label}: errors=${String(validation.errors.length)} review=${String(validation.review.length)} generated=${String(validation.generated.length)} uncovered=${String(validation.uncovered.length)} retries=${String(result.calls.length - 1)} $${usd.toFixed(4)} ${(ms / 1000).toFixed(1)}s`,
   )
-  return { keyPage, pdfPage, dir, structure: result.page, extraction, validation, usd }
+  return { keyPage, pdfPage, dir, structure, extraction, validation, usd }
 }
 
 // Renders one accessible HTML document from processed pages, with image crops; returns its path. `printed` adds

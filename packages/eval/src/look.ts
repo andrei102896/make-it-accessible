@@ -15,7 +15,7 @@ import { briefDocument, BriefSchema, type Brief, type HeadingClass } from '@make
 import { fontClass } from '@make-it-accessible/pipeline/pdf/fonts'
 import type { ModelOptions } from '@make-it-accessible/pipeline/model/client'
 import { joinRuns } from '@make-it-accessible/pipeline/pdf/runs'
-import { canon } from '@make-it-accessible/pipeline/text/normalize'
+import { lettersOf } from '@make-it-accessible/pipeline/text/normalize'
 import { renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Run } from '@make-it-accessible/pipeline/pdf/types'
 import { z } from 'zod'
@@ -68,12 +68,11 @@ function largestLine(results: readonly PageResult[]): string | undefined {
 // out): a part is kept only when it is printed as one phrase in the text layer, else the largest printed line.
 const MIN_TITLE_WORDS = 2
 export function printedTitle(title: string, pageText: string): string | undefined {
-  const letters = (t: string): string => canon(t).replace(/[^\p{L}\p{N}]/gu, '')
-  const printed = letters(pageText)
+  const printed = lettersOf(pageText)
   const kept = title
     .split(' · ')
     .map((part) => part.trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
-    .filter((part) => part && printed.includes(letters(part)))
+    .filter((part) => part && printed.includes(lettersOf(part)))
     .join(' · ')
   return kept.split(/\s+/).filter((w) => /\p{L}|\p{N}/u.test(w)).length >= MIN_TITLE_WORDS ? kept : undefined
 }

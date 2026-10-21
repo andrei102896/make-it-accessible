@@ -1,6 +1,7 @@
 import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
+import type { OcrWord } from '@make-it-accessible/pipeline/pdf/ocr'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { Refused } from '@make-it-accessible/pipeline/pdf/refused'
 import { unverified, validatePage } from '@make-it-accessible/pipeline/validate/validate'
@@ -20,10 +21,10 @@ const SET = process.argv.includes('--verify') ? VERIFY_FILE : undefined
 // `--sealed`: only the verification menus never looked at (group verify-sealed), the judge of a rule learned elsewhere.
 const SEALED = process.argv.includes('--sealed')
 
-type Page = { structure: PageStructure; extraction: Extraction }
+type Page = { structure: PageStructure; extraction: Extraction; ocr: OcrWord[] }
 // A gate: whether it holds the page. More gates (geometry, icon shape, OCR, pixels) join this list.
 const GATES: { name: string; holds: (p: Page) => boolean }[] = [
-  { name: 'validator', holds: (p) => unverified(validatePage(p.structure, p.extraction)).length > 0 },
+  { name: 'validator', holds: (p) => unverified(validatePage(p.structure, p.extraction, p.ocr)).length > 0 },
 ]
 
 // mulberry32 over a string's hash: the same page draws the same defects every run.
@@ -69,7 +70,7 @@ for (const s of (await loadSources(SET)).filter((x) => !SEALED || x.group === 'v
       const t = tally.get(m.type)
       if (!t) continue
       t.injected++
-      if (GATES.some((g) => g.holds({ structure: m.structure, extraction: page.extraction }))) t.caught++
+      if (GATES.some((g) => g.holds({ structure: m.structure, extraction: page.extraction, ocr: page.ocr }))) t.caught++
       else if (t.missed.length < 5) t.missed.push(`${s.slug} ${d} ${m.paths.join(' + ')}`)
     }
   }

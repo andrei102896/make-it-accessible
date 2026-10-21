@@ -37,14 +37,14 @@ async function rebuild(s: Source): Promise<string> {
     // A page whose model call failed has no structure: it stays missing and holds the document.
     const page = await refreshedPage(pdf, dir, legend)
     if (!page) continue
-    const { extraction, structure } = page
+    const { extraction, structure, ocr } = page
     results.push({
       keyPage: extraction.pdfPage,
       pdfPage: extraction.pdfPage,
       dir,
       structure,
       extraction,
-      validation: validatePage(structure, extraction),
+      validation: validatePage(structure, extraction, ocr),
       usd: 0,
     })
   }

@@ -60,7 +60,7 @@ Built before any optimisation, so every later change is judged by it.
 
 1. **Price ↔ dish**: the association checked from geometry and the render, not from the model's grouping; a disagreement is a content error.
 2. **Icons by shape**: legend icon and inline candidates rendered and compared (correlation), label only when unambiguous; ambiguity holds the document.
-3. **Omissions with proof**: a dropped word must be furniture by measure (page number, repeated running line, duplicate, inside a logo); otherwise an error. Hidden-word detection checked by rendering with and without the word.
+3. **Omissions with proof**: a dropped word must be furniture by measure (page number, repeated running line, duplicate, inside a logo); otherwise an error. Hidden-word detection checked by rendering with and without the word. Done in part (2026-10-21): typographic separators are no words; image text proven by the text layer's column heads or a second reading by OCR (DESIGN "Held until proven").
 4. **Text layer verified**: OCR agreement per word; no ToUnicode, outlined text or scans read from OCR or held; drawn letters filled from OCR of their shapes.
 5. **Prices as printed**: the printed string is shown in both views; meaning (amount, currency) kept separately; currency never inferred from "$" alone; currencies and numerals beyond EUR/GBP/USD.
 6. **Coordinates canonical**: rotation, CropBox/MediaBox offsets and UserUnit in one transform, verified by overlaying glyphs and images on the PDF render; landscape and mixed-page fixtures.

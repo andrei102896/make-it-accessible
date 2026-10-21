@@ -1,9 +1,12 @@
 import { amountOf, asPrinted, joinRuns, printsFusedCents } from '../pdf/runs.ts'
+import type { OcrWord } from '../pdf/ocr.ts'
+import { fitScale } from '../pdf/raster.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } from '../model/schema.ts'
 import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 import { consistencyFindings } from './consistency.ts'
+import { digitsIn, pageCites, printedHead, readTwice, separatorOnly } from './proof.ts'
 
 const MAX_ALT_LENGTH = 250
 
@@ -65,7 +68,8 @@ function ligaturesLost(model: string, runs: readonly Run[]): boolean {
   return new RegExp(`^${pattern}$`, 'u').test(loose(model))
 }
 
-export function validatePage(page: PageStructure, e: Extraction): Validation {
+// `ocr`: Tesseract's reading of the page, a second reader for text and digits the model read from the image.
+export function validatePage(page: PageStructure, e: Extraction, ocr: readonly OcrWord[] = []): Validation {
   const errors: Finding[] = []
   const review: Finding[] = []
   const generated: Finding[] = []
@@ -78,6 +82,8 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   const currency = pageCurrency(joinRuns(onPage))
   // Only a leaflet with fused cents needs a currency and a check on bare digits; elsewhere "19" is shown as printed.
   const fused = printsFusedCents(onPage)
+  const cites = pageCites(page, e)
+  const toPt = e.width / fitScale(e.width, e.height).width
 
   const runsOf = (path: string, ranges: readonly Range[], count = true): Run[] => {
     const out: Run[] = []
@@ -138,7 +144,12 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     } else if (amount.currency === null) {
       if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
     } else if (amount.fromBareDigits && fused) review.push({ path, problem: `price read from bare digits "${words}"` })
-    return [words, p.qualifier ? text(`${path}.qualifier`, p.qualifier) : ''].join(' ')
+    const q = p.qualifier
+    if (q && 'seen' in q && printedHead(cited, q.seen, onPage, cites)) {
+      generated.push({ path: `${path}.qualifier`, problem: `label printed as its column head: "${q.seen}"` })
+      return [words, q.seen].join(' ')
+    }
+    return [words, q ? text(`${path}.qualifier`, q) : ''].join(' ')
   }
 
   const image = (path: string, img: ImageValue, context: string, strict = true): void => {
@@ -147,16 +158,23 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     if (/<|https?:/i.test(img.alt)) errors.push({ path, problem: 'alt contains markup or a URL' })
     if (img.alt.length > MAX_ALT_LENGTH) review.push({ path, problem: `alt is ${img.alt.length} characters` })
     for (const digits of img.alt.match(/\d+/g) ?? []) {
-      if (!canon(context).includes(digits))
+      const [x, y, w, h] = img.box.map((v) => v * toPt)
+      if (!canon(context).includes(digits) && !digitsIn(digits, { x: x ?? 0, y: y ?? 0, w: w ?? 0, h: h ?? 0 }, ocr))
         (strict ? errors : review).push({ path, problem: `alt states "${digits}", which is not printed for it` })
     }
   }
 
-  const block = (path: string, b: Block): string => {
+  // `top`: a block of the page, not a dish's detail (a label read twice is still no proof of whose it is).
+  const block = (path: string, b: Block, top = false): string => {
     if (b.uncertain) review.push({ path, problem: `model unsure: ${b.uncertain}` })
     switch (b.kind) {
       case 'heading':
       case 'paragraph':
+        if (top && 'seen' in b.text && !/\d/.test(b.text.seen) && readTwice(b.text.seen, ocr, onPage)) {
+          generated.push({ path, problem: `image text read again by OCR: "${b.text.seen}"` })
+          seenTexts.push(b.text.seen)
+          return b.text.seen
+        }
         return text(path, b.text)
       case 'list':
         return b.items.map((t, i) => text(`${path}.items[${i}]`, t)).join(' ')
@@ -200,7 +218,7 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
     return words
   }
 
-  page.blocks.forEach((b, i) => block(`blocks[${i}]`, b))
+  page.blocks.forEach((b, i) => block(`blocks[${i}]`, b, true))
   runsOf('dropped', page.dropped)
   const pageWords = [joinRuns(e.runs.filter((r) => !hidden.has(r.id))), ...seenTexts].join(' ')
   figureAlts.forEach((f) => {
@@ -208,7 +226,9 @@ export function validatePage(page: PageStructure, e: Extraction): Validation {
   })
 
   const skipped = new Set([...e.duplicates, ...e.hidden])
-  const uncovered = e.runs.filter((r, i) => !citations.has(i) && !skipped.has(r.id)).map((r) => r.id)
+  const uncovered = e.runs
+    .filter((r, i) => !citations.has(i) && !skipped.has(r.id) && !separatorOnly(r))
+    .map((r) => r.id)
   const doubleCited = [...citations].filter(([, n]) => n > 1).flatMap(([i]) => e.runs[i]?.id ?? [])
   if (uncovered.length) review.push({ path: 'page', problem: `${uncovered.length} words neither used nor dropped` })
   // Prices and details that the page's own geometry gives to another dish (consistency.ts).
