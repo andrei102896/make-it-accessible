@@ -54,7 +54,8 @@ export const printWidthIn = (html: string): number =>
 export const printFloorIn = (html: string): number =>
   Number(/@media screen and \(min-width: (\d+)px\) and \(forced-colors: none\)/.exec(html)?.[1] ?? 0)
 
-// A sign added for reading (page.ts) takes no room: its inherited line height and spacing are lengths, not ems.
+// A sign added for reading (page.ts) is 1 px and transparent: VoiceOver skips text at size 0, and its inherited
+// line height and spacing are lengths, not ems.
 // A word in another brand ink takes `--ink-*` from its own placed line where it reads (placed.ts), else the line's
 // colour: no placed text holds another, so the variable never comes from an outer one.
 export const printCss = (width: number, inks: readonly string[]): string => `
@@ -97,7 +98,8 @@ ${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: small-c
 ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; font-weight: inherit; font-style: inherit; }
 ${on} ${page} ${leaf} .face { font-weight: var(--fw); font-style: var(--fi); }
-${on} ${page} ${leaf} .sign { font-size: 0; line-height: 0; letter-spacing: 0; }
+${on} ${page} ${leaf} .sign { font-size: 1px; line-height: 0; letter-spacing: 0; color: transparent; text-shadow: none;
+  -webkit-text-stroke: 0; }
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
 ${on} ${page} ${leaf} .icon { display: inline-block; width: calc(var(--iw) * 1cqw); height: 1px; border: 0; padding: 0;
   margin: 0; vertical-align: baseline; font-size: inherit; line-height: inherit; }
