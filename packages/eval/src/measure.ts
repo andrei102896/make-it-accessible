@@ -13,7 +13,7 @@ import { report, verdicts } from './fidelity-report.ts'
 import { OUT_DIR, ROOT } from './paths.ts'
 import { loadSources, REBUILT_DIR, VERIFY_FILE, type Source } from './sources.ts'
 
-// pnpm measure [--quick] [--sealed] [--against=<ref>] [--status]: the whole measurement round (rebuild, print
+// pnpm measure [--quick] [--sealed] [--against=<ref>] [--status] [--jobs=N, calibration only]: the round (rebuild, print
 // fidelity, injected defects, check:page, stage-0 rescore) as child processes of the same CLIs, JOBS at a time; a
 // result that slept, fell back or failed is run again alone, as the sequential round ran it, before it is read.
 const { values } = parseArgs({
@@ -138,7 +138,7 @@ const built = new Set<Doc>()
 const rebuilt = async (r: Ran): Promise<boolean> => {
   const d = byJob.get(r.job)
   const report = d && (await stat(join(REBUILT_DIR, d.source.slug, 'report.json')).catch(() => null))
-  const ok = r.code === 0 && report !== null && report !== undefined && report.mtimeMs >= Date.now() - r.ms
+  const ok = r.code === 0 && report !== null && report !== undefined && report.mtimeMs >= r.started
   if (ok && d) built.add(d)
   return ok
 }
@@ -155,23 +155,22 @@ await drain([...docs.flatMap((d) => tagged(d, [rebuild(d), content(d)])), ...res
 
 // Run again alone, nothing else running: the sequential round's conditions. Still marked: a real result, named.
 const notes = new Map<Doc, string[]>()
+const note = (d: Doc, r: Ran): void => {
+  const why = [...r.degraded, ...(r.code === 0 ? [] : [`${r.job.name} exited ${String(r.code)}`])]
+  if (why.length) notes.set(d, [...(notes.get(d) ?? []), ...why.map((l) => `alone: ${l}`)])
+}
 let interrupted = false
 for (const job of again) {
   const d = byJob.get(job)
   const r = await runJob(job)
   console.info(`alone: ${job.name} ${(r.ms / 1000).toFixed(0)} s${r.slept ? ', SLEPT' : ''}`)
   if (r.slept) interrupted = true
-  if (d && (r.degraded.length || r.code !== 0))
-    notes.set(d, [
-      ...(notes.get(d) ?? []),
-      ...r.degraded.map((l) => `alone: ${l}`),
-      ...(r.code ? [`alone: exited ${String(r.code)}`] : []),
-    ])
+  if (d) note(d, r)
   if (d && job.log.endsWith('.rebuild.log') && (await rebuilt(r)))
     for (const j of tagged(d, judges(d))) {
       const jr = await runJob(j)
       if (jr.slept) interrupted = true
-      if (!clean(jr)) notes.set(d, [...(notes.get(d) ?? []), ...jr.degraded.map((l) => `alone: ${l}`)])
+      note(d, jr)
     }
 }
 const minutes = ((Date.now() - started) / 60_000).toFixed(1)

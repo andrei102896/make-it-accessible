@@ -8,7 +8,7 @@ import { DEGRADED } from '@make-it-accessible/pipeline/degraded'
 // One CLI of the round run as a child process (its own browser, pdf.js and memory, as when run by hand), its stdout
 // and stderr in one log file.
 export type Job = { name: string; args: readonly string[]; log: string }
-export type Ran = { job: Job; code: number | null; slept: boolean; degraded: string[]; ms: number }
+export type Ran = { job: Job; code: number | null; slept: boolean; degraded: string[]; started: number; ms: number }
 
 const exec = promisify(execFile)
 
@@ -38,6 +38,7 @@ export async function runJob(job: Job): Promise<Ran> {
     code,
     slept: (await waketime()) !== woke,
     degraded: lines.filter((l) => l.startsWith(`${DEGRADED} `)),
+    started,
     ms: Date.now() - started,
   }
 }

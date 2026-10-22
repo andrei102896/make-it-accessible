@@ -91,8 +91,10 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     (PROBLEM.test(l) ? row.problems : VIEW.test(l) ? row.view : LETTERS.test(l) ? row.letters : row.log).push(l)
   add('refused', row.problems.filter((l) => l.includes('refused')).length)
   add('letters missing', row.letters.length)
-  const held = (await heldErrors(f.dir)).filter((l) => !l.endsWith('rebuild it'))
+  // A held.json missing or unreadable in a folder this round built is a problem, never "nothing held".
+  const [held, unread] = partition(await heldErrors(f.dir), (l) => !l.endsWith('rebuild it'))
   row.held.push(...held)
+  row.problems.push(...unread)
   add('held findings', held.length)
   add('held documents', held.length ? 1 : 0)
   const report = await readFile(join(f.dir, 'report.json'), 'utf8').then(parseReport, () => null)
@@ -103,7 +105,10 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   row.cosmetic.push(...(report?.notes ?? []).map((n) => `note: ${n}`))
   const check = cleanLines(await text(f.check), f.dir)
   row.check.push(...check)
-  add('check issues', check.some((l) => /axe (?!ok)|OVERFLOW|DIFFERS|clipped|overflow/.test(l)) ? 1 : 0)
+  add(
+    'check issues',
+    !check.length || check.some((l) => /axe (?!ok)|OVERFLOW|DIFFERS|clipped|overflow/.test(l)) ? 1 : 0,
+  )
   // The measures: every page's verdict, its cosmetic findings by kind (lines), its printed shadows.
   const fidelity = await text(f.fidelity).then((raw) => (raw ? FidelityFile.parse(JSON.parse(raw)) : null))
   for (const p of fidelity?.documents.flatMap((d) => d.pages) ?? []) {
@@ -182,6 +187,11 @@ export const emptyRow = (): DocRow => ({
   log: [],
   pages: [],
 })
+
+const partition = <T>(xs: readonly T[], keep: (x: T) => boolean): [T[], T[]] => [
+  xs.filter(keep),
+  xs.filter((x) => !keep(x)),
+]
 
 export function addTotals(into: Totals, from: Totals): void {
   for (const [k, n] of Object.entries(from)) into[k] = (into[k] ?? 0) + n

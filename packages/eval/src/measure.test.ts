@@ -10,6 +10,7 @@ const ran = (over: Partial<Ran>): Ran => ({
   code: 0,
   slept: false,
   degraded: [],
+  started: 0,
   ms: 1,
   ...over,
 })
