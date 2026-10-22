@@ -1,3 +1,4 @@
+import { lettersOf } from '../text/normalize.ts'
 import type { Box, Extraction, Picture, Run } from './types.ts'
 
 // Dietary icons printed inside text lines ("( [wheat] available)") have no word in the text layer; the document's
@@ -85,41 +86,66 @@ export const iconsOn = (pieces: readonly IconPiece[], runs: readonly Run[]): Ico
 const sameSize = (a: IconPiece, b: IconPiece): boolean =>
   a.kind === b.kind && Math.abs(a.box.w - b.box.w) <= SAME_SIZE && Math.abs(a.box.h - b.box.h) <= SAME_SIZE
 
+// The words printed after an icon on its line: the first within LABEL_REACH × its width, each next within the
+// line's height of the one before.
+function wordsAfter(icon: Box, line: Line, until = Infinity): Run[] {
+  const right = icon.x + icon.w
+  const out: Run[] = []
+  for (const r of line.runs.filter((w) => w.box.x >= right - 1 && w.box.x < until)) {
+    const prev = out.at(-1)
+    const gap = r.box.x - (prev ? prev.box.x + prev.box.w : right)
+    if (gap > (prev ? line.box.h : icon.w * LABEL_REACH)) break
+    out.push(r)
+  }
+  return out
+}
+
+type Pair = IconPiece & { words: string[] }
 // The icon-and-label pairs of a line, when it holds at least MIN_PAIRS of them.
-function pairsOf(icons: readonly IconPiece[], line: Line): LegendEntry[] {
+function pairsOf(icons: readonly IconPiece[], line: Line): Pair[] {
   const own = icons.filter((i) => lineOf(i.box, [line])).sort((a, b) => a.box.x - b.box.x)
-  const pairs = own.flatMap((icon, k): LegendEntry[] => {
-    const right = icon.box.x + icon.box.w
-    const until = own[k + 1]?.box.x ?? Infinity
-    const after = line.runs.filter((r) => r.box.x >= right - 1 && r.box.x < until)
-    const label: Run[] = []
-    for (const r of after) {
-      const prev = label.at(-1)
-      const gap = r.box.x - (prev ? prev.box.x + prev.box.w : right)
-      if (gap > (prev ? line.box.h : icon.box.w * LABEL_REACH)) break
-      label.push(r)
-    }
+  const pairs = own.flatMap((icon, k): Pair[] => {
+    const label = wordsAfter(icon.box, line, own[k + 1]?.box.x)
     const first = label[0]
     if (!first || label.length > MAX_LABEL || !/^\p{Lu}/u.test(first.str) || label.some((r) => /\d/.test(r.str)))
       return []
-    return [
-      {
-        box: icon.box,
-        kind: icon.kind,
-        label: label
-          .map((r) => r.str)
-          .join(' ')
-          .toLowerCase(),
-      },
-    ]
+    return [{ box: icon.box, kind: icon.kind, words: label.map((r) => r.str) }]
   })
   return pairs.length >= MIN_PAIRS ? pairs : []
 }
 
+// A legend restates the phrase its icon is used in ("( [icon] NGCI available )"): words MIN_PAIRS uses begin with
+// are not its name, nor is a bracket; a word in capitals among lower-case ones is an abbreviation and keeps them.
+function named(pair: Pair, uses: readonly string[][]): string {
+  const words = pair.words.filter((w) => lettersOf(w))
+  const read = uses.map((u) => u.map(lettersOf).filter(Boolean))
+  let keep = words.length
+  for (let tail = words.length - 1; tail >= 1; tail--) {
+    const end = words.slice(words.length - tail).map(lettersOf)
+    if (read.filter((u) => end.every((w, i) => u[i] === w)).length >= MIN_PAIRS) keep = words.length - tail
+  }
+  return words
+    .slice(0, keep)
+    .map((w) => (/^\p{Lu}{2,}$/u.test(w) && pair.words.some((o) => /\p{Ll}/u.test(o)) ? w : w.toLowerCase()))
+    .join(' ')
+}
+
 // The document's legend: the pairs of its legend lines, less icons another entry matches in size.
 export function legendOf(pages: readonly Pick<Extraction, 'runs' | 'icons'>[]): LegendEntry[] {
-  const pairs = pages.flatMap((p) => linesOf(p.runs).flatMap((l) => pairsOf(p.icons ?? [], l)))
-  return pairs.filter((a) => !pairs.some((b) => b !== a && b.label !== a.label && sameSize(a, b)))
+  const lined = pages.map((p) => ({ icons: p.icons ?? [], lines: linesOf(p.runs) }))
+  const pairs = lined.flatMap((p) => p.lines.flatMap((l) => pairsOf(p.icons, l)))
+  const own = new Set(pairs.map((a) => JSON.stringify(a.box)))
+  const uses = (a: Pair): string[][] =>
+    lined.flatMap((p) =>
+      p.icons
+        .filter((i) => sameSize(i, a) && !own.has(JSON.stringify(i.box)))
+        .flatMap((i) => {
+          const line = lineOf(i.box, p.lines)
+          return line ? [wordsAfter(i.box, line).map((r) => r.str)] : []
+        }),
+    )
+  const entries = pairs.map((a) => ({ box: a.box, kind: a.kind, label: named(a, uses(a)) }))
+  return entries.filter((a) => !entries.some((b) => b !== a && b.label !== a.label && sameSize(a, b)))
 }
 
 // The page with each inline icon the legend names appended to its runs as the label's words, at the icon's box, on

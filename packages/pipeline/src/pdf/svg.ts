@@ -90,13 +90,15 @@ export const boxOf = (points: readonly Point[]): Box => {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
 }
 // A drawn path or rect in page points: `clip` is the box its clips leave visible, `bound` its own box within that;
-// `masked` when its visible shape is unknown (a mask, or a shaped clip), `filtered` under a filter.
+// `masked` when its visible shape is unknown (a mask, or a shaped clip), `filtered` under a filter; `alpha` the
+// opacity its masks leave it when they are uniform (a watermark drawn through a 5 % mask).
 export type Drawn = {
   tag: string
   subpaths: Subpath[]
   m: Matrix
   clip: Box | null
   masked: boolean
+  alpha: number
   filtered: boolean
   bound: Box | null
   range: [number, number]
@@ -274,6 +276,7 @@ export function drawnElements(svg: string): {
         m: here,
         clip: visible?.box ?? null,
         masked: hidden || !shown,
+        alpha: fade,
         filtered: filter,
         bound: own && visible ? intersect(own, visible.box) : own,
         range: n.range,

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import type { PageStructure } from '../model/schema.ts'
 import type { OcrWord } from '../pdf/ocr.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
-import { digitsIn, printedHead, readTwice, separatorOnly } from './proof.ts'
+import { digitsIn, printedHead, readTwice, separatorOnly, wordsOfPicture } from './proof.ts'
 import { unverified, validatePage } from './validate.ts'
 
 const run = (i: number, str: string, x: number, y: number, w: number, line: number): Run => ({
@@ -110,4 +110,18 @@ test('the validator holds neither a label printed as its column head nor a separ
     ['blocks[1].items[0].prices[1].qualifier'],
   )
   assert.deepEqual(v.uncovered, [])
+})
+
+test("a picture's own lettering is the words inside it its alt names each piece of; others are printed over it", () => {
+  const logo = { x: 150, y: 480, w: 120, h: 60 }
+  const runs = [
+    run(0, 'EST-1990', 195, 484, 30, 0),
+    run(1, 'HOWIES', 151, 502, 116, 1),
+    run(2, 'Brunch', 160, 520, 40, 2),
+  ]
+  const e = { runs: [...runs, run(3, 'HOWIES', 151, 700, 116, 3)], pictures: [], width: 420, height: 595 }
+  assert.deepEqual(
+    wordsOfPicture(logo, 'Howies Restaurant logo, est. 1990', e).map((r) => r.str),
+    ['EST-1990', 'HOWIES'],
+  )
 })

@@ -1,5 +1,6 @@
 import type { Block, PageStructure } from '../model/schema.ts'
 import type { OcrWord } from '../pdf/ocr.ts'
+import { pictureIn } from '../pdf/art.ts'
 import type { Box, Extraction, Run } from '../pdf/types.ts'
 import { lettersOf } from '../text/normalize.ts'
 
@@ -103,3 +104,34 @@ export const digitsIn = (digits: string, box: Box, ocr: readonly OcrWord[]): boo
     const [cx, cy] = [w.box.x + w.box.w / 2, w.box.y + w.box.h / 2]
     return cx >= box.x && cx <= box.x + box.w && cy >= box.y && cy <= bottom(box) && lettersOf(w.str).includes(digits)
   })
+
+// A word's letters and digits in pieces ("EST-1990" → est, 1990).
+const tokens = (s: string): string[] =>
+  s
+    .normalize('NFKC')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+// A picture's words are printed within this (pt) of its drawn box.
+const IN_PICTURE = 2
+
+// The words printed inside a picture (its drawn box when the vector layer has it) whose every piece its alt names:
+// a logo's own "EST-1990 HOWIES RESTAURANT" for "Howies Restaurant logo, est. 1990", no text printed over it.
+export function wordsOfPicture(
+  box: Box,
+  alt: string,
+  e: Pick<Extraction, 'runs' | 'pictures' | 'width' | 'height'>,
+): Run[] {
+  const named = new Set(tokens(alt))
+  const at = pictureIn(box, e.pictures ?? [], e.width, e.height) ?? box
+  return e.runs.filter((r) => {
+    const [cx, cy] = [r.box.x + r.box.w / 2, r.box.y + r.box.h / 2]
+    const inside =
+      cx >= at.x - IN_PICTURE &&
+      cx <= at.x + at.w + IN_PICTURE &&
+      cy >= at.y - IN_PICTURE &&
+      cy <= bottom(at) + IN_PICTURE
+    const own = tokens(r.str)
+    return !r.icon && inside && own.length > 0 && own.every((t) => named.has(t))
+  })
+}

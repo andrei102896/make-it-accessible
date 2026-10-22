@@ -18,6 +18,7 @@ import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/p
 import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { wordsOfPicture } from '@make-it-accessible/pipeline/validate/proof'
 import { writeBackdrops } from './backdrop.ts'
 import { costUsd } from './cost.ts'
 import { checkPrinted } from './printcheck.ts'
@@ -167,14 +168,17 @@ export async function buildHtml(
       : []
     const pictures = boxes.map(({ box: [x = 0, y = 0, w = 0, h = 0] }) => ({ x, y, w, h }))
     const sources = new Map<string, string>()
-    for (const [i, { path, own }] of boxes.entries()) {
-      const mine = new Set(own)
+    for (const [i, { path, own, figure, alt }] of boxes.entries()) {
+      const model = pictures[i] ?? { x: 0, y: 0, w: 0, h: 0 }
+      // A figure's own lettering (wordsOfPicture) is its picture's: inside its crop, no words printed over it.
+      const lettering = figure && alt ? wordsOfPicture(toPts(model), alt, r.extraction) : []
+      const ids = new Set(lettering.map((w) => w.id))
+      const mine = new Set([...own, ...r.extraction.runs.flatMap((w, j) => (ids.has(w.id) ? [j] : []))])
       // Other products' pictures are foreign to this one, like their words.
       const words = [
         ...painted.map((p) => ({ box: p.box, own: mine.has(p.i) })),
         ...pictures.filter((_, j) => j !== i).map((box) => ({ box, own: false })),
       ]
-      const model = pictures[i] ?? { x: 0, y: 0, w: 0, h: 0 }
       // A figure with other words printed over it is a background illustration (Noah's octopus): not a picture to
       // show; its words are the page's.
       const overprinted = painted.filter((p) => !mine.has(p.i) && intersection(p.box, model) > area(p.box) / 2)

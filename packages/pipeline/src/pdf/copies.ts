@@ -21,6 +21,11 @@ const MAX_COPY = 2
 const MOSTLY = 0.25
 // A fill this opaque hides what was drawn under it (pdftocairo writes fill-opacity="1" for solid paint).
 const OPAQUE = 0.99
+// A shape shown fainter than this is no copy of the words over it: a watermark (Howies' fish, drawn navy through a
+// 5 % mask, read as a shadow of the two lines it crosses).
+const MIN_SHOWN = 0.5
+const shown = (d: Drawn): number =>
+  d.alpha * Number(attr(d.tag, 'fill-opacity') ?? 1) * Number(attr(d.tag, 'opacity') ?? 1)
 
 export const zoneOf = (b: Box): Box => {
   const p = b.h * PAD
@@ -79,5 +84,7 @@ export function copiesOf(svg: string, words: readonly Box[]): Drawn[] {
       b.h <= tallest * MAX_COPY
     )
   }
-  return art.filter((d) => d.bound && (outline(d) || !plainBox(d)) && !hidden(d) && redrawn(d, d.bound))
+  return art.filter(
+    (d) => d.bound && (outline(d) || !plainBox(d)) && shown(d) >= MIN_SHOWN && !hidden(d) && redrawn(d, d.bound),
+  )
 }

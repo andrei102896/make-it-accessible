@@ -21,6 +21,7 @@ const rect = (x0: number, y0: number, x1: number, y1: number, fill = RED): Drawn
   m: [1, 0, 0, 1, 0, 0],
   clip: null,
   masked: false,
+  alpha: 1,
   filtered: false,
   bound: null,
   range: [0, 0],

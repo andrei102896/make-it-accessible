@@ -75,18 +75,26 @@ function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[],
 // each piece's characters with their runs, and the whitespace between them as shown, so the pieces make up `shown`
 // exactly. Null when the text does not follow its runs or prints as one piece.
 export type LinePart = { text: string; runs: Run[]; segments: Segment[] } | { gap: string }
-// Two cited words of one line printed apart: the next back to the left (an icon cited before the name it follows) or
-// past a row's gap (another leaf's words between them: "+ … supplement" round its "5.95").
-const apart = (a: Run, b: Run): boolean => {
+// Words printed apart: back to the left, past a row's gap ("+ … supplement" round its "5.95"), or before a kept icon
+// with the bracket opening on it, so a stand-in's other widths never slide words under it ("oaties | ( [NGCI] …").
+const apart = (a: Run, b: Run, lead: (r: Run) => boolean): boolean => {
   const em = a.font?.size ?? b.font?.size ?? a.box.h
   const gap = b.box.x - (a.box.x + a.box.w)
-  return gap < -em / 2 || gap > GAP * em
+  return gap < -em / 2 || gap > GAP * em || (a.icon !== true && !lead(a) && (b.icon === true || lead(b)))
 }
+const OPENS = /^[([{]+$/
 export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[] | null {
   const owners = shownRuns(t, e, shown)
   if (!owners) return null
   const letters = Array.from(shown)
   const key = (r: Run): string => `${String(r.flow)}:${String(r.line)}`
+  const order = [...new Set(owners.filter((r): r is Run => r !== null))]
+  // A bracket opens on the icon only when the icon starts within an em of it ("( [NGCI] available)").
+  const lead = (r: Run): boolean => {
+    const next = order[order.indexOf(r) + 1]
+    const em = r.font?.size ?? r.box.h
+    return OPENS.test(r.str) && next?.icon === true && next.box.x - (r.box.x + r.box.w) <= em
+  }
   const parts: LinePart[] = []
   let line: { start: number; end: number; key: string } | null = null
   const close = (): void => {
@@ -109,7 +117,7 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
     }
     const before = last
     last = owner
-    if (line && line.key === key(owner) && (before === owner || !before || !apart(before, owner))) {
+    if (line && line.key === key(owner) && (before === owner || !before || !apart(before, owner, lead))) {
       line.end = i + 1
       gap = ''
       return

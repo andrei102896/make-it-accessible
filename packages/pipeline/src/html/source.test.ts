@@ -203,6 +203,44 @@ test('a text is cut where its cited words are printed apart on one line, never b
   assert.equal(lineParts({ src: [[2, 3]] }, e, 'supplement if'), null)
 })
 
+test('a line is cut before an icon the backdrop keeps: its words before it fit their own box (Howies "oaties ( [NGCI] available)")', () => {
+  const font = { key: 'gaultier', size: 10, weight: 400, italic: false }
+  const run = (id: string, str: string, x: number, w: number, icon = false): Run => ({
+    id,
+    str,
+    box: { x, y: 313, w, h: 12 },
+    flow: 0,
+    line: 9,
+    font,
+    ...(icon ? { icon } : {}),
+  })
+  const e: Extraction = {
+    pdfPage: 1,
+    width: 595,
+    height: 842,
+    runs: [
+      run('1:0', 'oaties', 327.8, 27.4),
+      run('1:1', '(', 357.5, 3.2),
+      run('1:2', 'NGCI', 361.5, 7.3, true),
+      run('1:3', 'available)', 371.1, 41.4),
+    ],
+    images: [],
+    duplicates: [],
+    hidden: [],
+  }
+  const parts = lineParts({ src: [[0, 3]] }, e, 'oaties ( NGCI available)') ?? []
+  assert.deepEqual(
+    parts.map((p) => ('runs' in p ? p.text : `[${p.gap}]`)),
+    ['oaties', '[ ]', '( NGCI available)'],
+  )
+  // A line that opens on the bracket stays one piece.
+  assert.equal(lineParts({ src: [[1, 3]] }, e, '( NGCI available)'), null)
+  // A bracket whose icon prints further on (past an em: Waterloo's "( available) [icon]") is no opener of it.
+  const far: Extraction = { ...e, runs: e.runs.map((r) => (r.icon ? { ...r, box: { ...r.box, x: 390 } } : r)) }
+  const pieces = lineParts({ src: [[0, 3]] }, far, 'oaties ( NGCI available)') ?? []
+  assert.equal(pieces.filter((p) => 'runs' in p)[0]?.text, 'oaties (')
+})
+
 test("only the words in another face than their placed element's are wrapped with it", () => {
   const run = (id: string, weight: number): Run => ({
     id,

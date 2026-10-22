@@ -117,3 +117,29 @@ test("a line is anchored on its first word: the left column's lines do not chain
     [535.4, 550.6],
   )
 })
+
+test('a legend that restates the phrase its icon is used in names the icon without it (Howies group "NGCI")', () => {
+  // "[leaf] Vegan … ( [wheat] NGCI available )" and two dishes printing "( [wheat] available)".
+  const legend = [
+    word('Vegan', 263, 800, 23, 90),
+    word('(', 463, 800, 2, 90),
+    word('NGCI', 477, 800, 22, 90),
+    word('available', 501, 800, 30, 90),
+    word(')', 532, 800, 2, 90),
+  ]
+  const dish = (y: number, line: number): Run[] => [
+    word('(', 310.7, y, 3.2, line),
+    word('available)', 324.3, y, 41.4, line),
+  ]
+  const icons = [
+    piece(246.9, 802.1, 13.9, 8.9),
+    piece(466.9, 800.4, 7.3, 9.7),
+    piece(314, 240, 7.3, 9.7),
+    piece(314, 400, 7.3, 9.7),
+  ]
+  const named = legendOf([page([...legend, ...dish(237.5, 10), ...dish(397.5, 20)], icons)])
+  assert.deepEqual(
+    named.map((l) => l.label),
+    ['vegan', 'NGCI'],
+  )
+})

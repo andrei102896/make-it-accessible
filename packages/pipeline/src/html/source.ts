@@ -127,12 +127,26 @@ function citations(item: Item): number[] {
 }
 
 // Every picture of a page with the runs its own product cites (none for a figure).
-export type PictureBox = { path: string; box: readonly number[]; own: number[]; ref: string | null; figure: boolean }
+export type PictureBox = {
+  path: string
+  box: readonly number[]
+  own: number[]
+  ref: string | null
+  figure: boolean
+  alt: string | null
+}
 export function imageBoxes(page: PageStructure): PictureBox[] {
   const out: PictureBox[] = []
   const block = (path: string, b: Block): void => {
     if (b.kind === 'figure')
-      out.push({ path: `${path}.image`, box: b.image.box, own: [], ref: b.image.ref ?? null, figure: true })
+      out.push({
+        path: `${path}.image`,
+        box: b.image.box,
+        own: [],
+        ref: b.image.ref ?? null,
+        figure: true,
+        alt: b.image.alt,
+      })
     if (b.kind === 'products')
       b.items.forEach((item, i) => {
         product(`${path}.items[${i}]`, item)
@@ -149,6 +163,7 @@ export function imageBoxes(page: PageStructure): PictureBox[] {
         own: citations(item),
         ref: item.image.ref ?? null,
         figure: false,
+        alt: item.image.alt,
       })
   }
   page.blocks.forEach((b, i) => {

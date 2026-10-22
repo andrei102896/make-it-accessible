@@ -6,7 +6,7 @@ import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } fr
 import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 import { consistencyFindings } from './consistency.ts'
-import { digitsIn, pageCites, printedHead, readTwice, separatorOnly } from './proof.ts'
+import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, wordsOfPicture } from './proof.ts'
 
 const MAX_ALT_LENGTH = 250
 
@@ -225,7 +225,12 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
     image(f.path, f.img, pageWords, false)
   })
 
-  const skipped = new Set([...e.duplicates, ...e.hidden])
+  // A figure's own words (a logo's lettering its alt names) are the figure's, read in its alt.
+  const pictured = figureAlts.flatMap(({ img }) => {
+    const [x = 0, y = 0, w = 0, h = 0] = img.box.map((v) => v * toPt)
+    return img.alt ? wordsOfPicture({ x, y, w, h }, img.alt, e).map((r) => r.id) : []
+  })
+  const skipped = new Set([...e.duplicates, ...e.hidden, ...pictured])
   const uncovered = e.runs
     .filter((r, i) => !citations.has(i) && !skipped.has(r.id) && !separatorOnly(r))
     .map((r) => r.id)
