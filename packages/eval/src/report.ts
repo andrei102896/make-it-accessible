@@ -49,11 +49,15 @@ const checkedBy = (cs: readonly { label: string; name: string; at: string }[]): 
   const day = (at: string): string =>
     new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
   const groups = Map.groupBy(cs, (c) => JSON.stringify([day(c.at), c.name])).values()
+  // Details told alike are told once (Howies' two lobster marks, one label).
+  const told = (g: readonly { label: string }[]): string[] => [
+    ...new Set(g.map((c) => c.label.replace(/[\s.;,]+$/, ''))),
+  ]
   const said = [...groups].map((g) => {
-    const labels = g.map((c) => c.label.replace(/[\s.;,]+$/, '')).join('; ')
-    return `On ${day(g[0]?.at ?? '')}, ${g[0]?.name ?? ''} at Make It Accessible checked ${g.length === 1 ? 'this detail' : 'these details'} against your PDF by hand: ${labels}.`
+    const labels = told(g)
+    return `On ${day(g[0]?.at ?? '')}, ${g[0]?.name ?? ''} at Make It Accessible checked ${labels.length === 1 ? 'this detail' : 'these details'} against your PDF by hand: ${labels.join('; ')}.`
   })
-  const closing = `If ${cs.length === 1 ? 'it' : 'anything'} differs from your menu, reply to this email and we'll correct it.`
+  const closing = `If ${told(cs).length === 1 ? 'it' : 'anything'} differs from your menu, reply to this email and we'll correct it.`
   return said.length ? [...said, closing] : []
 }
 const listed = (items: string[]): string =>

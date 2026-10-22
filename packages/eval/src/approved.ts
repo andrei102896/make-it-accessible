@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
-import { ICON_AT, readFromImage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { ICON_AT } from '@make-it-accessible/pipeline/validate/iconmarks'
+import { readFromImage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 
 // A held detail a person checked against the PDF by hand (CLIENT_FLOW §4): recorded beside the run (`pnpm run approve`),
 // bound to the words the page publishes there, never to an error. It goes live; the owner is told and can correct it.

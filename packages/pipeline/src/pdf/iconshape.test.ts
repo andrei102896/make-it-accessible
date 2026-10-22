@@ -143,3 +143,37 @@ test("an icon is measured against the word beside it, not a line read across col
     ['vegan'],
   )
 })
+
+test('a mark the legend names that the answer leaves out holds its page at its place (Waterloo dinner cremeux)', () => {
+  const legend = legendOf([page(legendLine, legendIcons)])
+  const runs = [word('Chocolate', 100, 100, 0, 40), word('cremeux', 145, 100, 0, 40)]
+  const e = withIcons(page(runs, [icon(80, 101, 12.5, 8.2, LEAF)]), legend)
+  const structure = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [{ kind: 'products', items: [{ name: { src: [[0, 1]] } }] }],
+      dropped: [[2, 2]],
+    }),
+  )
+  assert.deepEqual(
+    validatePage(structure, e).review.filter((f) => f.path.startsWith('icon@')),
+    [{ path: 'icon@80,101', problem: `the legend's "vegan" mark is left out, before "Chocolate cremeux"` }],
+  )
+})
+
+test("an icon joins the flow of the word printed after it, though read in another column's line (cremeux)", () => {
+  const legend = legendOf([page(legendLine, legendIcons)])
+  // "…focaccia toasts" ends the trout's line in one column; "[leaf] Chocolate cremeux" opens the next, 8 pt lower.
+  const toasts = { ...word('toasts', 880, 275, 0, 30), flow: 59, line: 95 }
+  const chocolate = {
+    ...word('Chocolate', 968, 279.3, 0, 45),
+    flow: 28,
+    line: 53,
+    box: { x: 968, y: 283, w: 45, h: 17.1 },
+  }
+  const e = withIcons(page([toasts, chocolate], [icon(939, 281.7, 12.5, 8.2, LEAF)]), legend)
+  assert.deepEqual(
+    e.runs.filter((r) => r.icon).map((r) => [r.str, r.flow, r.line]),
+    [['vegan', 28, 53]],
+  )
+})

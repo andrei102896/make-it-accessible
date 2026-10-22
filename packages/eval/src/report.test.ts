@@ -76,3 +76,18 @@ test('several details checked by hand: one sentence per day and person, labels a
   assert.match(two, /^On .* Andrei .* this detail .*\. On .* Louis .* this detail .*\. If anything differs/)
   assert.equal(two.match(/If anything differs/g)?.length, 1)
 })
+
+test('details checked by hand under one label are told once (Howies: two lobster marks)', () => {
+  const page = { keyPage: 1, pdfPage: 1, printed: true, scan: false, converted: true }
+  const check = { text: new Map(), cosmetic: new Set<never>() }
+  const lobster = {
+    pdfPage: 1,
+    label: 'Add half lobster: the lobster mark, in no allergen key',
+    name: 'Andrei',
+    at: '2026-10-22T19:13:09Z',
+  }
+  assert.equal(
+    reportOf([page], check, [], [lobster, lobster]).pages[0]?.say,
+    "On 22 October 2026, Andrei at Make It Accessible checked this detail against your PDF by hand: Add half lobster: the lobster mark, in no allergen key. If it differs from your menu, reply to this email and we'll correct it.",
+  )
+})

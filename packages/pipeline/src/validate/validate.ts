@@ -6,6 +6,7 @@ import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } fr
 import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 import { consistencyFindings } from './consistency.ts'
+import { iconMarks } from './iconmarks.ts'
 import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, wordsOfPicture } from './proof.ts'
 
 const MAX_ALT_LENGTH = 250
@@ -35,25 +36,6 @@ type Range = [number, number]
 
 // A text citing only words that draw nothing: one finding per text, at the first such place.
 const NOTHING = 'cites words that draw nothing on the page'
-// An icon the legend's size but alike none of its icons (pdf/icons.ts): a finding of its own place, so a person who
-// checked it beside the PDF can record it (eval/approved.ts binds the words beside it).
-export const ICON_AT = 'icon@'
-function unnamedIcons(e: Extraction): Finding[] {
-  const hidden = new Set(e.hidden)
-  return (e.icons ?? [])
-    .filter((i) => i.unnamed)
-    .map(({ box: b }) => {
-      const beside = e.runs
-        .filter((r) => !r.icon && !hidden.has(r.id) && r.box.x >= b.x + b.w - 1)
-        .filter((r) => Math.abs(r.box.y + r.box.h / 2 - (b.y + b.h / 2)) <= b.h / 2)
-        .sort((x, y) => x.box.x - y.box.x)
-        .slice(0, 3)
-      return {
-        path: `${ICON_AT}${String(Math.round(b.x))},${String(Math.round(b.y))}`,
-        problem: `a mark the size of the legend's icons matches none of them, before "${joinRuns(beside)}"`,
-      }
-    })
-}
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
 // The punctuation that ends a span parts it from what follows ("PERONI NASTRO AZZURRO," + its strength): not a word.
 const reading = (s: string): string => loose(s).replace(/[,;:]+$/u, '')
@@ -269,6 +251,6 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
   const doubleCited = [...citations].filter(([, n]) => n > 1).flatMap(([i]) => e.runs[i]?.id ?? [])
   if (uncovered.length) review.push({ path: 'page', problem: `${uncovered.length} words neither used nor dropped` })
   // Prices and details that the page's own geometry gives to another dish (consistency.ts).
-  review.push(...consistencyFindings(page, e), ...unnamedIcons(e))
+  review.push(...consistencyFindings(page, e), ...iconMarks(page, e))
   return { errors, review, generated, uncovered, doubleCited }
 }

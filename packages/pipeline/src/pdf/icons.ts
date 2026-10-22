@@ -195,7 +195,13 @@ export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extrac
       if (!icon.hidden && legendSized(icon.box)) unnamed.add(icon)
       return []
     }
-    const beside = line.runs.find((r) => r.box.x >= icon.box.x + icon.box.w - 1) ?? line.runs.at(-1)
+    // The word printed next after it at its height, though pdftotext reads it in another line (Waterloo dinner's
+    // cremeux marks, read in the trout's line of the next column, joined the trout's flow).
+    const cy = icon.box.y + icon.box.h / 2
+    const after = e.runs
+      .filter((r) => !r.icon && r.box.x >= icon.box.x + icon.box.w - 1 && cy >= r.box.y && cy <= r.box.y + r.box.h)
+      .sort((a, b) => a.box.x - b.box.x)[0]
+    const beside = after ?? line.runs.find((r) => r.box.x >= icon.box.x + icon.box.w - 1) ?? line.runs.at(-1)
     if (!beside) return []
     // One run for the whole label: a citation of the icon is a citation of all its words (a lone "gluten" cited
     // from "gluten free" named the opposite of what the print says).
