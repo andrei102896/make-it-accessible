@@ -101,7 +101,10 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   for (const p of report?.pages ?? []) {
     row.view.push(`p${String(p.page)} ${p.view}${p.why ? `: ${p.why}` : ''}`)
     add(`pages ${p.view}`)
+    row.held.push(...p.checked.map((c) => `p${String(p.page)} checked by ${c.name}: ${c.label}`))
+    add('details checked by hand', p.checked.length)
   }
+  add('approvals no longer matching', held.filter((l) => l.endsWith('no longer matches its words')).length)
   row.cosmetic.push(...(report?.notes ?? []).map((n) => `note: ${n}`))
   const check = cleanLines(await text(f.check), f.dir)
   row.check.push(...check)

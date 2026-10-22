@@ -37,7 +37,8 @@
     "review:open": "node packages/eval/src/review-open.ts",
     "inject": "node packages/eval/src/inject-run.ts",
     "fidelity": "node packages/eval/src/fidelity.ts",
-    "measure": "node packages/eval/src/measure.ts"
+    "measure": "node packages/eval/src/measure.ts",
+    "approve": "node packages/eval/src/approve.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

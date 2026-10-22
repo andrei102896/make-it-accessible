@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Kind } from '@make-it-accessible/pipeline/pdf/fidelity-verdict'
-import type { Held } from './preview.ts'
+import type { Checked, Held } from './approved.ts'
 import type { PrintCheck, TextWhy } from './printcheck.ts'
 
 // report.json beside held.json: per page which layout it opens in and why, in the owner's words (CLIENT_FLOW §5),
@@ -12,6 +12,8 @@ const Page = z.object({
   view: z.enum(['printed', 'text', 'none']),
   why: z.string().nullable(),
   open: z.array(z.object({ path: z.string(), problem: z.string() })),
+  // Details checked against the PDF by hand (approved.ts): live, the owner told and free to correct them.
+  checked: z.array(z.object({ label: z.string(), name: z.string(), at: z.string() })).default([]),
   say: z.string().nullable(),
 })
 const Report = z.object({ pages: z.array(Page), notes: z.array(z.string()) })
@@ -42,6 +44,9 @@ const COSMETIC: Record<Kind, string | null> = {
   vanished: null,
   doubled: null,
 }
+// Each checked detail told to the owner once, the date written out (22 October 2026 reads the same in the UK and US).
+const checkedBy = (c: { label: string; name: string; at: string }): string =>
+  `On ${new Date(c.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}, ${c.name} at Make It Accessible checked this detail against your PDF by hand: ${c.label}. If it differs from your menu, reply to this email and we'll correct it.`
 const listed = (items: string[]): string =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}` : (items[0] ?? '')
 
@@ -49,25 +54,35 @@ const listed = (items: string[]): string =>
 export type ReportPage = { keyPage: number; pdfPage: number; printed: boolean; scan: boolean; converted: boolean }
 
 // `printed`: pages that kept the printed view; `check`: why the others lost it (printcheck.ts); `held`: open content.
-export function reportOf(pages: readonly ReportPage[], check: PrintCheck, held: readonly Held[]): Report {
+export function reportOf(
+  pages: readonly ReportPage[],
+  check: PrintCheck,
+  held: readonly Held[],
+  checked: readonly Checked[] = [],
+): Report {
   const rows = pages.map((p) => {
     const open = held.filter((h) => h.pdfPage === p.pdfPage).map(({ path, problem }) => ({ path, problem }))
+    const mine = checked.filter((c) => c.pdfPage === p.pdfPage).map(({ label, name, at }) => ({ label, name, at }))
     if (!p.converted)
       return {
         page: p.pdfPage,
         view: 'none' as const,
         why: "This page didn't convert. We're looking into it and will email you when it's ready.",
         open,
+        checked: mine,
         say: `Page ${String(p.pdfPage)} isn't ready yet. We'll email you when it is.`,
       }
     const reason: TextWhy | 'scan' | 'no-print' | null = p.printed
       ? null
       : (check.text.get(p.keyPage) ?? (p.scan ? 'scan' : 'no-print'))
     const say = [
-      reason ? `Page ${String(p.pdfPage)} ${OPENS_AS_TEXT}${open.length ? '' : ' Nothing for you to do.'}` : '',
+      reason
+        ? `Page ${String(p.pdfPage)} ${OPENS_AS_TEXT}${open.length || mine.length ? '' : ' Nothing for you to do.'}`
+        : '',
       open.length
         ? `${String(open.length)} ${open.length === 1 ? 'detail' : 'details'} on page ${String(p.pdfPage)} ${open.length === 1 ? 'needs' : 'need'} your confirmation before the page goes live.`
         : '',
+      ...mine.map(checkedBy),
     ]
       .filter(Boolean)
       .join(' ')
@@ -76,6 +91,7 @@ export function reportOf(pages: readonly ReportPage[], check: PrintCheck, held: 
       view: p.printed ? ('printed' as const) : ('text' as const),
       why: reason ? WHY[reason] : null,
       open,
+      checked: mine,
       say: say || null,
     }
   })

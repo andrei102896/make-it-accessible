@@ -3,7 +3,6 @@ import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { unverified, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 
 // A preview is a converted page a prospect gets a private link to: unlisted, noindex, deleted after PREVIEW_DAYS
 // unless the owner keeps it (the rule told in every email).
@@ -88,23 +87,6 @@ export const formatExpiry = (rows: readonly ExpiryRow[]): string =>
 
 export const expired = (rows: readonly ExpiryRow[], today: Date): ExpiryRow[] =>
   rows.filter((r) => r.deleteBy <= day(today))
-
-export type Held = { pdfPage: number; path: string; problem: string }
-// What holds a document: every expected page that did not convert, and all that is unverified in those that did.
-export function heldOf(
-  expected: readonly number[],
-  pages: readonly { pdfPage: number; validation: Pick<Validation, 'errors' | 'review' | 'generated'> }[],
-): Held[] {
-  const built = new Set(pages.map((p) => p.pdfPage))
-  return [
-    ...expected
-      .filter((n) => !built.has(n))
-      .map((pdfPage) => ({ pdfPage, path: 'page', problem: 'the page did not convert (failure.txt in its folder)' })),
-    ...pages.flatMap((p) =>
-      unverified(p.validation).map((f) => ({ pdfPage: p.pdfPage, path: f.path, problem: f.problem })),
-    ),
-  ]
-}
 
 // A document's content errors (eval/process.ts): a held document is not published. Missing file: built before the
 // gate, read as held so it is rebuilt first.

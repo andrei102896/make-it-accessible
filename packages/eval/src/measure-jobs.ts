@@ -1,4 +1,4 @@
-import { execFile, spawn } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { createWriteStream } from 'node:fs'
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
@@ -11,6 +11,14 @@ export type Job = { name: string; args: readonly string[]; log: string }
 export type Ran = { job: Job; code: number | null; slept: boolean; degraded: string[]; started: number; ms: number }
 
 const exec = promisify(execFile)
+// Children still running: stopped with the round, so none goes on writing out/rebuilt after it (RUNNING stays: the
+// next round says this one was interrupted).
+const live = new Set<ChildProcess>()
+for (const signal of ['SIGINT', 'SIGTERM'] as const)
+  process.on(signal, () => {
+    for (const child of live) child.kill('SIGKILL')
+    process.exit(1)
+  })
 
 // The Mac's last wake time: a job during which it changed slept, and its deadlines fired on waking (Node's clocks
 // count through sleep, so no clock difference shows it). Empty off macOS.
@@ -26,10 +34,14 @@ export async function runJob(job: Job): Promise<Ran> {
   const log = createWriteStream(job.log)
   const code = await new Promise<number | null>((resolve, reject) => {
     const child = spawn(process.execPath, job.args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    live.add(child)
     child.stdout.pipe(log, { end: false })
     child.stderr.pipe(log, { end: false })
     child.on('error', reject)
-    child.on('close', resolve)
+    child.on('close', (code) => {
+      live.delete(child)
+      resolve(code)
+    })
   })
   await new Promise<void>((resolve) => log.end(resolve))
   const lines = (await readFile(job.log, 'utf8')).split('\n')

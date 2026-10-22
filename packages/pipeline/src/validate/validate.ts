@@ -19,12 +19,13 @@ export type Validation = {
   doubleCited: string[]
 }
 
+export const readFromImage = (f: Finding): boolean => /read from the image/.test(f.problem)
 // What no independent check confirmed (Andrei, 2026-10-19: self-serve holds all of it): errors, review findings, and
 // words the model read from the image (a "vegan" label, a dish name) — not alt text, which describes a picture.
 export const unverified = (v: Pick<Validation, 'errors' | 'review' | 'generated'>): Finding[] => [
   ...v.errors,
   ...v.review,
-  ...v.generated.filter((f) => /read from the image/.test(f.problem)),
+  ...v.generated.filter(readFromImage),
 ]
 
 // The paths a page marks for review: its errors and review findings (the printed view leaves them as printed).

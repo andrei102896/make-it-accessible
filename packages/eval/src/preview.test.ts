@@ -9,7 +9,6 @@ import {
   formatExpiry,
   HELD_FILE,
   heldErrors,
-  heldOf,
   parseExpiry,
   previewFile,
   withAssets,
@@ -73,33 +72,4 @@ test('a document is held while it has content errors, or was built before the ga
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
-})
-
-test('a page that did not convert holds its document, as unverified content does', () => {
-  const ok = { pdfPage: 1, validation: { errors: [], review: [], generated: [] } }
-  assert.deepEqual(heldOf([1], [ok]), [])
-  assert.deepEqual(heldOf([1, 2], [ok]), [
-    { pdfPage: 2, path: 'page', problem: 'the page did not convert (failure.txt in its folder)' },
-  ])
-  const wrong = {
-    pdfPage: 1,
-    validation: { errors: [{ path: 'blocks[0]', problem: 'not an amount' }], review: [], generated: [] },
-  }
-  assert.deepEqual(heldOf([1], [wrong]), [{ pdfPage: 1, path: 'blocks[0]', problem: 'not an amount' }])
-  // Unverified: a review finding and a word read from the image hold too; alt text does not.
-  const doubt = {
-    pdfPage: 1,
-    validation: {
-      errors: [],
-      review: [{ path: 'blocks[1]', problem: 'model unsure' }],
-      generated: [
-        { path: 'blocks[2]', problem: 'text read from the image: "vegan"' },
-        { path: 'blocks[3].image', problem: 'alt text: "a plate of pasta"' },
-      ],
-    },
-  }
-  assert.deepEqual(
-    heldOf([1], [doubt]).map((h) => h.path),
-    ['blocks[1]', 'blocks[2]'],
-  )
 })

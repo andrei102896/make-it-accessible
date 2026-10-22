@@ -89,3 +89,9 @@
 - A gitignored file that is the only copy is rewritten atomically with a backup beside it (targets.csv, 2026-10-18).
 - A fixed-width inline block inside a placed line wraps its own text and grows: hidden words go in an absolutely positioned child, the block keeps only the width and one em of height (icon tags, 2026-10-18).
 - pdftotext splits one printed line per column: words of a line are grouped by vertical overlap, not by its flow and line numbers (Howies' legend, 2026-10-18).
+- On this Mac's Node, process.hrtime counts through sleep (libuv uses mach_continuous_time) and every pending timer fires on waking: a clock difference never detects sleep, kern.waketime does (measure plan, 2026-10-22).
+- A deadline is one path among many that makes a result depend on load: every catch that degrades a result (Text only, a smaller render, a dropped page) is marked, and a marked result is rerun alone before it is read (measure plan, 2026-10-22).
+- A build folder seeded with a copy of the run that already holds the output file is never judged by that file existing: judge only what this run wrote (stale index.html after a refusal, 2026-10-22).
+- A file the build reads beside a run is parsed so that any failure, JSON.parse included, is "absent" plus a visible held line: a throw inside buildHtml aborts every rerender, which catches only Refused (approved.json, 2026-10-22).
+- Never decide whether a finding is an error from its problem text: validate.ts writes the same sentence into errors or review by path; carry the bucket (approved.json, "alt states …", 2026-10-22).
+- A human decision tied to engine output needs a line when it no longer matches: a rule change must never silently take it back (approved.json, 2026-10-22).

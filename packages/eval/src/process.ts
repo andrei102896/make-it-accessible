@@ -1,6 +1,7 @@
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { HELD_FILE, heldOf } from './preview.ts'
+import { HELD_FILE } from './preview.ts'
+import { heldOf, readApprovals } from './approved.ts'
 import { renderDocument, type HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { imageBoxes } from '@make-it-accessible/pipeline/html/source'
 import { area, intersection } from '@make-it-accessible/pipeline/pdf/geometry'
@@ -132,7 +133,8 @@ export async function buildHtml(
     // A rerender refreshes the extraction in memory; the printed view's fidelity measure reads it from the folder.
     if (printed) await writeFile(join(r.dir, 'extraction.json'), JSON.stringify(r.extraction))
   }
-  const held = heldOf(expected, results)
+  const { approvals, unreadable } = await readApprovals(docDir)
+  const { held, checked } = heldOf(expected, results, approvals, unreadable)
   await writeFile(join(docDir, HELD_FILE), json(held))
   // A scan's words are in its pixels: it has no backdrop to print over yet, so its document keeps the text view.
   if (printed)
@@ -267,7 +269,7 @@ export async function buildHtml(
       converted: r !== undefined,
     }
   })
-  await writeFile(join(docDir, REPORT_FILE), json(reportOf(rows, check, held)))
+  await writeFile(join(docDir, REPORT_FILE), json(reportOf(rows, check, held, checked)))
   return htmlPath
 }
 
