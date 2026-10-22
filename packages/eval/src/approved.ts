@@ -5,7 +5,7 @@ import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { readFromImage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 
-// A held detail a person checked against the PDF by hand (CLIENT_FLOW §4): recorded beside the run (`pnpm approve`),
+// A held detail a person checked against the PDF by hand (CLIENT_FLOW §4): recorded beside the run (`pnpm run approve`),
 // bound to the words the page publishes there, never to an error. It goes live; the owner is told and can correct it.
 export const APPROVED_FILE = 'approved.json'
 export const Approval = z.object({

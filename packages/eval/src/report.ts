@@ -44,9 +44,18 @@ const COSMETIC: Record<Kind, string | null> = {
   vanished: null,
   doubled: null,
 }
-// Each checked detail told to the owner once, the date written out (22 October 2026 reads the same in the UK and US).
-const checkedBy = (c: { label: string; name: string; at: string }): string =>
-  `On ${new Date(c.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}, ${c.name} at Make It Accessible checked this detail against your PDF by hand: ${c.label}. If it differs from your menu, reply to this email and we'll correct it.`
+// The checked details told once per page, one sentence per day and person (dates read the same in the UK and US).
+const checkedBy = (cs: readonly { label: string; name: string; at: string }[]): string[] => {
+  const day = (at: string): string =>
+    new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+  const groups = Map.groupBy(cs, (c) => JSON.stringify([day(c.at), c.name])).values()
+  const said = [...groups].map((g) => {
+    const labels = g.map((c) => c.label.replace(/[\s.;,]+$/, '')).join('; ')
+    return `On ${day(g[0]?.at ?? '')}, ${g[0]?.name ?? ''} at Make It Accessible checked ${g.length === 1 ? 'this detail' : 'these details'} against your PDF by hand: ${labels}.`
+  })
+  const closing = `If ${cs.length === 1 ? 'it' : 'anything'} differs from your menu, reply to this email and we'll correct it.`
+  return said.length ? [...said, closing] : []
+}
 const listed = (items: string[]): string =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}` : (items[0] ?? '')
 
@@ -82,7 +91,7 @@ export function reportOf(
       open.length
         ? `${String(open.length)} ${open.length === 1 ? 'detail' : 'details'} on page ${String(p.pdfPage)} ${open.length === 1 ? 'needs' : 'need'} your confirmation before the page goes live.`
         : '',
-      ...mine.map(checkedBy),
+      ...checkedBy(mine),
     ]
       .filter(Boolean)
       .join(' ')

@@ -53,3 +53,26 @@ test('a detail checked by hand is told to the owner with the date written out, a
     /On 22 October 2026, Andrei at Make It Accessible checked this detail against your PDF by hand: STILL \/ SPARKLING WATER, 330ml 2\.50 and 750ml 4\.25\. If it differs from your menu, reply to this email/,
   )
 })
+
+test('several details checked by hand: one sentence per day and person, labels apart by semicolons, one closing', () => {
+  const page = { keyPage: 1, pdfPage: 1, printed: true, scan: false, converted: true }
+  const check = { text: new Map(), cosmetic: new Set<never>() }
+  const at = '2026-10-22T12:51:33Z'
+  const fries = [
+    { pdfPage: 1, label: 'Sea salt skin on fries 4.95, gluten free.', name: 'Andrei', at },
+    {
+      pdfPage: 1,
+      label: 'Sea salt skin on fries: shown without a dairy-free mark, as in your PDF',
+      name: 'Andrei',
+      at,
+    },
+  ]
+  const say = (c: typeof fries): string => reportOf([page], check, [], c).pages[0]?.say ?? ''
+  assert.equal(
+    say(fries),
+    "On 22 October 2026, Andrei at Make It Accessible checked these details against your PDF by hand: Sea salt skin on fries 4.95, gluten free; Sea salt skin on fries: shown without a dairy-free mark, as in your PDF. If anything differs from your menu, reply to this email and we'll correct it.",
+  )
+  const two = say(fries.map((c, i) => (i ? { ...c, name: 'Louis' } : c)))
+  assert.match(two, /^On .* Andrei .* this detail .*\. On .* Louis .* this detail .*\. If anything differs/)
+  assert.equal(two.match(/If anything differs/g)?.length, 1)
+})
