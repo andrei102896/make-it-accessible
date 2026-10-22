@@ -190,7 +190,9 @@ export function mutants(
       drop(s, s.blocks.splice(i, 1))
     })
   // An icon word cited for another icon of a different label: the dish claims what it is not.
-  const icons = e.runs.flatMap((r, i) => (r.icon ? [i] : []))
+  // A covered icon's word is hidden: a defect pointing at it would be one no gate can see (pdf/visibility.ts).
+  const covered = new Set(e.hidden)
+  const icons = e.runs.flatMap((r, i) => (r.icon && !covered.has(r.id) ? [i] : []))
   const cited = rangesIn(page.blocks).filter(([a, b]) => a === b && icons.includes(a))
   for (const [from] of pick(cited, per)) {
     const other = icons.find((j) => e.runs[j]?.str !== e.runs[from]?.str)

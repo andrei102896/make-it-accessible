@@ -67,3 +67,5 @@
 - An icon in the PDF's vectors may draw nothing: ink at its box is tested before it is cited (icon 881, Waterloo dinner, 2026-10-22).
 - Only text that reads as printed, word for word and in order, can be confirmed; reordered or repunctuated text needs an edit (Waterloo group heading, 2026-10-22).
 - A measurement report keeps every signal the old logs showed (missing letters, ragged, fallbacks, per-line misses) and lists the worst first, each set apart (measure plan, 2026-10-22).
+- A word the model cited "by position" may stand for a visible mark we never named: before hiding it, look for the printed mark it replaced (Howies group menus' wheat, 2026-10-22).
+- Pieces merged into one drawing stop matching the legend's size and lose their name: an icon plus its slash or neighbour (Howies group 11 x 22.8 and 23.2 x 15.5 pt, 2026-10-22).

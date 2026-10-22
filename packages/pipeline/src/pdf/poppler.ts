@@ -13,7 +13,7 @@ import { piecesOf, picturesOf } from './art.ts'
 import { iconsOn } from './icons.ts'
 import { lettersDrawnBeside } from './drawnletters.ts'
 import { parseVectors } from './vectors.ts'
-import { hiddenRuns } from './visibility.ts'
+import { hiddenRuns, inkless, pixelsIn } from './visibility.ts'
 
 export { MAX_BUFFER, poppler, popplerBytes }
 export { copyForbidden } from './preflight.ts'
@@ -71,12 +71,17 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
   const fits = Math.sqrt(MAX_BUFFER / 3 / (width * height)) * 72
   const dpi = Math.min(VISIBILITY_DPI, (MAX_VISIBILITY_EDGE * 72) / Math.max(width, height), fits)
   const blank = runs.filter((r) => !r.str.trim()).map((r) => r.id)
-  const hidden = [...new Set([...hiddenRuns(runs, await renderPixels(pdf, pdfPage, dpi), dpi / 72), ...blank])]
+  const img = await renderPixels(pdf, pdfPage, dpi)
+  const judged = hiddenRuns(runs, img, dpi / 72)
+  const hidden = [...new Set([...(judged ?? []), ...blank])]
   const { boxes, rules, art, placed, glyphs } = parseVectors(await pageSvg(pdf, pdfPage))
   const shown = new Set(hidden)
   const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())
   const pictures = picturesOf(art, placed, words, width, height)
-  const icons = iconsOn(piecesOf(art, placed, words, width, height), words)
+  // An icon covered by what is painted after it draws nothing, as a hidden word (not judged when the render failed).
+  const icons = iconsOn(piecesOf(art, placed, words, width, height), words).map((i) =>
+    judged && inkless(pixelsIn(img, i.box, dpi / 72)) ? { ...i, hidden: true as const } : i,
+  )
   const lost = lettersDrawnBeside(art, glyphs, words)
   const read = { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures, icons }
   return lost.length ? { ...read, lost } : read

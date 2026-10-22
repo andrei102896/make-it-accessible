@@ -95,3 +95,5 @@
 - A file the build reads beside a run is parsed so that any failure, JSON.parse included, is "absent" plus a visible held line: a throw inside buildHtml aborts every rerender, which catches only Refused (approved.json, 2026-10-22).
 - Never decide whether a finding is an error from its problem text: validate.ts writes the same sentence into errors or review by path; carry the bucket (approved.json, "alt states …", 2026-10-22).
 - A human decision tied to engine output needs a line when it no longer matches: a rule change must never silently take it back (approved.json, 2026-10-22).
+- A guard that treats a failed render as "nothing hidden" covers every judgement made on that render, not only the words it was written for (icon ink test, 2026-10-22).
+- Hiding an input that a naming rule counts renames every other use: filter what gets named, never the evidence that names it (legendOf uses, 2026-10-22).

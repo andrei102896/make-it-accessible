@@ -100,6 +100,18 @@ test('inline icons the legend names become words at their box, on the line of th
   assert.equal(withIcons(page(runs, iconsOn(inline, runs)), twice).runs.length, 7)
 })
 
+test("an icon covered by what is painted after it keeps its word, hidden (Howies Waterloo dinner's fries: no dairy free)", () => {
+  const legend = legendOf([page(legendRuns, iconsOn(legendPieces, legendRuns), 2)])
+  const runs = [word('Sea', 100, 680, 15, 12, 3), word('fries', 120, 680, 20, 12, 3)]
+  const icons = [{ ...piece(81.5, 680.7, 13, 13), hidden: true as const }]
+  const e = withIcons(page(runs, icons), legend)
+  assert.deepEqual(
+    e.runs.slice(2).map((r) => [r.id, r.str]),
+    [['1:2', 'dairy free']],
+  )
+  assert.deepEqual(e.hidden, ['1:2'])
+})
+
 test("a line is anchored on its first word: the left column's lines do not chain the right column's into one tall band (Howies' salmon line)", () => {
   const runs = [
     word('Scottish', 119.7, 271.8, 38.6, 1),

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import type { Rgb } from '../html/color.ts'
 import type { Pixels } from './pixels.ts'
 import type { Box, Run } from './types.ts'
-import { hiddenRuns } from './visibility.ts'
+import { hiddenRuns, inkless, pixelsIn } from './visibility.ts'
 
 const NAVY: Rgb = [40, 40, 72]
 const WHITE: Rgb = [255, 255, 255]
@@ -58,9 +58,22 @@ test("a display glyph's box reaching over a small word does not cover it: the wo
   assert.deepEqual(hiddenRuns(runs, page(ink), 1), [])
 })
 
-test('a page where most words show no ink is a render failure: nothing is hidden', () => {
+test('a page where most words show no ink is a render failure: nothing is judged', () => {
   const runs = [run(0, { x: 10, y: 10, w: 40, h: 20 }), run(1, { x: 10, y: 50, w: 40, h: 20 })]
-  assert.deepEqual(hiddenRuns(runs, page([]), 1), [])
+  assert.equal(hiddenRuns(runs, page([]), 1), null)
+})
+
+test('a box draws nothing when none of its pixels leave the ground (an icon covered by what is painted after it)', () => {
+  const icon = { x: 100, y: 100, w: 11, h: 11 }
+  assert.ok(inkless(pixelsIn(page([]), icon, 1)))
+  assert.ok(!inkless(pixelsIn(page([icon]), icon, 1)))
+  // A filled mark leaves its corners as ground: its own colour as the dominant one still reads as ink.
+  const disc = {
+    width: 400,
+    height: 200,
+    at: (x: number, y: number): Rgb => ((x - 105) ** 2 + (y - 105) ** 2 < 30 ? WHITE : NAVY),
+  }
+  assert.ok(!inkless(pixelsIn(disc, icon, 1)))
 })
 
 test("a word drawn over another one does not inherit its neighbour's verdict", () => {

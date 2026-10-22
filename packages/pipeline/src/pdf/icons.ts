@@ -154,6 +154,7 @@ export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extrac
   if (!legend.length || !e.icons?.length) return e
   const lines = linesOf(e.runs)
   const own = new Set(legend.map((l) => JSON.stringify(l.box)))
+  const covered = new Set<Run>()
   const added = e.icons.flatMap((icon): Run[] => {
     const line = lineOf(icon.box, lines)
     const named = legend.filter((l) => sameSize(l, icon))
@@ -165,8 +166,12 @@ export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extrac
     if (!beside) return []
     // One run for the whole label: a citation of the icon is a citation of all its words (a lone "gluten" cited
     // from "gluten free" named the opposite of what the print says).
-    return [{ id: '', str: entry.label, box: icon.box, flow: beside.flow, line: beside.line, icon: true }]
+    const run: Run = { id: '', str: entry.label, box: icon.box, flow: beside.flow, line: beside.line, icon: true }
+    if (icon.hidden) covered.add(run)
+    return [run]
   })
-  const runs = [...e.runs, ...added].map((r, i) => (r.id ? r : { ...r, id: `${String(e.pdfPage)}:${String(i)}` }))
-  return { ...e, runs }
+  // A covered icon's word stays (saved answers cite icon words by place, eval/iconcites.ts) but is hidden.
+  const ids = new Map([...e.runs, ...added].map((r, i) => [r, r.id || `${String(e.pdfPage)}:${String(i)}`]))
+  const runs = [...ids].map(([r, id]) => ({ ...r, id }))
+  return { ...e, runs, hidden: [...e.hidden, ...[...covered].map((r) => ids.get(r) ?? '')] }
 }

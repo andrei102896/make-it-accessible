@@ -1,6 +1,6 @@
 import type { Rgb } from '../html/color.ts'
 import type { Pixels } from './pixels.ts'
-import type { Run } from './types.ts'
+import type { Box, Run } from './types.ts'
 
 // A word is judged on the part of its box no other word covers: at least this share and this many pixels.
 const MIN_FREE = 0.3
@@ -16,15 +16,34 @@ const SAME_SCALE = 2
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
 
+// Whether pixels draw nothing: none of them off their dominant colour (the ground) by INK_DIFF, past MIN_INK.
+export function inkless(pixels: readonly Rgb[]): boolean {
+  const ground = dominant(pixels)
+  return (
+    pixels.filter((c) => c.some((v, ch) => Math.abs(v - (ground[ch] ?? 0)) > INK_DIFF)).length < pixels.length * MIN_INK
+  )
+}
+
+// A box in PDF points as the image's pixel rectangle, inside the image.
+const rectOf = (b: Box, img: Pixels, scale: number): Rect => ({
+  x0: Math.max(0, Math.floor(b.x * scale)),
+  y0: Math.max(0, Math.floor(b.y * scale)),
+  x1: Math.min(img.width, Math.ceil((b.x + b.w) * scale)),
+  y1: Math.min(img.height, Math.ceil((b.y + b.h) * scale)),
+})
+
+// The image's pixels inside a box given in PDF points.
+export function pixelsIn(img: Pixels, box: Box, scale: number): Rgb[] {
+  const { x0, y0, x1, y1 } = rectOf(box, img, scale)
+  const out: Rgb[] = []
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) out.push(img.at(x, y))
+  return out
+}
+
 // Words in the text layer that draw nothing on the page (covered by a shape, or drawn in the colour beneath):
-// they must not be published. `scale` converts PDF points to the image's pixels.
-export function hiddenRuns(runs: readonly Run[], img: Pixels, scale: number): string[] {
-  const rects: Rect[] = runs.map((r) => ({
-    x0: Math.max(0, Math.floor(r.box.x * scale)),
-    y0: Math.max(0, Math.floor(r.box.y * scale)),
-    x1: Math.min(img.width, Math.ceil((r.box.x + r.box.w) * scale)),
-    y1: Math.min(img.height, Math.ceil((r.box.y + r.box.h) * scale)),
-  }))
+// they must not be published. `scale` converts PDF points to the image's pixels. Null when the render failed.
+export function hiddenRuns(runs: readonly Run[], img: Pixels, scale: number): string[] | null {
+  const rects = runs.map((r) => rectOf(r.box, img, scale))
   const hidden = new Set<number>()
   const undecided = new Set<number>()
   rects.forEach((rect, i) => {
@@ -47,9 +66,7 @@ export function hiddenRuns(runs: readonly Run[], img: Pixels, scale: number): st
       undecided.add(i)
       return
     }
-    const ground = dominant(free)
-    const ink = free.filter((c) => c.some((v, ch) => Math.abs(v - (ground[ch] ?? 0)) > INK_DIFF)).length
-    if (ink < free.length * MIN_INK) hidden.add(i)
+    if (inkless(free)) hidden.add(i)
   })
   // A word too covered by its neighbours to judge is hidden when it continues a hidden word on the same line.
   for (let grew = true; grew;) {
@@ -61,7 +78,7 @@ export function hiddenRuns(runs: readonly Run[], img: Pixels, scale: number): st
       grew = true
     }
   }
-  if (hidden.size > runs.length * MAX_HIDDEN) return []
+  if (hidden.size > runs.length * MAX_HIDDEN) return null
   return [...hidden].sort((a, b) => a - b).flatMap((i) => runs[i]?.id ?? [])
 }
 

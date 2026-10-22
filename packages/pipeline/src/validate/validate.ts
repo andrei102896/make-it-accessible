@@ -33,6 +33,8 @@ export const flaggedPaths = (v: Validation): string[] => [...v.errors, ...v.revi
 
 type Range = [number, number]
 
+// A text citing only words that draw nothing: one finding per text, at the first such place.
+const NOTHING = 'cites words that draw nothing on the page'
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
 // The punctuation that ends a span parts it from what follows ("PERONI NASTRO AZZURRO," + its strength): not a word.
 const reading = (s: string): string => loose(s).replace(/[,;:]+$/u, '')
@@ -93,6 +95,16 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
         errors.push({ path, problem: `range [${from},${to}] outside 0..${e.runs.length - 1}` })
         continue
       }
+      // The model never sees a hidden word: a range of nothing else is a saved answer from before the page was
+      // read again, maybe standing for a visible mark beside it (Howies' covered "NGCI"); a person looks.
+      const first = e.runs[from]
+      const nothing = `${NOTHING} (${Math.round(first?.box.x ?? 0)}, ${Math.round(first?.box.y ?? 0)})`
+      if (
+        path !== 'dropped' &&
+        e.runs.slice(from, to + 1).every((r) => hidden.has(r.id)) &&
+        !review.some((f) => f.path === path && f.problem.startsWith(NOTHING))
+      )
+        review.push({ path, problem: nothing })
       e.runs.slice(from, to + 1).forEach((run, offset) => {
         // A hidden word inside a cited range is not published (the renderer skips it too).
         if (hidden.has(run.id)) return
