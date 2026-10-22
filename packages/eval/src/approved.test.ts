@@ -110,3 +110,20 @@ test('a page that did not convert holds its document; alt text alone does not', 
     [9],
   )
 })
+
+test('a mark the legend names nothing can be checked and recorded: bound to its place and the words beside it', () => {
+  const lobster = {
+    path: 'icon@81,705',
+    problem: `a mark the size of the legend's icons matches none of them, before "Add half lobster"`,
+  }
+  const v = { errors: [], review: [lobster], generated: [] }
+  assert.equal(wordsAt(structure(), e, lobster.path, lobster.problem), lobster.problem)
+  const checked = approval({
+    ...lobster,
+    words: lobster.problem,
+    label: 'A lobster mark beside "Add half lobster", in no legend',
+  })
+  assert.deepEqual(heldOf([8], [page(structure(), v)], [checked]).held, [])
+  const moved = { ...lobster, problem: lobster.problem.replace('lobster', 'crab') }
+  assert.equal(heldOf([8], [page(structure(), { ...v, review: [moved] })], [checked]).held.length, 1)
+})

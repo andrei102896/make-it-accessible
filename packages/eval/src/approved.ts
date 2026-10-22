@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
-import { readFromImage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
+import { ICON_AT, readFromImage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 
 // A held detail a person checked against the PDF by hand (CLIENT_FLOW §4): recorded beside the run (`pnpm run approve`),
 // bound to the words the page publishes there, never to an error. It goes live; the owner is told and can correct it.
@@ -37,6 +37,8 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 // What the page publishes at a finding's path: its node as JSON, each citation as the words it shows. Null where no
 // approval may hold: the page, an unresolved path, a finding naming another path too (consistency.ts).
 export function wordsAt(page: PageStructure, e: Extraction, path: string, problem: string): string | null {
+  // An unnamed icon's finding names its place and the words beside it: those are what a person checked.
+  if (path.startsWith(ICON_AT)) return problem
   if (path === 'page' || /\bblocks\[\d+\]/.test(problem)) return null
   let node: unknown = page
   for (const [, key, index] of path.matchAll(/([A-Za-z]+)|\[(\d+)\]/g)) {

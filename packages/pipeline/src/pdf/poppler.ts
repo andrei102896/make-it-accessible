@@ -9,7 +9,7 @@ import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
 import { lineAt, textLines, type Line } from './face.ts'
 import type { Box, Extraction, PageImage, Run } from './types.ts'
-import { piecesOf, picturesOf } from './art.ts'
+import { piecesOf, picturesOf, shapeIn } from './art.ts'
 import { iconsOn } from './icons.ts'
 import { lettersDrawnBeside } from './drawnletters.ts'
 import { parseVectors } from './vectors.ts'
@@ -79,9 +79,11 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
   const words = runs.filter((r) => !shown.has(r.id) && r.str.trim())
   const pictures = picturesOf(art, placed, words, width, height)
   // An icon covered by what is painted after it draws nothing, as a hidden word (not judged when the render failed).
-  const icons = iconsOn(piecesOf(art, placed, words, width, height), words).map((i) =>
-    judged && inkless(pixelsIn(img, i.box, dpi / 72)) ? { ...i, hidden: true as const } : i,
-  )
+  const icons = iconsOn(piecesOf(art, placed, words, width, height), words).map((i) => {
+    const shape = i.kind === 'vector' ? shapeIn(art, i.box) : []
+    const drawn = shape.length ? { ...i, shape } : i
+    return judged && inkless(pixelsIn(img, i.box, dpi / 72)) ? { ...drawn, hidden: true as const } : drawn
+  })
   const lost = lettersDrawnBeside(art, glyphs, words)
   const read = { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures, icons }
   return lost.length ? { ...read, lost } : read

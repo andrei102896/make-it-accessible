@@ -1,10 +1,10 @@
 import { lettersOf } from '../text/normalize.ts'
-import type { Box, Extraction, Picture, Run } from './types.ts'
+import type { Box, Extraction, Run } from './types.ts'
 
 // Dietary icons printed inside text lines ("( [wheat] available)") have no word in the text layer; the document's
 // legend of icon-and-label pairs names them, and a named icon becomes the label's words at its printed spot.
 
-// An icon stands on a printed line: between these shares of the line's height, no wider than WIDE × its height.
+// An icon stands on a printed line: between these shares of its nearest word's height, no wider than WIDE × its height.
 const LINE_TALL = 1.6
 const MIN_TALL = 0.4
 const WIDE = 3
@@ -15,8 +15,10 @@ const SAME_LINE = 0.5
 const LABEL_REACH = 1.5
 const MAX_LABEL = 3
 const MIN_PAIRS = 2
-// A legend icon and its inline copies measure the same within this (pt); two legend icons this close are told
-// apart by nothing, so neither names anything.
+// Two drawings whose path points lie this close on average (a share of their box, both ways) are one icon: copies
+// measure 0.005 at most whatever their size, different icons 0.05 at least (Howies' lobster disc and dairy free).
+const SAME_SHAPE = 0.02
+// Without a shape (a raster, an old extraction) a legend icon and its copies measure the same within this (pt).
 const SAME_SIZE = 1
 // A drawing a word's box covers this much of is no icon between words.
 const UNDER_WORD = 0.2
@@ -25,7 +27,7 @@ const UNDER_WORD = 0.2
 const TOUCH = 1
 const ICON_MAX = 40
 
-export type IconPiece = Pick<Picture, 'box' | 'kind'>
+export type IconPiece = Pick<NonNullable<Extraction['icons']>[number], 'box' | 'kind' | 'shape'>
 export type LegendEntry = IconPiece & { label: string }
 // `seed`: the first word's box, which every word of the line must overlap; the union box would chain down a
 // column and across to the next one (Howies' salmon line, 36 pt tall by the left column's two lines).
@@ -52,16 +54,17 @@ function linesOf(runs: readonly Run[]): Line[] {
   for (const l of lines) l.runs.sort((a, b) => a.box.x - b.box.x)
   return lines
 }
+// An icon is measured against the word nearest it on its line: a line read across columns is as tall as all of
+// them (Howies' houmous leaf, 8.2 pt beside 17 pt words on a 21.9 pt line).
 const lineOf = (b: Box, lines: readonly Line[]): Line | undefined => {
   const cy = b.y + b.h / 2
-  return lines.find(
-    (l) =>
-      cy >= l.box.y &&
-      cy <= l.box.y + l.box.h &&
-      b.h <= l.box.h * LINE_TALL &&
-      b.h >= l.box.h * MIN_TALL &&
-      !l.runs.some((r) => across(r.box, b) > b.w * UNDER_WORD),
-  )
+  const gap = (r: Run): number => Math.max(r.box.x - (b.x + b.w), b.x - (r.box.x + r.box.w), 0)
+  return lines.find((l) => {
+    if (cy < l.box.y || cy > l.box.y + l.box.h) return false
+    if (l.runs.some((r) => across(r.box, b) > b.w * UNDER_WORD && overlap(r.box, b) > 0)) return false
+    const by = l.runs.reduce((best, r) => (gap(r) < gap(best) ? r : best))
+    return cy >= by.box.y && cy <= by.box.y + by.box.h && b.h <= by.box.h * LINE_TALL && b.h >= by.box.h * MIN_TALL
+  })
 }
 
 // Touching small pieces of one kind as one drawing each (ponytail: a pass per piece over the rest; a page holds
@@ -85,6 +88,13 @@ export const iconsOn = (pieces: readonly IconPiece[], runs: readonly Run[]): Ico
 
 const sameSize = (a: IconPiece, b: IconPiece): boolean =>
   a.kind === b.kind && Math.abs(a.box.w - b.box.w) <= SAME_SIZE && Math.abs(a.box.h - b.box.h) <= SAME_SIZE
+const nearest = (a: readonly [number, number][], b: readonly [number, number][]): number =>
+  a.reduce((t, [x, y]) => t + Math.min(...b.map(([u, v]) => Math.hypot(x - u, y - v))), 0) / a.length
+// One icon: the same drawing at any size, or, without shapes to compare, the same size.
+const alike = (a: IconPiece, b: IconPiece): boolean =>
+  a.shape?.length && b.shape?.length
+    ? (nearest(a.shape, b.shape) + nearest(b.shape, a.shape)) / 2 <= SAME_SHAPE
+    : sameSize(a, b)
 
 // The words printed after an icon on its line: the first within LABEL_REACH × its width, each next within the
 // line's height of the one before.
@@ -100,16 +110,24 @@ function wordsAfter(icon: Box, line: Line, until = Infinity): Run[] {
   return out
 }
 
+// A label too long for one ends where a new phrase starts, a capital after a lower-case word ("Contains nuts |
+// Please ask for ("); one that fits stays whole ("Suitable for Vegetarians").
+function phrase(words: Run[]): Run[] {
+  if (words.length <= MAX_LABEL) return words
+  const cut = words.findIndex((w, i) => i > 0 && /^\p{Lu}/u.test(w.str) && /^\p{Ll}/u.test(words[i - 1]?.str ?? ''))
+  return cut > 0 ? words.slice(0, cut) : words
+}
+
 type Pair = IconPiece & { words: string[] }
 // The icon-and-label pairs of a line, when it holds at least MIN_PAIRS of them.
 function pairsOf(icons: readonly IconPiece[], line: Line): Pair[] {
   const own = icons.filter((i) => lineOf(i.box, [line])).sort((a, b) => a.box.x - b.box.x)
   const pairs = own.flatMap((icon, k): Pair[] => {
-    const label = wordsAfter(icon.box, line, own[k + 1]?.box.x)
+    const label = phrase(wordsAfter(icon.box, line, own[k + 1]?.box.x))
     const first = label[0]
     if (!first || label.length > MAX_LABEL || !/^\p{Lu}/u.test(first.str) || label.some((r) => /\d/.test(r.str)))
       return []
-    return [{ box: icon.box, kind: icon.kind, words: label.map((r) => r.str) }]
+    return [{ ...icon, words: label.map((r) => r.str) }]
   })
   return pairs.length >= MIN_PAIRS ? pairs : []
 }
@@ -130,7 +148,8 @@ function named(pair: Pair, uses: readonly string[][]): string {
     .join(' ')
 }
 
-// The document's legend: the pairs of its legend lines, less icons another entry matches in size.
+// The document's legend: the pairs of its legend lines, less icons alike another entry's with another label (told
+// apart by nothing: Cattlemen's arrows over "enhance your steak" and "desserts").
 export function legendOf(pages: readonly Pick<Extraction, 'runs' | 'icons'>[]): LegendEntry[] {
   const lined = pages.map((p) => ({ icons: p.icons ?? [], lines: linesOf(p.runs) }))
   const pairs = lined.flatMap((p) => p.lines.flatMap((l) => pairsOf(p.icons, l)))
@@ -138,30 +157,44 @@ export function legendOf(pages: readonly Pick<Extraction, 'runs' | 'icons'>[]): 
   const uses = (a: Pair): string[][] =>
     lined.flatMap((p) =>
       p.icons
-        .filter((i) => sameSize(i, a) && !own.has(JSON.stringify(i.box)))
+        .filter((i) => alike(i, a) && !own.has(JSON.stringify(i.box)))
         .flatMap((i) => {
           const line = lineOf(i.box, p.lines)
           return line ? [wordsAfter(i.box, line).map((r) => r.str)] : []
         }),
     )
-  const entries = pairs.map((a) => ({ box: a.box, kind: a.kind, label: named(a, uses(a)) }))
-  return entries.filter((a) => !entries.some((b) => b !== a && b.label !== a.label && sameSize(a, b)))
+  const entries = pairs.map((a) => ({
+    box: a.box,
+    kind: a.kind,
+    ...(a.shape && { shape: a.shape }),
+    label: named(a, uses(a)),
+  }))
+  return entries.filter((a) => !entries.some((b) => b !== a && b.label !== a.label && alike(a, b)))
 }
 
 // The page with each inline icon the legend names appended to its runs as the label's words, at the icon's box, on
-// the line of the word beside it (the model's inventory sorts such a line by x). Ids continue the page's.
+// the line of the word beside it (the model's inventory sorts such a line by x). Ids continue the page's. An icon
+// of the legend's heights alike none of its entries, or several, is marked `unnamed`: it holds the page.
 export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extraction {
   if (!legend.length || !e.icons?.length) return e
   const lines = linesOf(e.runs)
   const own = new Set(legend.map((l) => JSON.stringify(l.box)))
+  const heights = legend.map((l) => l.box.h)
+  const legendSized = (b: Box): boolean =>
+    b.h >= Math.min(...heights) - SAME_SIZE && b.h <= Math.max(...heights) + SAME_SIZE
   const covered = new Set<Run>()
+  const unnamed = new Set<IconPiece>()
   const added = e.icons.flatMap((icon): Run[] => {
     const line = lineOf(icon.box, lines)
-    const named = legend.filter((l) => sameSize(l, icon))
+    const named = legend.filter((l) => alike(l, icon))
     const [entry] = named
     // A legend printed on several pages lists each label more than once: one label is one name.
     const labels = new Set(named.map((l) => l.label))
-    if (!line || !entry || labels.size !== 1 || own.has(JSON.stringify(icon.box))) return []
+    if (!line || own.has(JSON.stringify(icon.box))) return []
+    if (!entry || labels.size !== 1) {
+      if (!icon.hidden && legendSized(icon.box)) unnamed.add(icon)
+      return []
+    }
     const beside = line.runs.find((r) => r.box.x >= icon.box.x + icon.box.w - 1) ?? line.runs.at(-1)
     if (!beside) return []
     // One run for the whole label: a citation of the icon is a citation of all its words (a lone "gluten" cited
@@ -173,5 +206,6 @@ export function withIcons(e: Extraction, legend: readonly LegendEntry[]): Extrac
   // A covered icon's word stays (saved answers cite icon words by place, eval/iconcites.ts) but is hidden.
   const ids = new Map([...e.runs, ...added].map((r, i) => [r, r.id || `${String(e.pdfPage)}:${String(i)}`]))
   const runs = [...ids].map(([r, id]) => ({ ...r, id }))
-  return { ...e, runs, hidden: [...e.hidden, ...[...covered].map((r) => ids.get(r) ?? '')] }
+  const icons = e.icons.map((i) => (unnamed.has(i) ? { ...i, unnamed: true as const } : i))
+  return { ...e, runs, hidden: [...e.hidden, ...[...covered].map((r) => ids.get(r) ?? '')], icons }
 }

@@ -74,8 +74,17 @@ const Extraction = z.object({
   rules: z.array(Rule).optional(),
   pictures: z.array(Picture).optional(),
   // Small drawings standing on a text line (pdf/icons.ts); runs extracted before they were read have none.
-  // `hidden`: drawn but covered by what is painted after it (pdf/visibility.ts), its word hidden too.
-  icons: z.array(Picture.pick({ box: true, kind: true }).extend({ hidden: z.literal(true).optional() })).optional(),
+  // `hidden`: drawn but covered by what is painted after it (pdf/visibility.ts), its word hidden too. `shape`: its
+  // path points as shares of its box (pdf/art.ts). `unnamed`: legend-sized, alike no legend icon (holds the page).
+  icons: z
+    .array(
+      Picture.pick({ box: true, kind: true }).extend({
+        hidden: z.literal(true).optional(),
+        shape: z.array(z.tuple([z.number(), z.number()])).optional(),
+        unnamed: z.literal(true).optional(),
+      }),
+    )
+    .optional(),
 })
 
 export type Box = z.infer<typeof Box>

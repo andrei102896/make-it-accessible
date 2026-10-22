@@ -26,6 +26,21 @@ export function moveIconCites(structure: unknown, saved: readonly Run[], fresh: 
     if (Array.isArray(v)) v.forEach(walk)
     else if (typeof v === 'object' && v !== null)
       for (const [key, x] of Object.entries(v)) {
+        // A dropped icon word the PDF no longer gives (a false legend's name) has nothing left to leave out.
+        if (key === 'dropped' && Array.isArray(x)) {
+          const ranges = x.map((r: unknown): Range => (Array.isArray(r) ? [Number(r[0]), Number(r[1])] : [0, -1]))
+          if (ranges.some(([a, b]) => a < base && b >= base)) ok = false
+          else
+            Reflect.set(
+              v,
+              key,
+              ranges.flatMap((r): Range[] => {
+                const moved = r[1] < base ? r : move(r)
+                return moved ? [moved] : []
+              }),
+            )
+          continue
+        }
         if (key !== 'src' || !Array.isArray(x)) {
           walk(x)
           continue

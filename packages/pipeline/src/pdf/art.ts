@@ -146,6 +146,20 @@ export function piecesOf(
   ]
 }
 
+// A point this far (pt) outside a drawing's box is still on its edge (coordinates rounded by pdftocairo).
+const EDGE = 0.5
+// A drawing's shape: the path points of the shown art wholly inside its box, as shares of the box (x / w, y / h),
+// so a copy drawn smaller or squashed is the same shape. Rounded: the extraction stores it.
+export function shapeIn(art: readonly Drawn[], b: Box): [number, number][] {
+  const inside = ([x, y]: [number, number]): boolean =>
+    x >= b.x - EDGE && x <= b.x + b.w + EDGE && y >= b.y - EDGE && y <= b.y + b.h + EDGE
+  const round = (v: number): number => Math.round(v * 1000) / 1000
+  return art
+    .filter((d) => opacityOf(d) >= MIN_SHOWN)
+    .map((d) => d.subpaths.flatMap((s) => s.points))
+    .filter((ps) => ps.length && ps.every(inside))
+    .flatMap((ps) => ps.map(([x, y]): [number, number] => [round((x - b.x) / b.w), round((y - b.y) / b.h)]))
+}
 export function picturesOf(
   art: readonly Drawn[],
   placed: readonly Placed[],

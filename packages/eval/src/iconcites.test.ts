@@ -63,3 +63,21 @@ test('a cited icon word with no fresh icon at its place, or a range across the t
   assert.equal(moveIconCites({ src: [[2, 2]] }, saved, [...text, run('1:2', 'vegan', 200, true)], 2), false)
   assert.equal(moveIconCites({ src: [[1, 2]] }, saved, [...text, run('1:2', 'gluten', 100, true)], 2), false)
 })
+
+test("a dropped icon word the PDF no longer gives is no longer dropped; one it still gives moves (Cattlemen's arrows)", () => {
+  const saved = [...text, run('1:2', 'desserts', 100, true), run('1:3', 'vegan', 200, true)]
+  const structure = {
+    blocks: [],
+    dropped: [
+      [0, 0],
+      [2, 2],
+      [3, 3],
+    ],
+  }
+  assert.equal(moveIconCites(structure, saved, [...text, run('1:2', 'vegan', 200, true)], 2), true)
+  assert.deepEqual(structure.dropped, [
+    [0, 0],
+    [2, 2],
+  ])
+  assert.equal(moveIconCites({ dropped: [[1, 2]] }, saved, text, 2), false)
+})
