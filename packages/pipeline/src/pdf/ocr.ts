@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MAX_BUFFER, poppler, popplerBytes } from './exec.ts'
 import type { Box, Extraction, Run } from './types.ts'
+import { degraded } from '../degraded.ts'
 
 // An independent reading of the printed page: Tesseract on the rendered pixels, never on the PDF's text layer.
 const OCR_DPI = 300
@@ -30,7 +31,7 @@ const engineVersion = (): Promise<string | null> =>
       .digest('hex')
     return `${version} eng ${eng} psm ${PSM}`
   })().catch((error: unknown) => {
-    console.error(`OCR unavailable, scanned pages stay held: ${error instanceof Error ? error.message : ''}`)
+    degraded(`OCR unavailable, scanned pages stay held: ${error instanceof Error ? error.message : ''}`)
     return null
   }))
 

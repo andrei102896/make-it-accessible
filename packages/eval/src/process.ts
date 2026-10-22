@@ -30,6 +30,7 @@ import { withIcons, type LegendEntry } from '@make-it-accessible/pipeline/pdf/ic
 import { extractWhole } from './wholewords.ts'
 import { folderStore } from './readings.ts'
 import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 const MAX_UNCOVERED = 0.1
 
@@ -70,7 +71,7 @@ export async function processPage(
   // A page whose text the layer mostly lacks is read by OCR and by the model apart (model/scan.ts).
   const read = await readPrinted(pdfPath, pdfPage, extraction, folderStore()).catch((error: unknown) => {
     // A failed reading leaves the page as its layer reads it: a scan then stays held, never the document stopped.
-    console.error(`${label}: OCR failed: ${error instanceof Error ? error.message : ''}`)
+    degraded(`${label}: OCR failed: ${error instanceof Error ? error.message : ''}`)
     return null
   })
   if (read && readsAsScan(extraction, read))

@@ -16,6 +16,7 @@ const Page = z.object({
 })
 const Report = z.object({ pages: z.array(Page), notes: z.array(z.string()) })
 export type Report = z.infer<typeof Report>
+export const parseReport = (raw: string): Report => Report.parse(JSON.parse(raw))
 
 // The page's switch reads "As printed" / "Text only" (html/strings.ts): the owner finds it by those words.
 const OPENS_AS_TEXT = 'opens as Text only, where every word reads clearly.'

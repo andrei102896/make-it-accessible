@@ -10,6 +10,7 @@ import { parseExtraction, type Box } from '@make-it-accessible/pipeline/pdf/type
 import { PDFJS_TIMEOUT_MS, withDeadline } from './deadline.ts'
 import { CAPTURE_PX, openPdf, type PdfTab } from './pdfshot.ts'
 import { pageDir } from './process.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Each page of a built document measured against its PDF (pipeline/pdf/fidelity.ts): sheet, ground (the sheet
 // with its placed text hidden) and the PDF drawn in one Chromium at one scale; pixels stay in the browser.
@@ -130,6 +131,7 @@ export async function measureDocument(
       } catch (error) {
         // A page that stalls is skipped and the PDF tab is opened afresh for the next one.
         const detail = error instanceof Error ? error.message : String(error)
+        degraded(`${docDir} p${String(sheet.keyPage)}: measure stalled, ${detail}`)
         out.push({ keyPage: sheet.keyPage, skipped: 'stall', detail })
         await pdfTab.close()
         pdfTab = null

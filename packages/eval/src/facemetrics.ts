@@ -6,6 +6,7 @@ import type { PrintedFace } from '@make-it-accessible/pipeline/pdf/printedfaces'
 import { printFaceOf } from '@make-it-accessible/pipeline/html/printface'
 import type { FontFile, FontManifest } from '@make-it-accessible/pipeline/html/webfonts'
 import { FONTS_DIR } from './paths.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Each printed face measured in a browser beside its lookalike, on the letters the printed subset has: the size
 // scales to the printed x-height and cap height (placed.ts blends them per line) and the weight with the printed stem.
@@ -48,6 +49,7 @@ export async function faceMetrics(
         tab ??= await browser.newPage()
         const measured = await measure(tab, key, face, library)
         if (measured === TIMED_OUT) {
+          degraded(`${key}: face metrics timed out`)
           await tab.close()
           tab = null
         }

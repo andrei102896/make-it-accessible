@@ -8,6 +8,7 @@ import { parseExtraction, type Extraction } from '@make-it-accessible/pipeline/p
 import { moveIconCites } from './iconcites.ts'
 import { folderStore } from './readings.ts'
 import { extractWhole } from './wholewords.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // A saved page as the build sees it today: fonts, colours, hidden words, drawn shapes and icon words read afresh
 // from the PDF, the structure's icon citations moved onto them and squared with the layer (reconcile.ts), with
@@ -54,7 +55,7 @@ export async function refreshedPage(
   if (!moveIconCites(structure, saved, extraction.runs, base.length))
     throw new Error(`${dir}: a cited icon word has no fresh icon at its place; run adhoc again`)
   const ocr = await readPrinted(pdf, extraction.pdfPage, extraction, folderStore()).catch((error: unknown) => {
-    console.error(`${dir}: OCR failed: ${error instanceof Error ? error.message : ''}`)
+    degraded(`${dir}: OCR failed: ${error instanceof Error ? error.message : ''}`)
     return null
   })
   return { extraction, structure: reconciled(structure, extraction), ocr: ocr ?? [] }

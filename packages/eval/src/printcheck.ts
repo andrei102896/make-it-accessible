@@ -3,6 +3,7 @@ import type { HtmlPage } from '@make-it-accessible/pipeline/html/document'
 import { judgePage, type Kind, type Misinforming } from '@make-it-accessible/pipeline/pdf/fidelity-verdict'
 import { measureDocument, type PageFidelity } from './fidelity-measure.ts'
 import { fitPlaced } from './fit.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Why a page that could print shows the text view instead: its text would not fit or collide (fit.ts), the
 // fidelity verdict found it misinforming (fidelity-verdict.ts), or it could not be compared with its PDF.
@@ -25,7 +26,7 @@ export async function checkPrinted(
     const shown = new Set(pages.flatMap((p) => (p.backdrop ? [p.keyPage] : [])))
     // A stuck fit (its deadline) leaves the document unchecked: every printed page goes to Text only, the set goes on.
     const misfits = await fitPlaced(htmlPath).catch((error: unknown) => {
-      console.error(`${docDir}: fit failed (${error instanceof Error ? error.message : String(error)})`)
+      degraded(`${docDir}: fit failed (${error instanceof Error ? error.message : String(error)})`)
       return [...shown].map((page) => ({ page, why: 'not-checked' as const }))
     })
     const judged = new Map<number, TextWhy>()
@@ -73,7 +74,7 @@ async function measureTwice(pdfPath: string, docDir: string): Promise<PageFideli
     try {
       return await measureDocument(browser, docDir, pdfPath)
     } catch (error) {
-      console.error(`${docDir}: fidelity not measured (${error instanceof Error ? error.message : String(error)})`)
+      degraded(`${docDir}: fidelity not measured (${error instanceof Error ? error.message : String(error)})`)
     } finally {
       await browser.close()
     }

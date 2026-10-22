@@ -62,8 +62,10 @@ async function rebuild(s: Source): Promise<string> {
 }
 
 for (const s of chosen)
-  await rebuild(s).catch((e: unknown) => {
-    // A document the engine now refuses (pdf/preflight.ts) is reported, the rest of the set rebuilt.
+  await rebuild(s).catch(async (e: unknown) => {
+    // A document the engine now refuses (pdf/preflight.ts) is reported, the rest of the set rebuilt; its folder,
+    // seeded with the saved run's page, goes, so nothing measures that page as this build's.
     if (!(e instanceof Refused)) throw e
+    await rm(join(REBUILT_DIR, s.slug), { recursive: true, force: true })
     console.error(`${s.slug}: refused, ${e.message}`)
   })

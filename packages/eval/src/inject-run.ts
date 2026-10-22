@@ -1,5 +1,6 @@
 import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import type { PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import type { OcrWord } from '@make-it-accessible/pipeline/pdf/ocr'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
@@ -10,16 +11,26 @@ import { documentLegend } from './legend.ts'
 import { OUT_DIR } from './paths.ts'
 import { refreshedPage } from './refresh.ts'
 import { loadSources, sourcePdf, VERIFY_FILE } from './sources.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
-// pnpm inject [--per 3] [--verify [--sealed]]: every saved page of the set, refreshed as the build sees it, takes injected content defects
-// (inject.ts); on pages the gates leave clean, a defect is caught when the page becomes held. Prints the catch rate
-// per defect and writes out/inject.json (no timestamps: a run repeats).
-const at = process.argv.indexOf('--per')
-const PER = at >= 0 ? Number(process.argv[at + 1]) : 3
-// `--verify`: the verification set instead of the working set (sources.ts).
-const SET = process.argv.includes('--verify') ? VERIFY_FILE : undefined
-// `--sealed`: only the verification menus never looked at (group verify-sealed), the judge of a rule learned elsewhere.
-const SEALED = process.argv.includes('--sealed')
+// pnpm inject [--per 3] [--verify [--sealed]] [--out=<file>] [<slug>…]: every saved page of the set (or of the slugs
+// given), refreshed as the build sees it, takes injected content defects (inject.ts); on pages the gates leave clean,
+// a defect is caught when the page becomes held. Prints the catch rate per defect and writes out/inject.json (no
+// timestamps: a run repeats; `--out`: elsewhere, as pnpm measure does per document).
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    per: { type: 'string', default: '3' },
+    // The verification set instead of the working set (sources.ts).
+    verify: { type: 'boolean', default: false },
+    // Only the verification menus never looked at (group verify-sealed), the judge of a rule learned elsewhere.
+    sealed: { type: 'boolean', default: false },
+    out: { type: 'string', default: join(OUT_DIR, 'inject.json') },
+  },
+})
+const PER = Number(values.per)
+const SET = values.verify ? VERIFY_FILE : undefined
+const SEALED = values.sealed
 
 type Page = { structure: PageStructure; extraction: Extraction; ocr: OcrWord[] }
 // A gate: whether it holds the page. More gates (geometry, icon shape, OCR, pixels) join this list.
@@ -51,7 +62,9 @@ const tally = new Map<Defect, { injected: number; caught: number; missed: string
 )
 let clean = 0
 let held = 0
-for (const s of (await loadSources(SET)).filter((x) => !SEALED || x.group === 'verify-sealed')) {
+for (const s of (await loadSources(SET)).filter(
+  (x) => (!SEALED || x.group === 'verify-sealed') && (!positionals.length || positionals.includes(x.slug)),
+)) {
   const pdf = sourcePdf(s)
   const legend = await documentLegend(pdf).catch((e: unknown) => {
     if (e instanceof Refused) return null
@@ -59,7 +72,10 @@ for (const s of (await loadSources(SET)).filter((x) => !SEALED || x.group === 'v
   })
   if (!legend) continue
   for (const d of (await readdir(s.run)).filter((x) => /^p\d+$/.test(x)).sort()) {
-    const page = await refreshedPage(pdf, join(s.run, d), legend).catch(() => null)
+    const page = await refreshedPage(pdf, join(s.run, d), legend).catch((e: unknown) => {
+      degraded(`${s.slug} ${d}: not refreshed, ${e instanceof Error ? e.message : String(e)}`)
+      return null
+    })
     if (!page) continue
     if (GATES.some((g) => g.holds(page))) {
       held++
@@ -84,7 +100,4 @@ for (const r of rows)
   console.info(
     `${r.defect.padEnd(16)} ${String(r.caught).padStart(4)} / ${String(r.injected).padEnd(4)} ${r.rate === null ? '-' : `${String(r.rate)} %`}`,
   )
-await writeFile(
-  join(OUT_DIR, 'inject.json'),
-  JSON.stringify({ per: PER, clean, held, gates: GATES.map((g) => g.name), rows }, null, 2),
-)
+await writeFile(values.out, JSON.stringify({ per: PER, clean, held, gates: GATES.map((g) => g.name), rows }, null, 2))

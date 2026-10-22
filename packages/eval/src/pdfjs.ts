@@ -8,6 +8,7 @@ import { PdfFont, PdfItem } from '@make-it-accessible/pipeline/pdf/pdfjs'
 import { trackingOf } from '@make-it-accessible/pipeline/pdf/tracking'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { permittedFonts } from './rawfonts.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Poppler's words and pdf.js' items agree on the page's frame only where the crop box is the media box: within this.
 export const SAME_FRAME = 0.5
@@ -27,7 +28,7 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
   const task = getDocument({ data, fontExtraProperties: true, disableFontFace: true, verbosity: 0 })
   const doc = await withDeadline(task.promise, PDFJS_TIMEOUT_MS, 'pdf.js did not open it in time').catch(
     async (err: unknown) => {
-      console.error(`${pdf}: pdf.js could not read it, no tracking or own faces: ${String(err)}`)
+      degraded(`${pdf}: pdf.js could not read it, no tracking or own faces: ${String(err)}`)
       await task.destroy()
       return null
     },
@@ -64,7 +65,7 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
           printed: printedFaces(e.runs, items, fonts, box, drawn),
         }
       } catch (err) {
-        console.error(`${pdf} p${String(e.pdfPage)}: no tracking or own faces: ${String(err)}`)
+        degraded(`${pdf} p${String(e.pdfPage)}: no tracking or own faces: ${String(err)}`)
         return NONE()
       } finally {
         page?.cleanup()

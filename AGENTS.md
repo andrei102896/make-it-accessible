@@ -34,6 +34,8 @@ pnpm check        # typecheck + lint + format check + tests
 ```
 All green before declaring done. List every file touched. Behaviour-preserving refactors are confirmed with `pnpm stage0 --rescore <run>` (scores must not change).
 
+A change to what the engine builds is measured with `pnpm measure` (rebuild, print fidelity, injected defects, check:page and the stage-0 rescore, both sets in parallel, compared with HEAD's round): `--quick` while iterating (never quoted), the full round with `--sealed` once before the commit, `--status` to confirm it is recorded for the tree being committed. A line marked `DEGRADED` or a job the Mac slept through is run again alone; an `INTERRUPTED` round is no result.
+
 ## Docs upkeep
 - Docs are the source of truth: update them in the same change or stop and ask.
 - Record regression guards (incident + "do not remove") and dead ends (evidence + "do not rebuild") in README.md.

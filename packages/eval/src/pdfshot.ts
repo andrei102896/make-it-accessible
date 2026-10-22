@@ -5,6 +5,7 @@ import type * as PdfJs from 'pdfjs-dist'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { Browser, BrowserContext, Page } from 'playwright'
 import { withDeadline } from './deadline.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // PDF pages drawn by pdf.js in the browser that captures our sheets: embedded faces load as browser fonts and their
 // text goes through the same rasteriser as ours (Poppler's thin strokes read lighter: Bannatyne p2, 2026-10-18).
@@ -90,7 +91,7 @@ export async function pdfShots(browser: Browser, pdf: string, shots: readonly Sh
       done.add(s.pdfPage)
     }
   } catch (e) {
-    console.error(`${pdf}: pdf.js render stopped (${e instanceof Error ? e.message : String(e)}); Poppler raster kept`)
+    degraded(`${pdf}: pdf.js render stopped (${e instanceof Error ? e.message : String(e)}); Poppler raster kept`)
   } finally {
     await open?.close()
   }

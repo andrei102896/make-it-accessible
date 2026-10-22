@@ -22,6 +22,7 @@ import type { Run } from '@make-it-accessible/pipeline/pdf/types'
 import { fontLibrary } from './brand.ts'
 import { faceMetrics, type Cache } from './facemetrics.ts'
 import { pdfFacts } from './pdfjs.ts'
+import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Sharp at twice the CSS pixels of the printed size (1 pt = 4/3 px), which covers a retina screen at 100 %; once
 // at the CSS pixels when that runs out of time. Soft masks and filters can stall Chromium (a leaflet with 35
@@ -96,10 +97,13 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
       let drawn: Drawn | null = null
       for (const scale of SCALES) {
         drawn = await rasterise(browser, svg, width, height, scale)
-        if (drawn) break
+        if (drawn) {
+          if (scale !== SCALES[0]) degraded(`${r.dir}: the backdrop rendered only at ${scale.toFixed(2)} px/pt`)
+          break
+        }
       }
       if (!drawn) {
-        console.error(`${r.dir}: the backdrop did not render in ${String(TIMEOUT_MS / 1000)} s; text view only`)
+        degraded(`${r.dir}: the backdrop did not render in ${String(TIMEOUT_MS / 1000)} s; text view only`)
         // A backdrop left from an earlier build would stand behind words placed for this one.
         await rm(join(r.dir, 'backdrop.json'), { force: true })
         await rm(join(r.dir, 'backdrop.jpg'), { force: true })
