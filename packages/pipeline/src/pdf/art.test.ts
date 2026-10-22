@@ -86,6 +86,19 @@ test("of several pictures in a model's box, the one or the union that fits it be
   assert.deepEqual(pictureIn({ x: 45, y: 95, w: 110, h: 130 }, strips, 600, 800), { x: 50, y: 100, w: 100, h: 120 })
 })
 
+test('a watermark is no icon piece: a wheat touching the fish drawn through a 5 % mask stays its own size (Howies group)', () => {
+  const mask =
+    '<mask id="m"><rect x="0" y="0" width="600" height="800" fill="rgb(0%, 0%, 0%)" fill-opacity="0.05"/></mask>'
+  const fish = `<g mask="url(#m)">${rect(107, 55, 16, 11)}</g>`
+  const { art, placed, width, height } = parseVectors(page(rect(100, 50, 7, 10) + fish, mask))
+  assert.deepEqual(
+    piecesOf(art, placed, [], width, height).map((p) => [p.box.x, p.box.w]),
+    [[100, 7]],
+  )
+  const alone = parseVectors(page(fish, mask))
+  assert.deepEqual(piecesOf(alone.art, alone.placed, [], alone.width, alone.height), [])
+})
+
 test('piecesOf keeps neighbouring drawings apart where picturesOf groups them (two icons before one dish)', () => {
   const { art, placed, width, height } = parseVectors(page(rect(100, 50, 10, 13) + rect(114, 50, 13, 13)))
   assert.equal(picturesOf(art, placed, [], width, height).length, 1)

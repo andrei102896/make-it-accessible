@@ -76,6 +76,12 @@ export const paints = (tag: string): boolean =>
       attr(tag, 'stroke') !== 'none' &&
       Number(attr(tag, 'stroke-opacity') ?? 1) >= OPAQUE))
 
+// A shape shown fainter than this is a watermark, not ink of its own: no copy of the words over it, no icon piece
+// (Howies' fish, drawn navy through a 5 % mask, read as a shadow and merged into the wheat icons it touches).
+export const MIN_SHOWN = 0.5
+export const opacityOf = (d: Drawn): number =>
+  d.alpha * Number(attr(d.tag, 'fill-opacity') ?? 1) * Number(attr(d.tag, 'opacity') ?? 1)
+
 // What the page shows of its drawings: fills of their own, the small vector pieces (ungrouped), and the rasters.
 function shownArt(
   art: readonly Drawn[],
@@ -132,7 +138,8 @@ export function piecesOf(
   width: number,
   height: number,
 ): Picture[] {
-  const { pieces, rasters } = shownArt(art, placed, words, width, height)
+  const inked = art.filter((d) => opacityOf(d) >= MIN_SHOWN)
+  const { pieces, rasters } = shownArt(inked, placed, words, width, height)
   return [
     ...rasters.map((box): Picture => ({ box, kind: 'raster', color: null })),
     ...pieces.map((box): Picture => ({ box, kind: 'vector', color: null })),
