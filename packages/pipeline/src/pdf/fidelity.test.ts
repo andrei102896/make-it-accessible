@@ -199,3 +199,18 @@ test('a halo in the ground colour on a grey ground adds nothing; ink at a fifth 
   const c = faint.lines[0]?.contrast ?? 1
   assert.ok(c > 0.3 && c < 0.5, String(c))
 })
+
+test("a narrow line's padding inside a neighbour's box is the neighbour's for its own ink (Waterloo dinner's \"(\")", () => {
+  // "day" ends at the bracket's left in the PDF; ours sets "day" 5 px further left. The bracket is one stroke.
+  const bracket = { x: 23, y: 4, w: 2, h: 16 }
+  const day = { x: 4, y: 4, w: 19, h: 16 }
+  const word = (rows: string[], x: number): string[] => stroke(stroke(rows, x, 11, 14), x, 13, 14)
+  const pdf = stroke(word(paper(40, 24), 9), 23, 11, 1)
+  const ours = stroke(word(paper(40, 24), 4), 23, 11, 1)
+  const [, b] = score(pdf, ours, [line(day, 'day'), line(bracket, '(')]).lines
+  assert.ok(b && b.core.ours >= b.core.pdf * 0.5, JSON.stringify(b?.core))
+  // Its own ink gone is still none; the window's mass still counts the neighbour's.
+  const gone = score(pdf, word(paper(40, 24), 4), [line(day, 'day'), line(bracket, '(')]).lines[1]
+  assert.equal(gone?.core.ours, 0)
+  assert.ok(b.mass.pdf > b.core.pdf)
+})

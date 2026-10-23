@@ -111,7 +111,7 @@ export function scorePage(input: ScoreInput): Pick<PageScore, 'size' | 'lines'> 
     h: b.h + 2 * b.h * pad,
   })
   const ofG = (x: number, y: number): number => lum(g, x, y)
-  const scored = lines.map((l) => {
+  const scored = lines.map((l, index) => {
     const b = clip(padded(l.box))
     const core = clip(l.box)
     const [top, rows] = [Math.max(0, core.y - b.y), Math.min(core.h, b.y + b.h - core.y)]
@@ -142,6 +142,17 @@ export function scorePage(input: ScoreInput): Pick<PageScore, 'size' | 'lines'> 
     const cp = colourOf(p, b, mp, dark)
     const colour = cs && cp ? Math.hypot(cs[0] - cp[0], cs[1] - cp[1], cs[2] - cp[2]) / 255 : null
     const onRows = (m: Uint8Array): number => m.slice(top * b.w, (top + rows) * b.w).reduce((k, v) => k + v, 0)
+    // For the line's own ink only (vanished, faint): padding inside another line's box is that line's, in both
+    // renders (Waterloo dinner's lone "(" took the tail of "day" beside it). Mass, extent and centre keep it.
+    const theirs = lines
+      .flatMap((o, j) => (j === index ? [] : [clip(o.box)]))
+      .filter((o) => o.x < b.x + b.w && b.x < o.x + o.w && o.y < b.y + b.h && b.y < o.y + o.h)
+    const notOthers = (m: Uint8Array): Uint8Array =>
+      m.map((v, i) => {
+        const [x, y] = [b.x + (i % b.w), b.y + Math.floor(i / b.w)]
+        const inCore = x >= core.x && x < core.x + core.w && y >= core.y && y < core.y + core.h
+        return v && !inCore && theirs.some((o) => x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h) ? 0 : v
+      })
     const gm = median(gl)
     const at = (im: Image, i: number): number => lum(im, b.x + (i % b.w), b.y + Math.floor(i / b.w))
     // A pixel on the line's own rows: a neighbour's ink in the padding, at full strength, stays out of shape and contrast.
@@ -212,7 +223,7 @@ export function scorePage(input: ScoreInput): Pick<PageScore, 'size' | 'lines'> 
       em: l.em,
       price: l.price,
       mass: { ours: count(ms), pdf: count(mp) },
-      core: { ours: onRows(ms), pdf: onRows(mp) },
+      core: { ours: onRows(notOthers(ms)), pdf: onRows(notOthers(mp)) },
       rim: Math.round(rim * 1000) / 1000,
       effect,
       darker,
