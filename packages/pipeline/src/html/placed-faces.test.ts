@@ -19,7 +19,7 @@ const runs = [run(0, 'GAELIC', 700), run(1, '(Monkey', 400), run(2, 'Shoulder,',
 const extraction: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
 const structure = parsePage(JSON.stringify({ lang: 'en', blocks: [{ kind: 'paragraph', text: { src: [[0, 3]] } }] }))
 const grid: Grid = {
-  version: 8,
+  version: 9,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -43,7 +43,14 @@ const grid: Grid = {
 
 test("a word printed in another weight or program of its line's family keeps its own (GAELIC bold before its note)", () => {
   const pl = placer(
-    { keyPage: 1, structure, extraction, flagged: [], imageSrc: () => undefined, backdrop: { src: 'b.jpg', grid } },
+    {
+      keyPage: 1,
+      structure,
+      extraction,
+      flagged: [],
+      imageSrc: () => undefined,
+      backdrop: { src: 'b.webp', src2x: 'b2.webp', grid },
+    },
     { printPx: null, library: [], inks: new Set() },
   )
   // The line takes the program most of its letters use; GAELIC keeps its bold one.
@@ -65,7 +72,7 @@ test("a word printed in another weight or program of its line's family keeps its
       extraction,
       flagged: [],
       imageSrc: () => undefined,
-      backdrop: { src: 'b.jpg', grid: few },
+      backdrop: { src: 'b.webp', src2x: 'b2.webp', grid: few },
     },
     { printPx: null, library: [], inks: new Set() },
   )

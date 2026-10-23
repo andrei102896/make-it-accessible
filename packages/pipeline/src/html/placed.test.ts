@@ -39,9 +39,11 @@ const structure = parsePage(
     ],
   }),
 )
+// A page shown on `grid`'s backdrop.
+const shown = (grid: Grid): { src: string; src2x: string; grid: Grid } => ({ src: 'b.webp', src2x: 'b2.webp', grid })
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 8,
+  version: 9,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -73,7 +75,8 @@ test('each leaf takes its printed box, size, face and drawn ink, kept as printed
   assert.ok(title)
   assert.equal(
     placement(title, extraction.width, white, 2, []),
-    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#fff100;--ts:none"',
+    // The yellow title reads under 4.5:1 on white as printed: counted (`--low`).
+    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#fff100;--ts:none;--low:1"',
   )
   const name = spots.get('blocks[2].items[0].name')
   assert.ok(name)
@@ -85,11 +88,14 @@ test('a page with a backdrop renders both views from one document; without one, 
   const html = renderDocument({
     lang: 'en',
     title: 'T',
-    pages: [{ ...page, backdrop: { src: 'p01/backdrop.jpg', grid: white } }],
+    pages: [{ ...page, backdrop: { src: 'p01/backdrop-1x.webp', src2x: 'p01/backdrop-2x.webp', grid: white } }],
   })
   assert.match(html, /<fieldset class="view">/)
   assert.match(html, /<section [^>]*style="--ar:600\/800">/)
-  assert.match(html, /<img class="backdrop" src="p01\/backdrop.jpg" alt="" loading="lazy" decoding="async">/)
+  assert.match(
+    html,
+    /<img class="backdrop" src="p01\/backdrop-1x.webp" srcset="p01\/backdrop-1x.webp 1x, p01\/backdrop-2x.webp 2x" alt="" loading="lazy" decoding="async">/,
+  )
   assert.match(html, /<p data-free>/)
   assert.match(html, /<div class="lead">/)
   const plain = renderDocument({ lang: 'en', title: 'T', pages: [page] })
@@ -134,7 +140,7 @@ test('a title printed as two lines in two faces is placed line by line, each wit
   )
   const page = { keyPage: 1, structure: title, extraction: e, flagged: [], imageSrc: () => undefined }
   const lilac: Grid = { ...white, min: white.min.map(() => 0.45), max: white.max.map(() => 0.47), inks: {} }
-  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: lilac } }] })
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: shown(lilac) }] })
   const heading = /<h3[^>]*>(.*?)<\/h3>/.exec(html)?.[1] ?? ''
   assert.match(html, /<h3 [^>]*data-pl>/)
   const lines = [...heading.matchAll(/<span class="pl" style="([^"]*)">([^<]*)<\/span>/g)]
@@ -166,7 +172,7 @@ test("a price whose label is printed apart from its amount places each where it 
     }),
   )
   const page = { keyPage: 1, structure: menu, extraction: e, flagged: [], imageSrc: () => undefined }
-  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: shown(white) }] })
   assert.match(html, /<span class="price[^"]*" data-role="current"[^>]* data-pl>/)
   assert.match(html, /<span class="qualifier" style="--x:50;--y:13\.333;/)
   assert.match(html, /<span class="amount" style="--x:51\.667;--y:16\.667;/)
@@ -182,7 +188,7 @@ test("a column head several prices share is placed once; the other prices read i
   const item = (n: number) => ({ name: { src: [[n, n]] }, prices: [{ src: [[n + 1, n + 1]], ...head }] })
   const menu = parsePage(JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items: [item(1), item(3)] }] }))
   const page = { keyPage: 1, structure: menu, extraction: e, flagged: [], imageSrc: () => undefined }
-  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: shown(white) }] })
   assert.equal(html.match(/<span class="qualifier" style="--x:/g)?.length, 1)
   assert.match(html, /<span class="qualifier" data-free>Bottle<\/span>/)
   assert.equal(html.match(/<span class="amount" style="--x:51\.667;/g)?.length, 2)
@@ -190,14 +196,14 @@ test("a column head several prices share is placed once; the other prices read i
 
 test('a leaf the validator doubts is read, not placed: the backdrop keeps its printed words', () => {
   const page = { keyPage: 1, structure, extraction, flagged: ['blocks[0]'], imageSrc: () => undefined }
-  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: white } }] })
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: shown(white) }] })
   assert.match(html, /<h3 [^>]*data-review data-free>/)
 })
 
 test("words printed inside a picture under an invisible text layer are not drawn again (Stone House's cover)", () => {
   const cover: Grid = { ...white, undrawn: ['1:0'] }
   const page = { keyPage: 1, structure, extraction, flagged: [], imageSrc: () => undefined }
-  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: { src: 'b.jpg', grid: cover } }] })
+  const html = renderDocument({ lang: 'en', title: 'T', pages: [{ ...page, backdrop: shown(cover) }] })
   assert.match(html, /<h3 [^>]*data-free>/)
   assert.ok(spotsOf(structure.blocks, extraction, cover).has('blocks[2].items[0].name'))
 })
@@ -291,7 +297,7 @@ test("a line's ink is its unmarked words'; a word in another brand ink shows it 
       extraction: e,
       flagged: [],
       imageSrc: () => undefined,
-      backdrop: { src: 'b.jpg', grid },
+      backdrop: { src: 'b.webp', src2x: 'b2.webp', grid },
     },
     { printPx: null, library: [], inks },
   )

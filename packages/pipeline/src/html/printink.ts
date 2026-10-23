@@ -85,12 +85,28 @@ function measured(spot: Inked, grid: Grid | null): Measured | null {
 }
 // A printed outline or shadow round the letters is their edge: it carries their contrast when it stands out from the
 // ink or from the ground (WCAG 1.4.3 counts an outline as the text's boundary; La Segunda's red round yellow).
-function reads(spot: Inked, { ink, ground, lo, hi }: Measured, target: number): boolean {
-  const edge = spot.stroke?.color ?? spot.shadow?.color
-  if (edge && Math.max(contrast(ink, fromHex(edge)), contrast(fromHex(edge), ground)) >= target) return true
+function reads(spot: Inked, m: Measured, target: number): boolean {
+  if (edged(spot, m, target)) return true
+  const { ink, lo, hi } = m
   const l = luminance(ink)
   const ratio = (v: number): number => (Math.max(l, v) + 0.05) / (Math.min(l, v) + 0.05)
   return Math.min(ratio(lo), ratio(hi)) >= target
+}
+
+const edged = (spot: Inked, { ink, ground }: Measured, target: number): boolean => {
+  const edge = spot.stroke?.color ?? spot.shadow?.color
+  return !!edge && Math.max(contrast(ink, fromHex(edge)), contrast(fromHex(edge), ground)) >= target
+}
+
+// Whether the printed ink reads on its ground as the print shows it (the printed view, uncorrected): the cells under
+// it hold its own letters too (the backdrop keeps them), so its ground is their extreme farthest from the ink.
+export function printedReads(spot: Inked, grid: Grid | null, target: number): boolean | null {
+  const m = measured(spot, grid)
+  if (!m) return null
+  if (edged(spot, m, target)) return true
+  const l = luminance(m.ink)
+  const ratio = (v: number): number => (Math.max(l, v) + 0.05) / (Math.min(l, v) + 0.05)
+  return Math.max(ratio(m.lo), ratio(m.hi)) >= target
 }
 
 // A placed text's words in a brand ink other than its line's, each ink with its letters' drawn colour and box.

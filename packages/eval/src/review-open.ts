@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 import { chromium } from 'playwright'
 import { GUTTER_PX, SHEET } from '@make-it-accessible/pipeline/html/print'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
-import { CAPTURE_PX, pdfShots } from './pdfshot.ts'
+import { CAPTURE_PX, pdfShots, wholePage } from './pdfshot.ts'
 import { loadSources, REBUILT_DIR, sourcePdf } from './sources.ts'
 
 // pnpm review:open [--all | <slug>…] [--with <page.html> <file.pdf>]: out/rebuilt/review.html, each document's PDF
@@ -80,6 +80,7 @@ try {
     await tab.waitForLoadState('networkidle')
     // The capture is the printed sheet alone: the view switch and the contents box stay out of the comparison.
     await tab.addStyleTag({ content: '.view, nav.toc { display: none }' })
+    await wholePage(tab)
     // Each printed sheet alone, so it stands beside its PDF page at the same scale; the whole page when none prints.
     const sheets = tab.locator(SHEET)
     const count = await sheets.count()

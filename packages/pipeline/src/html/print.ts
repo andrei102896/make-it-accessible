@@ -10,6 +10,14 @@ const MIN_FIT_PX = 7
 // Phones and narrow tablets keep the reflowed page whatever the print's size; main's side padding (2 × 1rem).
 const MIN_PRINT_PX = 768
 export const GUTTER_PX = 32
+// main's least width in the printed view (`max(64rem, printWidth)`), 1rem being 16 px.
+const MAIN_MIN_PX = 64 * 16
+// A retina screen's two device pixels per CSS pixel at the widest sheet, within this many pixels a page (a large
+// sheet's file then stays near 1 MB in WebP; Sarge's 2640 x 4080 measured 668 KB).
+const DEVICE_PX = 2
+const MAX_BACKDROP_PX = 12_000_000
+// Past this density (a retina screen zoomed beyond 125 %) the backdrop's letters blur: the text view shows.
+const MAX_DPPX = 2.5
 
 // The narrowest viewport (CSS px) that shows the body text of every page with a backdrop at MIN_BODY_PX, the body
 // being the size most letters are set in (a page without words, a cover picture, needs none); null without one.
@@ -25,6 +33,12 @@ export function printWidth(pages: readonly { extraction: Extraction; backdrop?: 
     return body ? [(MIN_BODY_PX * e.width) / body] : []
   })
   return widths.length ? Math.ceil(Math.max(MIN_PRINT_PX, ...widths) + GUTTER_PX) : null
+}
+
+// Pixels per point the backdrop of a page `width` (printWidth) is drawn at.
+export function backdropScale(width: number, page: { width: number; height: number }): number {
+  const sheet = Math.max(MAIN_MIN_PX, width) - GUTTER_PX
+  return Math.min((DEVICE_PX * sheet) / page.width, Math.sqrt(MAX_BACKDROP_PX / (page.width * page.height)))
 }
 
 // The narrowest window (CSS px) the printed view of a document `width` wide (printWidth) shows in.
@@ -44,7 +58,8 @@ const SR_ONLY =
 // fit.ts: `--k`, `--z` narrow, then shrink, a lookalike to its printed width, `--lx` spreads a narrow one (the box
 // grows by one `--ls`, which follows the last letter), `--ti` starts a one-line row on its printed edge (rows.ts).
 // `on`'s id outranks the brand's classes: their layout stays out.
-const on = 'body:has(#view-print:checked)'
+// A page the browser translated shows the text view: the print would stand untranslated over the words read.
+const on = ':root:not([class*="translated-"]) body:has(#view-print:checked)'
 export const SHEET = 'section[data-page][style*="--ar:"]'
 const printed = SHEET
 const lead = `.lead:has(> ${printed})`
@@ -57,16 +72,14 @@ const leaf = '[style*="--x:"]'
 export const printWidthIn = (html: string): number =>
   Number(/main \{ max-width: max\(64rem, (\d+)px\); \}/.exec(html)?.[1] ?? 0)
 export const printFloorIn = (html: string): number =>
-  Number(/@media screen and \(min-width: (\d+)px\) and \(forced-colors: none\)/.exec(html)?.[1] ?? 0)
+  Number(/@media screen and \(min-width: ([\d.]+)em\)/.exec(html)?.[1] ?? 0) * 16
 
 // A sign added for reading (page.ts) is 1 px and transparent: VoiceOver skips text at size 0, and its inherited
 // line height and spacing are lengths, not ems.
-// A word in another brand ink takes `--ink-*` from its own placed line where it reads (placed.ts), else the line's
-// colour: no placed text holds another, so the variable never comes from an outer one.
-export const printCss = (width: number, inks: readonly string[]): string => `
+export const printCss = (width: number): string => `
 .view, .backdrop { display: none; }
-@media screen and (min-width: ${String(printFloor(width))}px) and (forced-colors: none) {
-.view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem 1rem; align-items: center; border: 0;
+@media screen and (min-width: ${String(printFloor(width) / 16)}em) and (forced-colors: none) and (max-resolution: ${String(MAX_DPPX)}dppx) {
+:root:not([class*="translated-"]) .view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem 1rem; align-items: center; border: 0;
   margin: 0 0 .5rem; padding: 0; font-size: 1rem; color: var(--fg); }
 .view legend { float: left; font-weight: 600; padding: 0; }
 /* Its own colours, not the brand's: 4.5:1 on any menu ground (a tinted one took the selected text to 2.9:1). */
@@ -104,20 +117,22 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   width: calc(var(--w) / var(--k, 1) * 1cqw + var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); transform: scaleX(var(--k, 1)); transform-origin: left top;
   display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; list-style: none; max-width: none;
   font-size: calc(var(--fs, var(--h)) * var(--z, 1) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw);
-  white-space: var(--ws, normal); text-align: var(--ta, left); color: var(--c, inherit); font-weight: var(--fw, 400); font-style: var(--fi, normal);
-  text-shadow: var(--ts, none); -webkit-text-stroke: var(--st, 0 transparent); paint-order: stroke fill;
+  white-space: var(--ws, normal); text-align: var(--ta, left); color: transparent; font-weight: var(--fw, 400); font-style: var(--fi, normal);
   letter-spacing: calc(var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); font-size-adjust: none; }
 ${on} ${page} ${leaf}[style*="--ti:"] { text-align: left; text-indent: calc(var(--ti) * 1cqw); }
 ${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: small-caps; }
 ${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; font-weight: inherit; font-style: inherit; }
+/* The print shows its own letters (the backdrop); ours are read, selected and found over them, never seen. */
+${on} ${page} ${leaf}::selection, ${on} ${page} ${leaf} *::selection { color: transparent; }
 ${on} ${page} ${leaf} .face { font-weight: var(--fw); font-style: var(--fi); }
-${on} ${page} ${leaf} .sign { font-size: 1px; line-height: 0; letter-spacing: 0; color: transparent; text-shadow: none;
-  -webkit-text-stroke: 0; }
-${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: underline; text-underline-offset: .12em; }
+${on} ${page} ${leaf} .sign { font-size: 1px; line-height: 0; letter-spacing: 0; }
+/* A link is the print's own words: nothing drawn over them (Andrei on Brawn's www.brawn.co, 2026-10-23); the
+   keyboard's focus ring still marks it. */
+${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: none; }
 ${on} ${page} ${leaf} .icon { display: inline-block; width: calc(var(--iw) * 1cqw); height: 1px; border: 0; padding: 0;
   margin: 0; vertical-align: baseline; font-size: inherit; line-height: inherit; }
 ${on} ${page} ${leaf} .icon > span { ${SR_ONLY} }
 ${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }
-${inks.map((c) => `${on} ${page} ${leaf} .ink-${c.slice(1)} { color: var(--ink-${c.slice(1)}, inherit); }\n`).join('')}}
+}
 `

@@ -6,7 +6,7 @@ import type { Spot } from './spots.ts'
 import type { FontManifest } from './webfonts.ts'
 
 const grid = (metrics: Grid['metrics']): Grid => ({
-  version: 8,
+  version: 9,
   cell: 8,
   cols: 1,
   rows: 1,

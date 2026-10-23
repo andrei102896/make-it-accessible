@@ -2,7 +2,7 @@ import type { TextValue } from '../model/schema.ts'
 import type { FaceMetrics, Grid } from '../pdf/backdrop.ts'
 import { faceKey } from '../pdf/face.ts'
 import type { Box, RunFont } from '../pdf/types.ts'
-import { inkOn, inlineInk } from './printink.ts'
+import { inkOn, inlineInk, printedReads } from './printink.ts'
 import { unionOf } from './profile.ts'
 import { printFaceOf } from './printface.ts'
 import { inkSegments, lineParts, type FaceOf, type Segment } from './segments.ts'
@@ -57,6 +57,8 @@ export function placement(
     const target = readLarge ? READABLE_LARGE : READABLE
     const { color, shadow } = inkOn({ ...spot, box: ground }, grid, target, u)
     props.push(`--c:${color}`, `--ts:${shadow}`)
+    // Counted by the round (measure-rows.ts): the printed view shows this line under 4.5:1 (3:1 large) as printed.
+    if (printedReads({ ...spot, box: ground }, grid, target) === false) props.push('--low:1')
     // The printed outline is centred on the letter's edge with its inner half under the fill, as `paint-order:
     // stroke fill` draws ours: the same width shows the same.
     if (spot.stroke) props.push(`--st:calc(${u(spot.stroke.width)} * 1cqw) ${spot.stroke.color}`)

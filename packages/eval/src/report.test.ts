@@ -2,14 +2,14 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { reportOf } from './report.ts'
 
-test('a page in the text layout says why in the owner words; open details are counted; cosmetic notes come once', () => {
+test('a page in the text layout says why in the owner words; open details are counted', () => {
   const pages = [
     { keyPage: 1, pdfPage: 1, printed: true, scan: false, converted: true },
     { keyPage: 2, pdfPage: 2, printed: false, scan: false, converted: true },
     { keyPage: 3, pdfPage: 3, printed: false, scan: true, converted: true },
     { keyPage: 4, pdfPage: 4, printed: false, scan: false, converted: false },
   ]
-  const check = { text: new Map([[2, 'doubled' as const]]), cosmetic: new Set(['narrower' as const]) }
+  const check = { text: new Map([[2, 'misfit' as const]]) }
   const held = [
     { pdfPage: 1, path: 'blocks[0].items[2].prices[0]', problem: 'price "34.50`" is not an amount', words: null },
   ]
@@ -25,17 +25,14 @@ test('a page in the text layout says why in the owner words; open details are co
   const both = reportOf([{ keyPage: 2, pdfPage: 2, printed: false, scan: false, converted: true }], check, held2)
     .pages[0]
   assert.doesNotMatch(both?.say ?? '', /Nothing for you to do/)
-  assert.match(two.why ?? '', /shadow or blur/)
+  assert.match(two.why ?? '', /would not have fitted/)
   assert.match(three.why ?? '', /picture of the menu/)
-  assert.deepEqual(r.notes, [
-    "A few details As printed still differ from your print, and we're working on them: the letter spacing of some lines.",
-  ])
   assert.doesNotMatch(JSON.stringify(r), /complian|certif/i)
 })
 
 test('a detail checked by hand is told to the owner with the date written out, and the page has something to read', () => {
   const page = { keyPage: 8, pdfPage: 8, printed: false, scan: false, converted: true }
-  const check = { text: new Map([[8, 'misfit' as const]]), cosmetic: new Set<never>() }
+  const check = { text: new Map([[8, 'misfit' as const]]) }
   const checked = [
     {
       pdfPage: 8,
@@ -56,7 +53,7 @@ test('a detail checked by hand is told to the owner with the date written out, a
 
 test('several details checked by hand: one sentence per day and person, labels apart by semicolons, one closing', () => {
   const page = { keyPage: 1, pdfPage: 1, printed: true, scan: false, converted: true }
-  const check = { text: new Map(), cosmetic: new Set<never>() }
+  const check = { text: new Map() }
   const at = '2026-10-22T12:51:33Z'
   const fries = [
     { pdfPage: 1, label: 'Sea salt skin on fries 4.95, gluten free.', name: 'Andrei', at },
@@ -79,7 +76,7 @@ test('several details checked by hand: one sentence per day and person, labels a
 
 test('details checked by hand under one label are told once (Howies: two lobster marks)', () => {
   const page = { keyPage: 1, pdfPage: 1, printed: true, scan: false, converted: true }
-  const check = { text: new Map(), cosmetic: new Set<never>() }
+  const check = { text: new Map() }
   const lobster = {
     pdfPage: 1,
     label: 'Add half lobster: the lobster mark, in no allergen key',

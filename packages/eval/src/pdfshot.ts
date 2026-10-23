@@ -23,7 +23,8 @@ export type Shot = { pdfPage: number; width: number; out: string }
 // A document open in pdf.js: `draw` leaves the page's canvas in the tab (its pixels can be read there).
 export type PdfTab = {
   tab: Page
-  draw: (pdfPage: number, width: number) => Promise<void>
+  // The page's own size in points (its crop box, which pdf.js draws).
+  draw: (pdfPage: number, width: number) => Promise<{ width: number; height: number }>
   // A PNG the tab can fetch at /files/<name> (our sheet's renders, read beside the PDF's).
   serve: (name: string, png: Buffer) => void
   close: () => Promise<void>
@@ -78,6 +79,18 @@ export async function openPdf(browser: Browser, pdf: string, width: number): Pro
   }
 }
 
+// Our page ready to capture: every backdrop loaded and the window as tall as the page, since Chromium leaves a large
+// image unpainted past the window's bottom in an element's capture (La Segunda's last 70 px read as missing).
+export async function wholePage(tab: Page): Promise<void> {
+  await tab.evaluate(async () => {
+    const imgs = [...document.querySelectorAll<HTMLImageElement>('img.backdrop')]
+    for (const img of imgs) img.loading = 'eager'
+    await Promise.all(imgs.map((img) => img.decode().catch(() => undefined)))
+  })
+  const height = await tab.evaluate(() => document.documentElement.scrollHeight)
+  await tab.setViewportSize({ width: tab.viewportSize()?.width ?? CAPTURE_PX, height })
+}
+
 // Renders each page at its CSS width into its `out` JPEG; returns the pages drawn (others keep their fallback).
 export async function pdfShots(browser: Browser, pdf: string, shots: readonly Shot[]): Promise<Set<number>> {
   const done = new Set<number>()
@@ -119,11 +132,12 @@ async function openDocument(): Promise<void> {
   }).promise
 }
 
-async function drawPage({ n, width }: { n: number; width: number }): Promise<void> {
+async function drawPage({ n, width }: { n: number; width: number }): Promise<{ width: number; height: number }> {
   const doc = globalThis.reviewDoc
   if (!doc) throw new Error('no document')
   const page = await doc.getPage(n)
-  const viewport = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width })
+  const own = page.getViewport({ scale: 1 })
+  const viewport = page.getViewport({ scale: width / own.width })
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(viewport.width)
   canvas.height = Math.round(viewport.height)
@@ -131,4 +145,5 @@ async function drawPage({ n, width }: { n: number; width: number }): Promise<voi
   const context = canvas.getContext('2d')
   if (!context) throw new Error('no canvas')
   await page.render({ canvasContext: context, viewport }).promise
+  return { width: own.width, height: own.height }
 }

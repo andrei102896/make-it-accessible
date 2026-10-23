@@ -45,20 +45,18 @@ export function withNoindex(html: string): string {
 export const assetsDir = (file: string): string => file.replace(/\.html$/, '')
 export function withAssets(html: string, file: string): { html: string; assets: { from: string; to: string }[] } {
   const assets: { from: string; to: string }[] = []
-  const out = html.replace(/src="(p(\d+)\/backdrop\.jpg)"/g, (_, from: string, page: string) => {
-    const to = `${assetsDir(file)}/p${page}.jpg`
-    assets.push({ from, to })
-    return `src="${to}"`
+  // Each backdrop file wherever the page names it (`src` and `srcset`), copied once.
+  const out = html.replace(/p(\d+)\/backdrop-(\dx)\.webp/g, (from: string, page: string, scale: string) => {
+    const to = `${assetsDir(file)}/p${page}-${scale}.webp`
+    if (!assets.some((a) => a.from === from)) assets.push({ from, to })
+    return to
   })
   // The printed view's faces (html/printface.ts), fetched only by the printed view.
-  const fonted = out.replace(
-    new RegExp(`url\\((${PRINT_FONTS_DIR}/[\\w.-]+\\.(?:woff2|otf))\\)`, 'g'),
-    (_, from: string) => {
-      const to = `${assetsDir(file)}/${from}`
-      if (!assets.some((a) => a.from === from)) assets.push({ from, to })
-      return `url(${to})`
-    },
-  )
+  const fonted = out.replace(new RegExp(`url\\((${PRINT_FONTS_DIR}/[\\w.-]+\\.woff2)\\)`, 'g'), (_, from: string) => {
+    const to = `${assetsDir(file)}/${from}`
+    if (!assets.some((a) => a.from === from)) assets.push({ from, to })
+    return `url(${to})`
+  })
   return { html: fonted, assets }
 }
 

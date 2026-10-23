@@ -58,24 +58,6 @@ export function printFaceOf(font: RunFont, library: readonly FontManifest[], wei
   }
 }
 
-// A heading is at least this many times the page's body size.
-const DISPLAY = 1.4
-// A family with a vendored twin, a lookalike of its own, or the desktop's face: close enough to set a heading in.
-const matched = (key: string, library: readonly FontManifest[]): boolean =>
-  familyFor(key, library) !== undefined || SYSTEM.some(([re]) => re.test(key))
-
-// A word the backdrop keeps as printed, ours read: a script we cannot draw (Fig's signature), or a heading (DISPLAY
-// × `body`, the page's body size) in a family only a class or hand-lettering stand-in serves (K&Z's BinnerD).
-export const keptAsPrinted = (
-  font: RunFont,
-  own: boolean,
-  library: readonly FontManifest[],
-  body = Infinity,
-): boolean =>
-  !own &&
-  ((classOf(font.key) === 'script' && printFaceOf(font, library) === null) ||
-    (font.size >= body * DISPLAY && !matched(font.key, library)))
-
 // Its own name, so the text view's embedded face of the same family never resolves to these files (nor they to it).
 const nameOf = (m: FontManifest): string => `print-${m.key}`
 

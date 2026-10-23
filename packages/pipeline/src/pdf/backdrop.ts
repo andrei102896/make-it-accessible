@@ -3,16 +3,16 @@ import { hex, luminance } from '../html/color.ts'
 import { copiesOf, holds, outline, zoneOf } from './copies.ts'
 import { intersection, union } from './geometry.ts'
 import type { Pixels } from './pixels.ts'
-import { attr, colourOf, drawnElements, type Glyph, type Point } from './svg.ts'
+import { attr, colourOf, drawnElements, type Point } from './svg.ts'
 import type { Box } from './types.ts'
 
-// The printed page behind our own text (the printed view): the page's SVG without the words we place back, the light
-// and colour under each spot, and how each placed word is printed (ink, opacity, its printed shadow).
+// The printed page under our transparent text (the printed view): the light and colour under each spot, and how
+// each placed word is printed (ink, opacity, its printed shadow), read from the page's SVG.
 
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 8
+export const BACKDROP_VERSION = 9
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -95,46 +95,6 @@ export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'und
 export const parseGrid = (json: string): Grid => Grid.parse(JSON.parse(json))
 
 type Word = { id: string; box: Box; str?: string }
-// The page's SVG without the glyphs of `placed` words and the copies drawn round or under them; `unplaced` words,
-// boxes, rules and pictures stay. A glyph on an unplaced word's baseline is that word's, even inside a placed zone.
-export function backdropSvg(svg: string, placed: readonly Box[], unplaced: readonly Box[] = []): string {
-  const zones = placed.map(zoneOf)
-  const ownedBy = (boxes: readonly Box[], at: Point): boolean =>
-    boxes.some((b) =>
-      holds({ x: b.x - EDGE, y: b.y + b.h * BASELINE_FLOOR, w: b.w, h: b.h * (1 - BASELINE_FLOOR) }, at),
-    )
-  const glyphs = drawnElements(svg).glyphs
-  const cuts = (g: Glyph): boolean =>
-    zones.some((z) => holds(z, g.at)) && (ownedBy(placed, g.at) || !ownedBy(unplaced, g.at))
-  // A glyph drawn through a reused definition is one range for every instance: cut only when all of them go.
-  const mixed = new Set(instancesOf(glyphs).flatMap(([key, all]) => (all.every(cuts) || !all.some(cuts) ? [] : [key])))
-  const cut = [
-    ...glyphs.filter((g) => cuts(g) && !mixed.has(g.range.join())).map((g) => g.range),
-    ...copiesOf(svg, placed).map((d) => d.range),
-  ]
-  const starts = [...new Map(cut.map((r) => [r[0], r])).values()].sort((a, b) => b[0] - a[0])
-  return starts.reduce((out, [from, to]) => out.slice(0, from) + out.slice(to), svg)
-}
-
-// Glyph instances by their range in the SVG text (instances of one reused definition share it).
-const instancesOf = (glyphs: readonly Glyph[]): [string, Glyph[]][] => {
-  const by = new Map<string, Glyph[]>()
-  for (const g of glyphs) by.set(g.range.join(), [...(by.get(g.range.join()) ?? []), g])
-  return [...by].filter(([, all]) => all.length > 1)
-}
-
-// The placed words holding an instance of a reused glyph that is also drawn outside every placed zone: its range
-// cannot be cut for one instance alone, so the word stays printed (eval/backdrop.ts) rather than show twice.
-export function sharedGlyphWords(svg: string, placed: readonly Box[]): number[] {
-  const zones = placed.map(zoneOf)
-  const out = new Set<number>()
-  for (const [, all] of instancesOf(drawnElements(svg).glyphs)) {
-    const inside = all.map((g) => zones.findIndex((z) => holds(z, g.at)))
-    if (inside.some((i) => i < 0)) for (const i of inside) if (i >= 0) out.add(i)
-  }
-  return [...out]
-}
-
 const round = (v: number): number => Math.round(v * 100) / 100
 const near = (dx: number, dy: number, h: number): boolean =>
   Math.hypot(dx, dy) >= MIN_OFFSET && Math.abs(dx) <= h * SHADOW_REACH && Math.abs(dy) <= h * SHADOW_REACH

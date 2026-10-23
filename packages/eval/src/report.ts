@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import type { Kind } from '@make-it-accessible/pipeline/pdf/fidelity-verdict'
 import type { Checked, Held } from './approved.ts'
 import type { PrintCheck, TextWhy } from './printcheck.ts'
 
@@ -16,7 +15,7 @@ const Page = z.object({
   checked: z.array(z.object({ label: z.string(), name: z.string(), at: z.string() })).default([]),
   say: z.string().nullable(),
 })
-const Report = z.object({ pages: z.array(Page), notes: z.array(z.string()) })
+const Report = z.object({ pages: z.array(Page) })
 export type Report = z.infer<typeof Report>
 export const parseReport = (raw: string): Report => Report.parse(JSON.parse(raw))
 
@@ -25,24 +24,9 @@ const OPENS_AS_TEXT = 'opens as Text only, where every word reads clearly.'
 // Why a page shows Text only: one sentence after "Page N opens as Text only…".
 const WHY: Record<TextWhy | 'scan' | 'no-print', string> = {
   misfit: 'As printed, some words would not have fitted where your PDF prints them.',
-  'price-moved': 'As printed, a price would have stood away from the dish or size it belongs to.',
-  'price-unshown': 'As printed, a price would not have shown where your PDF prints it.',
-  vanished: 'As printed, some words would have been hard to see, or missing, where your PDF prints them.',
-  doubled: "As printed, some words would have carried a shadow or blur your PDF doesn't have.",
-  'not-checked': "We couldn't compare this page with your PDF.",
+  'not-checked': "We couldn't check where this page's words sit on your PDF.",
   scan: 'This page is a picture of the menu, so we read its words rather than redraw them.',
   'no-print': "We couldn't draw this page's printed layout.",
-}
-// The details still differing from the print on pages kept As printed, named once per document.
-const COSMETIC: Record<Kind, string | null> = {
-  ragged: 'some lines sit a little off their column',
-  narrower: 'the letter spacing of some lines',
-  'drawing-missing': 'a dotted line or frame',
-  'ground-differs': 'a shaded panel behind some words',
-  'price-moved': null,
-  'price-unshown': null,
-  vanished: null,
-  doubled: null,
 }
 // The checked details told once per page, one sentence per day and person (dates read the same in the UK and US).
 const checkedBy = (cs: readonly { label: string; name: string; at: string }[]): string[] => {
@@ -60,8 +44,6 @@ const checkedBy = (cs: readonly { label: string; name: string; at: string }[]): 
   const closing = `If ${told(cs).length === 1 ? 'it' : 'anything'} differs from your menu, reply to this email and we'll correct it.`
   return said.length ? [...said, closing] : []
 }
-const listed = (items: string[]): string =>
-  items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}` : (items[0] ?? '')
 
 // A page that did not convert is listed too: it is open until it does (`converted: false`).
 export type ReportPage = { keyPage: number; pdfPage: number; printed: boolean; scan: boolean; converted: boolean }
@@ -108,9 +90,5 @@ export function reportOf(
       say: say || null,
     }
   })
-  const details = [...check.cosmetic].flatMap((k) => COSMETIC[k] ?? [])
-  const notes = details.length
-    ? [`A few details As printed still differ from your print, and we're working on them: ${listed(details)}.`]
-    : []
-  return Report.parse({ pages: rows, notes })
+  return Report.parse({ pages: rows })
 }

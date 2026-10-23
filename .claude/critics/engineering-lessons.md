@@ -97,3 +97,8 @@
 - A human decision tied to engine output needs a line when it no longer matches: a rule change must never silently take it back (approved.json, 2026-10-22).
 - A guard that treats a failed render as "nothing hidden" covers every judgement made on that render, not only the words it was written for (icon ink test, 2026-10-22).
 - Hiding an input that a naming rule counts renames every other use: filter what gets named, never the evidence that names it (legendOf uses, 2026-10-22).
+- When what a view shows changes, list every measure whose ground or subject it was: the fidelity ground (the sheet minus our text) holds the print once our text is transparent, so every line reads "vanished" (printed-view letters plan, 2026-10-23).
+- Size a raster from the CSS the page ships (main's max-width, printFloor, the zoom range it stays up for), never from a window width (printed-view letters plan, 2026-10-23).
+- Moving a raster from Poppler to pdf.js moves its frame (crop box against media box): reuse the `SAME_FRAME` guard before stretching it under Poppler geometry (printed-view letters, 2026-10-23).
+- A deadline that resolves `null` inside a try skips the catch that marks the fallback: throw on timeout (`encoded()` on the pdf.js tab, 2026-10-23).
+- When the shown render changes, derive every measure from that same render; a second renderer adds an unguarded IO call and a second truth (luminance grid via pdftoppm, 2026-10-23).

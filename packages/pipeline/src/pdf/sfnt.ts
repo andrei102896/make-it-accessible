@@ -19,40 +19,6 @@ export function tablesOf(d: Uint8Array): Table[] {
 }
 const table = (d: Uint8Array, tag: string): Table | undefined => tablesOf(d).find((t) => t.tag === tag)
 
-// A name record (1 family, 6 PostScript name, 0 copyright, 13 licence, 14 licence URL): Windows (UTF-16) first.
-export function nameOf(d: Uint8Array, id: number): string | null {
-  const t = table(d, 'name')
-  if (!t) return null
-  const v = view(d)
-  const count = v.getUint16(t.offset + 2)
-  const strings = t.offset + v.getUint16(t.offset + 4)
-  let mac: string | null = null
-  for (let r = 0; r < count; r++) {
-    const at = t.offset + 6 + r * 12
-    if (v.getUint16(at + 6) !== id) continue
-    const [platform, length, offset] = [v.getUint16(at), v.getUint16(at + 8), v.getUint16(at + 10)]
-    const bytes = d.subarray(strings + offset, strings + offset + length)
-    if (platform === 3 || platform === 0) {
-      const units = Array.from(
-        { length: bytes.length >> 1 },
-        (_, i) => ((bytes[2 * i] ?? 0) << 8) | (bytes[2 * i + 1] ?? 0),
-      )
-      return String.fromCharCode(...units)
-    }
-    mac ??= String.fromCharCode(...bytes)
-  }
-  return mac
-}
-
-// OS/2 fsType: the embedding the font's maker permits; null without an OS/2 table.
-export function fsTypeOf(d: Uint8Array): number | null {
-  const t = table(d, 'OS/2')
-  return t && t.length >= 10 ? view(d).getUint16(t.offset + 8) : null
-}
-// Installable (0) or editable (0x0008) embedding, nothing more restrictive set: not restricted (0x0002), preview &
-// print (0x0004) or bitmap only (0x0200). Stricter than the spec (the least restrictive bit applies) on purpose.
-export const permitsEmbedding = (fs: number | null): boolean => fs !== null && (fs & 0x0206) === 0
-
 // maxp's glyph count: a cmap may not name a glyph past it (Chrome rejects the font).
 export function glyphCount(d: Uint8Array): number {
   const t = table(d, 'maxp')

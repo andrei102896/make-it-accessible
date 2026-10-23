@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { webFont } from './ownfont.ts'
 import type { PdfFont } from './pdfjs.ts'
-import { caseFilled } from './ownfont.ts'
-import { cmapOf, isSfnt, permitsEmbedding, tablesOf, withCmap } from './sfnt.ts'
+import { cmapOf, isSfnt, tablesOf, withCmap } from './sfnt.ts'
 
 // A TrueType program holding a head table (its magic number in place) and maxp (8 glyphs).
 function bare(): Uint8Array {
@@ -57,18 +56,6 @@ test('a rewritten character map reads back, its tables sorted and the whole font
   assert.equal(sum(font), 0xb1b0afba)
 })
 
-test('embedding is permitted when installable or editable, never restricted, preview-only or bitmap-only', () => {
-  assert.deepEqual([0, 0x0008, 0x0002, 0x0004, 0x0208, 0x000a, null].map(permitsEmbedding), [
-    true,
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-  ])
-})
-
 test("a PDF font's web font maps each one-letter ToUnicode to the glyph pdf.js draws for its code; a ligature, a code pdf.js does not draw, or a letter drawn two ways the page never uses is left out", () => {
   // pdf.js' program: its codes 0xE000–0xE002 draw A, h and the "Th" ligature; 0xE003 (B) is not in it; 0xE004 and
   // 0xE005 both draw "1" (two figure styles), 0xE006 and 0xE007 both draw "2"; 0xE008 names glyph 9, past maxp's 8.
@@ -110,29 +97,4 @@ test("a PDF font's web font maps each one-letter ToUnicode to the glyph pdf.js d
   )
   assert.equal(web.range, 'U+31, U+41, U+68')
   assert.equal(webFont({ ...font, missingFile: true }, new Map()), null)
-})
-
-test("a face drawing capitals for lowercase answers to both cases: each letter's other case maps to the same glyph (Howies' Lulo)", () => {
-  const data = withCmap(
-    bare(),
-    new Map([
-      [0x74, 1],
-      [0x57, 2],
-      [0x31, 3],
-    ]),
-  )
-  assert.ok(data)
-  const filled = caseFilled(data)
-  assert.ok(filled)
-  assert.deepEqual(
-    [...cmapOf(filled.data)].sort((a, b) => a[0] - b[0]),
-    [
-      [0x31, 3],
-      [0x54, 1],
-      [0x57, 2],
-      [0x74, 1],
-      [0x77, 2],
-    ],
-  )
-  assert.equal(filled.range, 'U+31, U+54, U+57, U+74, U+77')
 })

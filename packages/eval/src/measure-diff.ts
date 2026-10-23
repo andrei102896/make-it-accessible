@@ -42,13 +42,13 @@ function totalsOf(set: SetResult | undefined, slugs: readonly string[]): Totals 
   return t
 }
 
-// The shares the eye reads: injected defects caught of those measurable, per defect.
+// The shares the eye reads: injected content defects caught, per defect.
 function rates(t: Totals): string[] {
   const out: string[] = []
   for (const k of Object.keys(t).sort()) {
-    const m = /^(print|content) (.+) caught$/.exec(k)
-    const of = m && t[`${m[1] ?? ''} ${m[2] ?? ''} ${m[1] === 'print' ? 'measurable' : 'injected'}`]
-    if (m && of) out.push(`${m[1] ?? ''} ${m[2] ?? ''} ${((100 * (t[k] ?? 0)) / of).toFixed(1)} %`)
+    const m = /^content (.+) caught$/.exec(k)
+    const of = m && t[`content ${m[1] ?? ''} injected`]
+    if (m && of) out.push(`content ${m[1] ?? ''} ${((100 * (t[k] ?? 0)) / of).toFixed(1)} %`)
   }
   return out
 }

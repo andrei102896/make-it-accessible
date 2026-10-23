@@ -31,23 +31,11 @@ export type Totals = Record<string, number>
 
 export const sha = (s: string | Buffer): string => createHash('sha256').update(s).digest('hex').slice(0, 12)
 
-const Measured = PageScore.extend({
-  keyPage: z.number(),
-  pdfPage: z.number(),
-  sheetPx: z.number(),
-  mutated: z.array(z.number()),
-})
+const Measured = PageScore.extend({ keyPage: z.number(), pdfPage: z.number(), sheetPx: z.number() })
 const Skipped = z.object({ keyPage: z.number(), skipped: z.enum(['scan', 'height', 'stall']), detail: z.string() })
 export const FidelityFile = z.object({
   documents: z.array(z.object({ slug: z.string(), pages: z.array(z.union([Measured, Skipped])) })),
 })
-const Tally = z.object({
-  caught: z.number(),
-  missed: z.number(),
-  unmeasurable: z.number(),
-  lines: z.array(z.object({ text: z.string(), caught: z.boolean() })),
-})
-export const InjectedFile = z.record(z.string(), Tally)
 export const ContentFile = z.object({
   clean: z.number(),
   held: z.number(),
@@ -72,7 +60,6 @@ export type DocFiles = {
   dir: string
   rebuild: string
   fidelity: string
-  injected: string
   content: string
   check: string
 }
@@ -104,24 +91,30 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     row.held.push(...p.checked.map((c) => `p${String(p.page)} checked by ${c.name}: ${c.label}`))
     add('details checked by hand', p.checked.length)
   }
+  // Lines the printed view shows under 4.5:1 (3:1 large) as printed, per printed sheet (html/placed.ts `--low`).
+  const html = await readFile(join(f.dir, 'index.html'), 'utf8').catch(() => '')
+  for (const [section, page] of html.matchAll(/<section[^>]*\bdata-page="(\d+)"[^>]*--ar:[\s\S]*?<\/section>/g)) {
+    const low = section.split('--low:1').length - 1
+    if (low) row.view.push(`p${page ?? ''} printed lines under contrast: ${String(low)}`)
+    add('printed lines under contrast', low)
+  }
   add('approvals no longer matching', held.filter((l) => l.endsWith('no longer matches its words')).length)
-  row.cosmetic.push(...(report?.notes ?? []).map((n) => `note: ${n}`))
   const check = cleanLines(await text(f.check), f.dir)
   row.check.push(...check)
   add(
     'check issues',
     !check.length || check.some((l) => /axe (?!ok)|OVERFLOW|DIFFERS|clipped|overflow/.test(l)) ? 1 : 0,
   )
-  // The measures: every page's verdict, its cosmetic findings by kind (lines), its printed shadows.
+  // The measures: every page's whole-page findings, its printed shadows.
   const fidelity = await text(f.fidelity).then((raw) => (raw ? FidelityFile.parse(JSON.parse(raw)) : null))
   for (const p of fidelity?.documents.flatMap((d) => d.pages) ?? []) {
     if ('skipped' in p) {
       row.measures.push(`p${String(p.keyPage)} not measured: ${p.skipped}`)
       continue
     }
-    for (const c of judgePage(p).cosmetic) {
-      row.cosmetic.push(`p${String(p.keyPage)} ${c.kind}: ${String(c.lines.length)} lines`)
-      add(`cosmetic ${c.kind} lines`, c.lines.length)
+    for (const c of judgePage(p)) {
+      row.cosmetic.push(`p${String(p.keyPage)} ${c.kind}`)
+      add(`cosmetic ${c.kind} pages`)
     }
   }
   row.measures.push(...cleanLines(await text(f.fidelity.replace(/\.json$/, '.log')), f.dir))
@@ -132,15 +125,6 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
       : 0
     if (shadows) row.cosmetic.push(`${d} shadows: ${String(shadows)}`)
     add('shadows', shadows)
-  }
-  const injected = await text(f.injected).then((raw) => (raw ? InjectedFile.parse(JSON.parse(raw)) : {}))
-  for (const [m, t] of Object.entries(injected)) {
-    row.injections.push(
-      `${m}: caught ${String(t.caught)} of ${String(t.caught + t.missed)}, ${String(t.unmeasurable)} unmeasurable`,
-    )
-    row.injections.push(...t.lines.filter((l) => !l.caught).map((l) => `${m} missed: ${JSON.stringify(l.text)}`))
-    add(`print ${m} caught`, t.caught)
-    add(`print ${m} measurable`, t.caught + t.missed)
   }
   const content = await text(f.content).then((raw) => (raw ? ContentFile.parse(JSON.parse(raw)) : null))
   if (content) {

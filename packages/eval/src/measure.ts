@@ -13,8 +13,8 @@ import { report, verdicts } from './fidelity-report.ts'
 import { OUT_DIR, ROOT } from './paths.ts'
 import { loadSources, REBUILT_DIR, VERIFY_FILE, type Source } from './sources.ts'
 
-// pnpm measure [--quick] [--sealed] [--against=<ref>] [--status] [--jobs=N, calibration only]: the round (rebuild, print
-// fidelity, injected defects, check:page, stage-0 rescore) as child processes of the same CLIs, JOBS at a time; a
+// pnpm measure [--quick] [--sealed] [--against=<ref>] [--status] [--jobs=N, calibration only]: the round (rebuild,
+// whole-page check, injected content defects, check:page, stage-0 rescore) as child processes of the same CLIs, JOBS at a time; a
 // result that slept, fell back or failed is run again alone, as the sequential round ran it, before it is read.
 const { values } = parseArgs({
   options: {
@@ -117,7 +117,6 @@ const rebuild = (d: Doc): Job =>
   node('rerender.ts', d, 'rebuild', [d.source.slug, ...(d.set === 'working' ? [] : ['--verify'])])
 const judges = (d: Doc): Job[] => [
   node('fidelity.ts', d, 'fidelity', [...flags(d), `--out=${at(d, 'fidelity', 'json')}`, d.source.slug]),
-  node('fidelity.ts', d, 'injected', ['--inject', ...flags(d), `--out=${at(d, 'injected', 'json')}`, d.source.slug]),
   node('check-page.ts', d, 'check', [join(REBUILT_DIR, d.source.slug, 'page.html')]),
 ]
 const content = (d: Doc): Job =>
@@ -198,14 +197,13 @@ for (const d of docs) {
       dir: join(REBUILT_DIR, d.source.slug),
       rebuild: at(d, 'rebuild'),
       fidelity: at(d, 'fidelity', 'json'),
-      injected: at(d, 'injected', 'json'),
       content: at(d, 'content', 'json'),
       check: at(d, 'check'),
     },
     notes.get(d) ?? [],
   )
 }
-// Each set's measures as `pnpm fidelity` prints them: percentiles over its lines, pages to the text view by kind.
+// Each set's measures as `pnpm fidelity` prints them: cells the PDF draws and ours lacks, findings by kind.
 for (const [name, set] of Object.entries(sets)) {
   const measured: { slug: string; pages: PageFidelity[] }[] = []
   for (const d of docs.filter((x) => x.set === name)) {

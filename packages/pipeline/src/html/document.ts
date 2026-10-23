@@ -115,7 +115,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print, [...inks]) + printFaces(doc.pages, brand?.library ?? [])}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print) + printFaces(doc.pages, brand?.library ?? [])}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>

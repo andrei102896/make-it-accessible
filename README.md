@@ -60,9 +60,9 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/visibility.ts           words in the text layer that draw nothing on the page (covered or invisible): never published
   pdf/svg.ts                  pdftocairo's SVG read without a browser: transforms, clips, masks; placed content (`source-N` in <defs>) drawn where its <use> puts it
   pdf/art.ts                  the page's pictures from the vector layer: rasters where they show, vector drawings grouped (capped at a quarter page), large fills alone; `pictureIn` names the picture a loose model box means
-  pdf/backdrop.ts             the printed view's backdrop: the page's SVG without the words we place back (glyphs by baseline ownership), its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter
+  pdf/backdrop.ts             the printed view's backdrop facts: its light range per 8 pt cell, each word's ink and baseline as drawn at its first letter (read from the page's SVG)
   pdf/drawnletters.ts         letters the PDF draws as shapes beside a word (lost from the text layer): the word is marked lost
-  pdf/fidelity.ts             scorePage: the printed view measured against the PDF per placed line (ink mass, colour, span) and per cell outside text; runs in the browser and in tests
+  pdf/fidelity-outside.ts     the whole-page check: our page's ink against the PDF's drawn by pdf.js, over the page and per band; runs in the browser and in tests
   pdf/ocr.ts                  Tesseract on the rendered page (stored once per page hash and engine version); a page reads as a scan when its layer holds under a third of the printed words
   pdf/copies.ts               the shapes that draw placed words again (outlines, letter-shaped fills): under the words they mostly cover, never hidden by a later opaque box
   pdf/printedfaces.ts         per printed face, the pdf.js program printing most of its letters, rebuilt for a browser (measured by eval/facemetrics.ts)
@@ -72,8 +72,8 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/ligatures.ts            words a dropped ligature split, made whole from that text where Poppler left its copy at the page's edge
   html/spots.ts               the printed view's spots: what the print shows of each leaf (box, lines, ink, face, baseline), split from placed.ts
   pdf/icons.ts                dietary icons on text lines, named by the document's legend of icon-and-label pairs; named ones appended to the runs as words
-  pdf/sfnt.ts                 a font program's tables, names, embedding permission and format 4 cmap, read and rewritten
-  pdf/ownfont.ts              the PDF's own fonts for the printed view: pdf.js' program with a cmap from ToUnicode, its letters as a unicode-range, per word its face
+  pdf/sfnt.ts                 a font program's tables, glyph count and format 4 cmap, read and rewritten
+  pdf/ownfont.ts              a PDF font rebuilt for a browser (pdf.js' program with a cmap from ToUnicode), measured by eval/facemetrics.ts
   pdf/vectors.ts              frames, panels and rules from the PDF's vector layer (pdftocairo SVG): stroked rectangles, filled rings, fills, straight strokes and thin bars (solid, dotted, dashed, double)
   text/normalize.ts           norm (scoring) and canon (provenance) text forms
   text/money.ts               amounts in minor units, formatting, page currency
@@ -156,18 +156,17 @@ packages/eval/src/            evaluation harness, never shipped
   score/keyboard.ts           Tab through a page: every link and scroll region reached, focus ring visible, nothing under the sticky bar
   process.ts                  one page through the pipeline, HTML assembly
   refresh.ts                  a saved page as the build sees it today (rerender, inject): fonts, colours, hidden words read afresh; OCR runs kept
-  fidelity-measure.ts         measureDocument: the sheet, its ground and the PDF rendered in one Chromium at one scale, scored in the tab
+  fidelity-measure.ts         measureDocument: the sheet as shown (backdrop, text transparent) and the PDF rendered in one Chromium at one scale, scored in the tab
   fidelity.ts                 CLI: pnpm fidelity [--verify [--sealed]] [<slug>…] — numbers per page and the set's distributions
   readings.ts                 OCR readings on disk, one file per key (a database row and S3 object when live)
   inject.ts                   injected content defects (price swap, shift, role, name, heading, detail and item moves, drops, icons)
   inject-run.ts               CLI: pnpm inject [--per] [--verify [--sealed]] — the share of injected defects the gates catch
   iconcites.ts                a saved structure's icon citations moved onto icon words read afresh
   deadline.ts                 withDeadline for pdf.js calls (60 s)
-  backdrop.ts                 renders each page's backdrop in Chromium (JPEG at 2× CSS px) and its light grid (pNN/backdrop.jpg, backdrop.json)
+  backdrop.ts                 draws each page's backdrop with pdf.js in Chromium (Poppler where pdf.js cannot), WebP at 1× and 2×, and its light grid (pNN/backdrop-1x.webp, -2x.webp, backdrop.json)
   facemetrics.ts              measures each printed face beside its lookalike in a browser (x-height, cap height, stem): the size scale and weight placed.ts applies (backdrop.json metrics)
   pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page tracking and own faces; a page it cannot read has neither
-  rawfonts.ts                 the font programs as embedded (FlateDecode streams): per PostScript name its licence notice where every program permits embedding
-  streams.ts                  every FlateDecode stream of a PDF, inflated (capped): what rawfonts and wholewords read
+  streams.ts                  every FlateDecode stream of a PDF, inflated (capped): what wholewords reads
   wholewords.ts               extractWhole: a page read by Poppler with its ligature-split words whole (process, rerender, wiki)
   legend.ts                   documentLegend: a document's icon legend read once from every page (adhoc, rerender)
   fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box, spreads a narrower one with letter spacing (--lx) (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
@@ -243,6 +242,7 @@ out/                          run outputs (local only)
 - **The logo comes from the brief, its box from the vector layer** (`art.test.ts`, `document-layout.test.ts`). Position alone picks the wrong picture (La Segunda's mid-spread logo, FIG's footer, Bernini's bust for its wordmark); the brief (Sonnet: Haiku chose the bust and missed FIG) names page and box, `pictureIn` snaps to the picture or union that fits it best. An artwork logo leads the masthead with `alt=""` (the band's h1 names the place) and a big heading that is not the name stays its section. A figure the model gave is not repeated (Sarge's). Figures take the exact picture box; a logo crop moves only the edge a neighbouring word sticks past (Michael's oval kept whole). Rasters never join: photos edge to edge are separate pictures (Carew). Do not remove.
 
 ## Dead ends
+- **Redrawing the print's words in our faces** (2026-10-17 to 2026-10-23): the printed view cut the PDF's glyphs from the backdrop and set our text in its own embeddable programs, lookalikes or class stand-ins, sized and weighted by measure. Every unseen PDF brought a family, weight or style it missed (batch 2: serifs as sans, bold names italic). The printed view now shows the page as pdf.js draws it, our text transparent over it. Do not rebuild glyph cutting.
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.
 - **`pdftohtml` image boxes as final figure boxes:** they are raster bounds, not the visible area (transparent margins, clipped photos, backgrounds). Kept only as hints for the model.
 - **Compact citations** (single word ids mixed with ranges in one `src` list): the model confused `[23,25]` with a range, wrote plain strings and broken JSON; 9 of 12 pages needed a retry. Ranges only.

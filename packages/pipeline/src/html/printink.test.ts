@@ -2,12 +2,11 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
-import { printCss } from './print.ts'
-import { asDrawn, inkOn, inlineInk } from './printink.ts'
+import { asDrawn, inkOn, inlineInk, printedReads } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
-  version: 8,
+  version: 9,
   cell: 8,
   cols: 1,
   rows: 1,
@@ -56,7 +55,7 @@ test("each word takes its drawn colour, named by the brand ink it matches: the t
     },
     flagged: [],
     imageSrc: () => undefined,
-    backdrop: { src: 'b.jpg', grid: { ...blank, inks: { '8:0': '#bf1d23', '8:5': '#f9a72d' } } },
+    backdrop: { src: 'b.webp', src2x: 'b2.webp', grid: { ...blank, inks: { '8:0': '#bf1d23', '8:5': '#f9a72d' } } },
   }
   const drawn = asDrawn(page, new Set(['#bf1c23', '#f8a62c']))
   assert.deepEqual(
@@ -65,14 +64,6 @@ test("each word takes its drawn colour, named by the brand ink it matches: the t
   )
   const unprinted = { ...page, backdrop: null }
   assert.equal(asDrawn(unprinted, new Set(['#bf1c23'])), unprinted)
-})
-
-test('the printed view sets each brand ink from its line, and nothing without one', () => {
-  assert.doesNotMatch(printCss(1200, []), /ink-/)
-  assert.match(
-    printCss(1200, ['#c00000']),
-    /\[style\*="--x:"\] \.ink-c00000 \{ color: var\(--ink-c00000, inherit\); \}/,
-  )
 })
 
 test('a hairline or a panel edge inside a cell leaves the ground flat: the ink stays as printed, with no halo', () => {
@@ -100,4 +91,16 @@ test("the cells under a word's letters decide, not the row its box shares with a
   }
   const u = (v: number): string => String(v)
   assert.deepEqual(inkOn(gold, band, 4.5, u), { color: '#d69f65', shadow: 'none' })
+})
+
+test("a printed line is counted under its target on the print's own ground, its letters in the cells beside it (Howies' gold)", () => {
+  const word = { box: { x: 0, y: 0, w: 8, h: 8 }, alpha: 1, shadow: null, stroke: null }
+  // The cell holds the gold letters (its darkest) and the white paper (its lightest).
+  const cell: Grid = { ...blank, min: [0.38], max: [1], mean: ['#f0e6dc'] }
+  assert.equal(printedReads({ ...word, color: '#d69f65' }, cell, 4.5), false)
+  assert.equal(printedReads({ ...word, color: '#1a1a1a' }, { ...cell, min: [0.01] }, 4.5), true)
+  assert.equal(printedReads({ ...word, color: '#1a1a1a' }, null, 4.5), null)
+  // A printed outline is the letters' edge (WCAG 1.4.3): La Segunda's yellow outlined in red reads.
+  const outlined = { ...word, color: '#ffe600', stroke: { color: '#b00000', width: 1 } }
+  assert.equal(printedReads(outlined, { ...cell, min: [0.8] }, 4.5), true)
 })

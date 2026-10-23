@@ -1,78 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { backdropSvg, luminanceGrid, printedOf, sharedGlyphWords, tiltedOf } from './backdrop.ts'
+import { luminanceGrid, printedOf, tiltedOf } from './backdrop.ts'
 
 const page = (defs: string, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="612pt" height="792pt" viewBox="0 0 612 792"><defs>${defs}</defs>${body}</svg>`
 const glyphs = '<g id="glyph-0-1"><path d="M 0 0 L 5 0 L 5 -7 Z"/></g><g id="glyph-0-2"><path d="M 0 0 L 4 -7 Z"/></g>'
 const ink = (x: number, y: number, id = '1'): string =>
   `<g fill="rgb(0%, 0%, 0%)"><use xlink:href="#glyph-0-${id}" x="${String(x)}" y="${String(y)}"/></g>`
-
-test('the placed words lose their glyphs and the copy drawn under them; words we do not place, rules and pictures stay', () => {
-  const placed = ink(100, 110) + ink(106, 110, '2')
-  const unplaced = ink(300, 410)
-  const shadow = '<path fill="rgb(50%, 50%, 50%)" d="M 101 101 L 112 101 L 108 111 L 101 111 Z"/>'
-  const rule = '<path fill="none" stroke="rgb(0%, 0%, 0%)" stroke-width="1" d="M 95 113 L 140 113"/>'
-  const defs = `${glyphs}<image id="source-7" width="10" height="10"/>`
-  const svg = page(defs, placed + shadow + rule + unplaced + '<use xlink:href="#source-7"/>')
-  const out = backdropSvg(svg, [{ x: 98, y: 100, w: 20, h: 12 }])
-  assert.equal((out.match(/<use xlink:href="#glyph-/g) ?? []).length, 1)
-  assert.match(out, /x="300" y="410"/)
-  assert.doesNotMatch(out, /M 101 101/)
-  assert.match(out, /M 95 113 L 140 113/)
-  assert.match(out, /<use xlink:href="#source-7"\/>/)
-  assert.match(out, /<g id="glyph-0-1">/)
-})
-
-test('a placed word drawn over a picture leaves the picture whole (Gigi’s band)', () => {
-  const band = '<rect x="0" y="80" width="612" height="60" fill="rgb(80%, 20%, 20%)"/>'
-  const out = backdropSvg(page(glyphs, band + ink(100, 110)), [{ x: 98, y: 100, w: 20, h: 12 }])
-  assert.match(out, /<rect x="0" y="80"/)
-  assert.doesNotMatch(out, /#glyph-0-1"/)
-})
-
-test("an outline round a line of placed words goes (Kenny & Ziggy's); an icon between them and a box behind them stay", () => {
-  const words = [
-    { x: 100, y: 100, w: 60, h: 12 },
-    { x: 180, y: 100, w: 60, h: 12 },
-  ]
-  const outline =
-    '<path fill="none" stroke-width="0.12" stroke="rgb(13%, 12%, 12%)" d="M 102 102 L 238 102 L 230 110 L 102 110 Z"/>'
-  const chili = '<path fill="rgb(90%, 10%, 10%)" d="M 163 102 L 177 102 L 170 110 Z"/>'
-  const strip = '<path fill="rgb(100%, 100%, 100%)" d="M 97 98 L 243 98 L 243 114 L 97 114 Z"/>'
-  const out = backdropSvg(page(glyphs, strip + outline + chili), words)
-  assert.doesNotMatch(out, /M 102 102/)
-  assert.match(out, /M 163 102/)
-  assert.match(out, /M 97 98/)
-})
-
-test("a shape an opaque box drawn later hides is no copy and no shadow (Kenny & Ziggy's wood grain under its yellow cards)", () => {
-  const word = { id: '1:0', box: { x: 98, y: 100, w: 20, h: 12 } }
-  const grain = '<path fill="rgb(50%, 31%, 18%)" d="M 99 103 L 117 103 L 115 108 L 99 108 Z"/>'
-  const card = '<path fill="rgb(100%, 95%, 0%)" fill-opacity="1" d="M 90 90 L 130 90 L 130 130 L 90 130 Z"/>'
-  const svg = page(glyphs, grain + card + ink(100, 110))
-  assert.match(backdropSvg(svg, [word.box]), /M 99 103/)
-  assert.deepEqual(printedOf(svg, [word]).shadows, {})
-  // Drawn after the card, the same shape is the word's copy.
-  assert.doesNotMatch(backdropSvg(page(glyphs, card + grain + ink(100, 110)), [word.box]), /M 99 103/)
-})
-
-test("a badge round a digit stays when only a neighbour's zone touches it (Kenny & Ziggy's red circles)", () => {
-  const digit = { x: 100, y: 100, w: 10, h: 18 }
-  const below = { x: 95, y: 121, w: 60, h: 12 }
-  const badge = '<path fill="rgb(93%, 11%, 14%)" d="M 95 98 C 110 95 115 110 105 120 C 95 125 90 110 95 98 Z"/>'
-  assert.match(backdropSvg(page(glyphs, badge + ink(103, 115)), [digit, below]), /M 95 98/)
-})
-
-test("a glyph on an unplaced word's baseline stays, even inside the placed line below's zone (Kenny & Ziggy's flagged line)", () => {
-  const flagged = { x: 100, y: 100, w: 60, h: 12 }
-  const placed = { x: 100, y: 112, w: 60, h: 12 }
-  const svg = page(glyphs, ink(100, 110) + ink(100, 122))
-  const out = backdropSvg(svg, [placed], [flagged])
-  assert.match(out, /x="100" y="110"/)
-  assert.doesNotMatch(out, /x="100" y="122"/)
-  assert.doesNotMatch(backdropSvg(svg, [placed]), /x="100" y="110"/)
-})
 
 test("each cell keeps its darkest and lightest luminance and its mean colour (a black word's cell on white)", () => {
   const black = new Set(['3,2', '4,2'])
@@ -124,12 +58,11 @@ test("a drawing spanning lines of text under the words is no shadow of theirs (t
   assert.deepEqual(printedOf(page(glyphs, scale + lines), words).shadows, {})
 })
 
-test("a stroke drawn round each placed letter is their printed outline: taken out and kept as the words' stroke (La Segunda)", () => {
+test("a stroke drawn round each placed letter is their printed outline, kept as the words' stroke (La Segunda)", () => {
   const word = { id: '1:0', box: { x: 98, y: 100, w: 20, h: 12 } }
   const letterI =
     '<path fill="none" stroke-width="3" stroke="rgb(93.4%, 26%, 18%)" d="M 100 101 L 104 101 L 104 111 L 100 111 Z"/>'
   const svg = page(glyphs, letterI + ink(100, 110))
-  assert.doesNotMatch(backdropSvg(svg, [word.box]), /M 100 101/)
   assert.deepEqual(printedOf(svg, [word]).strokes, { '1:0': { color: '#ee422e', width: 3 } })
 })
 
@@ -171,11 +104,10 @@ test("a neighbour word's glyphs are never a word's ink or copy, even inside its 
   assert.deepEqual(printed.shadows, {})
 })
 
-test("specks of an engraving inside a word's box are no copy of it: they stay printed and give it no shadow (Boater's THE MENU)", () => {
+test("specks of an engraving inside a word's box are no copy of it and give it no shadow (Boater's THE MENU)", () => {
   const word = { id: '1:0', box: { x: 98, y: 100, w: 20, h: 30 } }
   const speck = '<path fill="rgb(95%, 39%, 48%)" d="M 104 110 C 105 110 105 111 104 112 Z"/>'
   const svg = page(glyphs, speck + ink(100, 125))
-  assert.match(backdropSvg(svg, [word.box]), /M 104 110/)
   assert.deepEqual(printedOf(svg, [word]).shadows, {})
 })
 
@@ -247,19 +179,6 @@ test("a word's ink is its first letter's: a glyph drawn after its letters in ano
   const space = at('rgb(100%, 100%, 100%)', 112, 110)
   const printed = printedOf(page(glyphs, gold + space), [{ id: '&', box: { x: 100, y: 96, w: 18, h: 18 } }])
   assert.deepEqual(printed.inks, { '&': '#f9a72d' })
-})
-
-test('a glyph drawn through a reused definition is cut only where every instance goes; its word stays printed', () => {
-  // One definition holding a word's glyph, drawn at two places (pdftocairo's sources: Bernini, Pastabilities).
-  const defs = `${glyphs}<g id="source-5">${ink(0, 10)}</g>`
-  const svg = page(defs, '<use xlink:href="#source-5" x="100" y="100"/><use xlink:href="#source-5" x="300" y="400"/>')
-  const word = { x: 98, y: 100, w: 20, h: 12 }
-  assert.match(backdropSvg(svg, [word]), /<g id="source-5"><g fill="rgb\(0%, 0%, 0%\)"><use xlink:href="#glyph-0-1"/)
-  assert.deepEqual(sharedGlyphWords(svg, [word]), [0])
-  // Both instances placed: the definition's glyph goes.
-  const both = [word, { x: 298, y: 400, w: 20, h: 12 }]
-  assert.doesNotMatch(backdropSvg(svg, both), /source-5"><g fill="rgb\(0%, 0%, 0%\)"><use/)
-  assert.deepEqual(sharedGlyphWords(svg, both), [])
 })
 
 test('a word whose layer box runs past its letters (a tab read into it) ends one step past its last letter', () => {

@@ -17,8 +17,8 @@ export type HtmlPage = {
   extraction: Extraction
   flagged: readonly string[]
   imageSrc: (path: string) => string | undefined
-  // The printed page without the words we place (pdf/backdrop.ts): the printed view stands on it.
-  backdrop?: { src: string; grid: Grid } | null
+  // The page as printed, its words included (eval/backdrop.ts): the printed view shows it under our transparent text.
+  backdrop?: { src: string; src2x: string; grid: Grid } | null
 }
 // `kind`, `headings` and `validity` come from the document brief; without one the page is laid out from its blocks.
 export type HtmlDocument = {

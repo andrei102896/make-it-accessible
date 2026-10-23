@@ -20,7 +20,7 @@ import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { wordsOfPicture } from '@make-it-accessible/pipeline/validate/proof'
-import { writeBackdrops } from './backdrop.ts'
+import { BACKDROP_FILES, clearBackdrop, writeBackdrops } from './backdrop.ts'
 import { costUsd } from './cost.ts'
 import { checkPrinted } from './printcheck.ts'
 import { REPORT_FILE, reportOf } from './report.ts'
@@ -136,6 +136,7 @@ export async function buildHtml(
   const { approvals, unreadable } = await readApprovals(docDir)
   const { held, checked } = heldOf(expected, results, approvals, unreadable)
   await writeFile(join(docDir, HELD_FILE), json(held))
+  for (const r of results) await clearBackdrop(r.dir)
   // A scan's words are in its pixels: it has no backdrop to print over yet, so its document keeps the text view.
   if (printed)
     await writeBackdrops(
@@ -255,8 +256,8 @@ export async function buildHtml(
   }
   await write()
   if (!printed) return htmlPath
-  // A page whose placed text misfits, or whose print misinforms against its PDF, shows the text view (printcheck.ts).
-  const check = await checkPrinted(pdfPath, htmlPath, docDir, pages, write)
+  // A page whose placed text misfits shows the text view (printcheck.ts).
+  const check = await checkPrinted(htmlPath, docDir, pages, write)
   const shown = new Set(pages.flatMap((p) => (p.backdrop ? [p.keyPage] : [])))
   // Every page the document must hold, the ones that failed to convert included.
   const rows = expected.map((pdfPage) => {
@@ -288,7 +289,8 @@ async function copyPrintFonts(html: string, docDir: string): Promise<void> {
 // The page's backdrop when it rendered (backdrop.ts); a page without one keeps its document in the text view.
 async function backdropOf(dir: string, docDir: string): Promise<NonNullable<HtmlPage['backdrop']> | null> {
   const json = await readFile(join(dir, 'backdrop.json'), 'utf8').catch(() => null)
-  return json === null ? null : { src: join(dir, 'backdrop.jpg').slice(docDir.length + 1), grid: parseGrid(json) }
+  const at = (file: string): string => join(dir, file).slice(docDir.length + 1)
+  return json === null ? null : { src: at(BACKDROP_FILES.x1), src2x: at(BACKDROP_FILES.x2), grid: parseGrid(json) }
 }
 
 // The brief's logo (a page among those it saw, a box as fractions of it) on the page and in the points it names.

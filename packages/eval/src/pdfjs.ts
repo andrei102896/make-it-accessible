@@ -2,33 +2,30 @@ import { readFile } from 'node:fs/promises'
 import { PDFJS_TIMEOUT_MS, withDeadline } from './deadline.ts'
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { z } from 'zod'
-import { ownFonts, type Drawn, type OwnFonts } from '@make-it-accessible/pipeline/pdf/ownfont'
+import type { Drawn } from '@make-it-accessible/pipeline/pdf/ownfont'
 import { printedFaces, type PrintedFace } from '@make-it-accessible/pipeline/pdf/printedfaces'
 import { PdfFont, PdfItem } from '@make-it-accessible/pipeline/pdf/pdfjs'
 import { trackingOf } from '@make-it-accessible/pipeline/pdf/tracking'
 import type { Extraction } from '@make-it-accessible/pipeline/pdf/types'
-import { permittedFonts } from './rawfonts.ts'
 import { degraded } from '@make-it-accessible/pipeline/degraded'
 
 // Poppler's words and pdf.js' items agree on the page's frame only where the crop box is the media box: within this.
 export const SAME_FRAME = 0.5
 
-// Per page: each run's printed letter spacing (pdf/tracking.ts), the PDF's own face it is printed in, where its
-// maker permits embedding (pdf/ownfont.ts), and each printed face's program for measuring (pdf/printedfaces.ts).
-export type PageFacts = { tracking: Record<string, number>; own: OwnFonts; printed: Map<string, PrintedFace> }
+// Per page: each run's printed letter spacing (pdf/tracking.ts) and each printed face's program for measuring
+// (pdf/printedfaces.ts).
+export type PageFacts = { tracking: Record<string, number>; printed: Map<string, PrintedFace> }
 type Facts = { of: (e: Extraction) => Promise<PageFacts>; close: () => Promise<void> }
-const NONE = (): PageFacts => ({ tracking: {}, own: { faces: {}, fonts: {}, files: new Map() }, printed: new Map() })
+const NONE = (): PageFacts => ({ tracking: {}, printed: new Map() })
 
 // The PDF read by pdf.js for its fonts. Both facts only refine the printed view: a PDF or page pdf.js cannot read
 // is untracked and in stand-in faces, and logged.
 export async function pdfFacts(pdf: string): Promise<Facts> {
   const data = new Uint8Array(await readFile(pdf))
-  // Before pdf.js: it may take over the buffer it is given.
-  const permitted = permittedFonts(data)
   const task = getDocument({ data, fontExtraProperties: true, disableFontFace: true, verbosity: 0 })
   const doc = await withDeadline(task.promise, PDFJS_TIMEOUT_MS, 'pdf.js did not open it in time').catch(
     async (err: unknown) => {
-      degraded(`${pdf}: pdf.js could not read it, no tracking or own faces: ${String(err)}`)
+      degraded(`${pdf}: pdf.js could not read it, no tracking or measured faces: ${String(err)}`)
       await task.destroy()
       return null
     },
@@ -61,11 +58,10 @@ export async function pdfFacts(pdf: string): Promise<Facts> {
         const drawn = drawnWith(ops)
         return {
           tracking: trackingOf(e.runs, items, fonts, box),
-          own: ownFonts(e.runs, items, fonts, box, permitted, drawn),
           printed: printedFaces(e.runs, items, fonts, box, drawn),
         }
       } catch (err) {
-        degraded(`${pdf} p${String(e.pdfPage)}: no tracking or own faces: ${String(err)}`)
+        degraded(`${pdf} p${String(e.pdfPage)}: no tracking or measured faces: ${String(err)}`)
         return NONE()
       } finally {
         page?.cleanup()

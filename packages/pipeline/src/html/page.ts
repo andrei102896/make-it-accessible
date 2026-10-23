@@ -329,7 +329,7 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
   const framed = layout.boxes.pageFrame ? ` class="box ${vectorClass(layout.boxes.pageFrame)}"` : ''
   const printed = page.backdrop ? ` style="--ar:${String(e.width)}/${String(e.height)}"` : ''
   const backdrop = page.backdrop
-    ? `\n<img class="backdrop" src="${esc(page.backdrop.src)}" alt="" loading="lazy" decoding="async">`
+    ? `\n<img class="backdrop" src="${esc(page.backdrop.src)}" srcset="${esc(page.backdrop.src)} 1x, ${esc(page.backdrop.src2x)} 2x" alt="" loading="lazy" decoding="async">`
     : ''
   const html = `<section aria-labelledby="${id}"${framed} data-page="${page.keyPage}"${printed}>\n<h2 id="${id}"${marker}>${ui.page} ${e.pdfPage}</h2>${backdrop}\n${body.join('\n')}\n</section>`
   return { html, toc, masthead: header }

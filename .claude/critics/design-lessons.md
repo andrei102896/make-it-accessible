@@ -69,3 +69,6 @@
 - A measurement report keeps every signal the old logs showed (missing letters, ragged, fallbacks, per-line misses) and lists the worst first, each set apart (measure plan, 2026-10-22).
 - A word the model cited "by position" may stand for a visible mark we never named: before hiding it, look for the printed mark it replaced (Howies group menus' wheat, 2026-10-22).
 - Pieces merged into one drawing stop matching the legend's size and lose their name: an icon plus its slash or neighbour (Howies group 11 x 22.8 and 23.2 x 15.5 pt, 2026-10-22).
+- A raster's promised scale is not its achieved scale: count the fallback pages before relying on it (Le Dive at 1 px/pt, printed-view letters plan, 2026-10-23).
+- Invisible text is still read under the pointer: misplaced transparent boxes mislead Hover Text and mouse-echo users (printed view as images of text, 2026-10-23).
+- A viewport-width threshold misses users who zoom only text or use a magnifier: write the floor in em (printed view floor, 2026-10-23).
