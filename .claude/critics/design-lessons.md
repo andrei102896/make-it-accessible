@@ -83,3 +83,6 @@
 - A computed `font-style` proves nothing when the family embeds only the other style: CSS falls back to it, so check the face drawn (italic plan, 2026-10-23).
 - A role styled italic with `font-synthesis: none` and no italic file draws upright, silently: Howies' notes were that CASES row (2026-10-23).
 - Taking a style off the roles also strips it from text with no runs (the band title, model-read leaves): list what is not built from segments first (2026-10-23).
+- A font budget is zero-sum: when a new style claims a file, diff the files that leave and the words that lose a real face (Carmine's at 4/4 files, 2026-10-23).
+- A style measured from geometry (a shear over an upright face) is an oblique: synthesis reproduces it, and exceptions written for named styles may not hold for it (fake italic plan, 2026-10-23).
+- Chrome synthesises `font-style: italic`, not an `oblique` angle, over a webfont declared normal: the computed style read oblique while Carmine's Barlow drew upright; look at the drawn face (fake italic, 2026-10-23).

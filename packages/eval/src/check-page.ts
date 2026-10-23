@@ -68,7 +68,7 @@ try {
             const text = document.querySelector<HTMLInputElement>('#view-text')
             if (text) text.click()
             // Text only shows `[data-free]` words (the printed view hides them), never `.sr-only` copies.
-            const spans = [...document.querySelectorAll('main [class*="fw-"], main .fi')].filter(
+            const spans = [...document.querySelectorAll('main [class*="fw-"], main .fi, main .fo')].filter(
               (s) => !s.closest('.sr-only') && s.parentElement,
             )
             const differ = (k: 'fontWeight' | 'fontStyle'): number =>

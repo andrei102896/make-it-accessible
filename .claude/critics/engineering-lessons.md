@@ -123,3 +123,7 @@
 - Moving a style from role CSS to word spans moves the font-file demand too: the embedding tally keys on what the spans ask for (italic plan, 2026-10-23).
 - A tally keyed on family alone credits every part of that family with every run: count each part's own cited words (shownFiles asked Lato 700 italic nothing drew, 2026-10-23).
 - A dedupe test passing the same input twice cannot show an overlap between distinct inputs sharing a key: test two parts that collide (webfonts.test, 2026-10-23).
+- Poppler hands one RunFont object to every word on a line: a per-word change never mutates it; a measured property gets its own field so faceKey-keyed measures stay put (fake-italic plan, 2026-10-23).
+- A step that ran on a few pages and threw on failure becomes an outage when it runs on every page: widen the gate and make its failure degrade together (`withWholeWords`, 2026-10-23).
+- A marker meaning "rerun me under less load" goes only on load-dependent failures: a pdf.js parse error marked `degraded` would drop a document from the measure for good (`withWholeWords`, 2026-10-23).
+- pdf.js text content holds empty, zero-wide end-of-line items with real transforms: a geometric matcher filters them before choosing "nearest" (`slanted`, 2026-10-23).

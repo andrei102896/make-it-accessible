@@ -45,7 +45,7 @@ for (const s of sources) {
       const f = fresh.runs[i]
       if (f?.font) r.font = f.font
       if (f?.color) r.color = f.color
-      if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled })
+      if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled, slanted: f.slanted })
     })
     const structure = parsePage(await readFile(join(s.run, d, 'structure.json'), 'utf8'))
     const v = validatePage(structure, extraction)

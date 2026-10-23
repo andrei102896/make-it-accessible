@@ -132,8 +132,32 @@ test("each word's italic is its own; weight only where its line mixes styles (Le
   assert.deepEqual(runsClasses(runs.slice(1, 2)), ['fw-400', 'fi'])
   assert.deepEqual(runsClasses(runs.slice(3)), ['fi'])
   assert.deepEqual(runsClasses(runs.slice(1, 3)), [])
+  // A word its text matrix slants leans (an upright face sheared), never asking its italic file.
+  const sheared: Extraction = { ...e, runs: [{ ...run('Served', 0, 400, false, false), slanted: true }] }
+  assert.equal(
+    inkedHtml(inkSegments({ src: [[0, 0]] }, sheared, 'Served'), new Set(), (s) => s),
+    '<span class="fo">Served</span>',
+  )
+  // Named italic wins over a slant; a leaf whose letters do not follow its runs takes most of them; mixed runs: none.
+  const mixed: Extraction = {
+    ...e,
+    runs: [
+      { ...run('Served', 0, 400, true, false), slanted: true },
+      { ...run('With', 1, 400, false, false), slanted: true },
+      run('Your', 2, 400, false, false),
+    ],
+  }
+  assert.equal(
+    inkedHtml(inkSegments({ src: [[0, 0]] }, mixed, 'Served'), new Set(), (s) => s),
+    '<span class="fi">Served</span>',
+  )
+  assert.equal(
+    inkedHtml(inkSegments({ src: [[1, 1]] }, mixed, 'Withh'), new Set(), (s) => s),
+    '<span class="fo">Withh</span>',
+  )
+  assert.deepEqual(runsClasses(mixed.runs.slice(1)), [])
   // A span synthesises a style its file lacks, keeping a small-caps role's synthesis.
-  assert.match(css(null, null), /:is\(\[class\*="fw-"\], \.fi\) \{ font-synthesis: weight style small-caps; \}/)
+  assert.match(css(null, null), /:is\(\[class\*="fw-"\], \.fi, \.fo\) \{ font-synthesis: weight style small-caps; \}/)
 })
 
 test('with a brand the red words are wrapped and coloured at 4.5:1; the contents label stays plain; without, nothing', () => {

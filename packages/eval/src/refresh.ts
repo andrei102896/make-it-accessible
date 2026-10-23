@@ -48,7 +48,7 @@ export async function refreshedPage(
     const f = freshBase[i]
     if (f?.color) r.color = f.color
     if (f?.font) r.font = f.font
-    if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled })
+    if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled, slanted: f.slanted })
   })
   const saved = extraction.runs
   extraction.runs = [...base, ...fresh.runs.filter((r) => r.icon)]
