@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { brandCss, type Brand } from './brand.ts'
 import { contrast, fromHex } from './color.ts'
 import type { Profile, RoleStyle } from './profile.ts'
-import { alongside, familyFor, fileFor, fontFaces, withinBudget, type FontManifest } from './webfonts.ts'
+import { familyFor, fileFor, fontFaces, type FontManifest } from './webfonts.ts'
 
 const manifest = (family: string, category: 'text' | 'display', weights: string[]): FontManifest => ({
   family,
@@ -46,40 +46,6 @@ test('a printed family finds its vendored face, a longer name by prefix, a comme
   assert.equal(familyFor('oswaldsemibolditalic', library)?.family, 'Oswald')
   assert.equal(familyFor('oswaldstencil', library), undefined)
   assert.equal(familyFor('dinosaur', library), undefined)
-})
-
-test('fonts to embed: most-used first, within the file count and the byte budget', () => {
-  const wanted = [
-    { id: 'a', words: 5, bytes: 90 },
-    { id: 'b', words: 50, bytes: 60 },
-    { id: 'c', words: 20, bytes: 50 },
-    { id: 'd', words: 10, bytes: 30 },
-  ]
-  assert.deepEqual(
-    withinBudget(wanted, 3, 150).map((w) => w.id),
-    ['b', 'c', 'd'],
-  )
-  assert.deepEqual(
-    withinBudget(wanted, 1, 150).map((w) => w.id),
-    ['b'],
-  )
-})
-
-test("spanned faces' files go in the budget the roles leave, only for a family already embedded", () => {
-  const f = (family: string, file: string, words: number, bytes: number) => ({
-    manifest: { key: family },
-    file: { file },
-    words,
-    bytes,
-  })
-  const chosen = [f('lato', 'regular', 50, 60)]
-  // Lato's italic fits; Bodoni's main file was left out, so its italic would switch Bodoni on for upright words.
-  const others = [f('lato', 'regular', 9, 60), f('lato', 'italic', 5, 50), f('bodoni', 'italic', 20, 10)]
-  assert.deepEqual(
-    alongside(chosen, others, 4, 150).map((w) => `${w.manifest.key}/${w.file.file}`),
-    ['lato/italic'],
-  )
-  assert.deepEqual(alongside(chosen, others, 4, 100), [])
 })
 
 test('a weight is drawn by the variable file containing it, else the nearest static weight', () => {
@@ -170,6 +136,34 @@ test('a page that prints a role in another weight than the document keeps its ow
     /section\[data-page="1"\] :is\(\.products\.menu \.name, \.products\.cards \.name\) \{[^}]*font-weight: 900/,
   )
   assert.doesNotMatch(css, /section\[data-page="2"\]/)
+})
+
+test("no role or heading is set italic: each word carries its own; the band title, with no runs, keeps its heading's", () => {
+  const italic: RoleStyle = { ...style('lato', 16, '#000000'), face: { key: 'lato', weight: 400, italic: true } }
+  const css = brandCss(brand(profile([italic], { desc: italic })))
+  // Only the band title and the embedded files' own @font-face name a style.
+  assert.doesNotMatch(css.replace(/\.band h1 \{[^}]*\}|@font-face \{[^}]*\}/g, ''), /font-style/)
+  assert.match(css, /\.band h1 \{[^}]*font-style: italic/)
+  // A masthead with a signature of its own gives the title its italic, whatever the first heading prints.
+  const upright = style('lato', 30, '#000000')
+  const mast = {
+    ...profile([upright, italic]),
+    headings: new Map([
+      ['0:blocks[0]', 0],
+      ['0:blocks[1]', 1],
+    ]),
+  }
+  assert.match(
+    brandCss({ ...brand(mast), masthead: { key: '0:blocks[1]', logoShare: null } }),
+    /\.band h1 \{[^}]*font-style: italic/,
+  )
+  assert.match(brandCss(brand(mast)), /\.band h1 \{[^}]*font-style: normal/)
+  // A display face with no italic file draws its italic words upright: its slant is its italic.
+  assert.match(
+    brandCss(brand(profile([], { name: style('bimbo', 16, '#000000') }))),
+    /\.name\) \.fi \{ font-style: normal; \}/,
+  )
+  assert.doesNotMatch(css, /\.fi \{ font-style: normal/)
 })
 
 test('a name read from the image (a wordmark) takes a wordmark size; the masthead keeps room above it', () => {

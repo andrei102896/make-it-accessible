@@ -118,3 +118,8 @@
 - Name a count by the unit it counts: spans of same-style words are not words, words marked only on success are not "words in mixed lines" (round style measures, 2026-10-23).
 - An "unmatched" count is the failures inside the loop that tried, never candidates minus successes (poppler.ts unmatched, 2026-10-23).
 - An exclusion borrowed from one view can be wrong in the other: `[data-free]` is hidden in the printed view and shown in Text only (spans restyled went 38 → 4 on the sealed set, 2026-10-23).
+- A probe with a fixed darkness threshold measures the ground of light-on-dark text: take ink as the box's minority side (Carew's GillSans-Italic on navy read upright, 324 rows, 2026-10-23).
+- When a class leaves a span vocabulary, grep the measures and resets that select it (`main .fi, main .fn` stood for every styled span, 2026-10-23).
+- Moving a style from role CSS to word spans moves the font-file demand too: the embedding tally keys on what the spans ask for (italic plan, 2026-10-23).
+- A tally keyed on family alone credits every part of that family with every run: count each part's own cited words (shownFiles asked Lato 700 italic nothing drew, 2026-10-23).
+- A dedupe test passing the same input twice cannot show an overlap between distinct inputs sharing a key: test two parts that collide (webfonts.test, 2026-10-23).

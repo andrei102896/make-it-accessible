@@ -49,16 +49,17 @@ test("a document's words styled by their piece, mixed-style lines left unmatched
       JSON.stringify({ ...extraction, runs: [run(0, true), run(1, true), run(2, false)] }),
     )
     const check = join(dir, 'check.log')
-    await writeFile(check, 'page: desktop: axe ok | spans restyled 4 ; phone: axe ok\n')
+    await writeFile(check, 'page: desktop: axe ok | spans restyled 4 weight, 9 italic ; phone: axe ok\n')
     const files = { dir, rebuild: join(dir, 'none'), fidelity: join(dir, 'none'), content: join(dir, 'none'), check }
     const { row, totals } = await docRow(files, [])
     assert.deepEqual(
       [
         totals['words styled by their piece'],
         totals['mixed-style lines unmatched'],
-        totals['text view spans restyled'],
+        totals['text view spans restyled in weight'],
+        totals['text view spans restyled in italic'],
       ],
-      [2, 2, 4],
+      [2, 2, 4, 9],
     )
     assert.ok(row.measures.includes('p01 lines in mixed styles unmatched: 2'))
   } finally {

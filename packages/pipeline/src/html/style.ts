@@ -59,11 +59,11 @@ p { margin: .5rem 0; }
 .priced .products { margin-bottom: .5rem; }
 .note { font-weight: 600; margin-bottom: 0; }
 .addon .money { font-weight: 600; color: var(--fg); }
-/* A word printed in another weight or style than its element (segments.ts); the page sets font-synthesis: none, a
-   face whose file is not embedded still shows its style. */
+/* A word's own italic, and its weight where its line mixes styles (segments.ts); the page sets font-synthesis: none,
+   a face whose file is not embedded still shows its style, small caps kept. */
 ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `.fw-${String(n * 100)} { font-weight: ${String(n * 100)}; }`).join(' ')}
-.fi { font-style: italic; } .fn { font-style: normal; }
-:is([class*="fw-"], .fi) { font-synthesis: weight style; }
+.fi { font-style: italic; }
+:is([class*="fw-"], .fi) { font-synthesis: weight style small-caps; }
 .products.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
   container-type: inline-size; }
 .products.cards > li { display: grid; grid-template-rows: subgrid; grid-row: span 4; row-gap: .5rem; align-content: start;

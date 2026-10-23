@@ -8,7 +8,17 @@ import { caseReliable } from './source.ts'
 // colour; a heading takes its own, grouped with headings printed alike, whatever level the model gave it.
 export type Face = { key: string; weight: number; italic: boolean }
 // `smallCaps`: the role is set in a small-caps face (see smallCapsIn); synthesised on the page.
-export type RoleStyle = { face: Face; size: number; color: string; caps: boolean; words: number; smallCaps?: boolean }
+// `letters`: per weight and italic its words show (segments.ts: weight only on styled words), the letters in it.
+export type Shown = { weight: number | null; italic: boolean; letters: number }
+export type RoleStyle = {
+  face: Face
+  size: number
+  color: string
+  caps: boolean
+  words: number
+  smallCaps?: boolean
+  letters?: Shown[]
+}
 export type Role = 'name' | 'price' | 'desc' | 'text' | 'th'
 export const ROLES: readonly Role[] = ['name', 'price', 'desc', 'text', 'th']
 export type Profile = {
@@ -62,6 +72,7 @@ const cites = (t: TextValue | undefined, e: Extraction, hidden: Set<string>): Ru
 // The dominant face and colour by characters, the median size, capitals when nearly every letter is one.
 export function styleOf(runs: readonly Run[]): RoleStyle | null {
   const tally = new Map<string, { face: Face; color: string; chars: number }>()
+  const shown = new Map<string, Shown>()
   const sizes: number[] = []
   let letters = 0
   let upper = 0
@@ -73,6 +84,9 @@ export function styleOf(runs: readonly Run[]): RoleStyle | null {
     const seen = tally.get(k) ?? { face: { key, weight, italic }, color, chars: 0 }
     seen.chars += r.str.length
     tally.set(k, seen)
+    const drawn = { weight: r.styled ? weight : null, italic }
+    const at = `${String(drawn.weight)}|${String(italic)}`
+    shown.set(at, { ...drawn, letters: (shown.get(at)?.letters ?? 0) + r.str.length })
     for (let i = 0; i < r.str.length; i++) sizes.push(r.font.size)
     letters += (r.str.match(/\p{L}/gu) ?? []).length
     upper += (r.str.match(/\p{Lu}/gu) ?? []).length
@@ -86,6 +100,7 @@ export function styleOf(runs: readonly Run[]): RoleStyle | null {
     color: top.color,
     caps: letters > 0 && upper / letters >= CAPS,
     words: runs.length,
+    letters: [...shown.values()],
   }
 }
 

@@ -3,8 +3,7 @@ import { join } from 'node:path'
 import { brandPlan, type Brand } from '@make-it-accessible/pipeline/html/brand'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import type { HtmlPage } from '@make-it-accessible/pipeline/html/document'
-import { profileOf, type Face, type Profile } from '@make-it-accessible/pipeline/html/profile'
-import { faceKey } from '@make-it-accessible/pipeline/pdf/face'
+import { profileOf, type Profile } from '@make-it-accessible/pipeline/html/profile'
 import {
   groupOrnaments,
   ornamentBelow,
@@ -13,10 +12,9 @@ import {
 } from '@make-it-accessible/pipeline/html/ornament'
 import { divided, lineBetween, ruleBelow, signatureRules, type Found } from '@make-it-accessible/pipeline/html/rules'
 import {
-  fileFor,
   FontManifestSchema,
-  withinBudget,
-  alongside,
+  familyBudget,
+  shownFiles,
   type EmbeddedFace,
   type FontManifest,
 } from '@make-it-accessible/pipeline/html/webfonts'
@@ -153,34 +151,15 @@ export async function documentBrand(
   if (!profile) return null
   const library = await fontLibrary()
   const plan = brandPlan(profile, library)
-  type Wanted = { manifest: FontManifest; file: EmbeddedFace['file']; words: number; bytes: number }
-  const want = async (into: Map<string, Wanted>, manifest: FontManifest, face: Face, words: number): Promise<void> => {
-    const file = fileFor(manifest, face.weight, face.italic)
-    if (!file) return
-    const k = `${manifest.key}/${file.file}`
-    const seen = into.get(k)
-    const bytes = seen?.bytes ?? (await stat(join(FONTS_DIR, manifest.key, file.file))).size
-    into.set(k, { manifest, file, words: (seen?.words ?? 0) + words, bytes })
-  }
-  const wanted = new Map<string, Wanted>()
-  const parts = [...plan.roles.values(), ...plan.headings]
-  for (const { manifest, style } of parts) if (manifest) await want(wanted, manifest, style.face, style.words)
-  const chosen = withinBudget([...wanted.values()], MAX_FILES, MAX_FONT_BYTES)
-  // The other weights and styles a part's family prints (words spanned, segments.ts), only in the budget left over.
-  const printed = new Map<string, Map<string, { face: Face; words: number }>>()
-  for (const r of pages.flatMap((p) => p.extraction.runs)) {
-    if (!r.font || !r.styled) continue
-    const byFace = printed.get(r.font.key) ?? new Map<string, { face: Face; words: number }>()
-    const seen = byFace.get(faceKey(r.font)) ?? { face: r.font, words: 0 }
-    seen.words++
-    printed.set(r.font.key, byFace.set(faceKey(r.font), seen))
-  }
-  const others = new Map<string, Wanted>()
-  for (const { manifest, style } of parts)
-    for (const { face, words } of printed.get(style.face.key)?.values() ?? [])
-      if (manifest) await want(others, manifest, face, words)
+  // The files its words draw in, most letters first, a family's others only beside its most-used (webfonts.ts).
+  const sized = await Promise.all(
+    shownFiles([...plan.roles.values(), ...plan.headings]).map(async (s) => ({
+      ...s,
+      bytes: (await stat(join(FONTS_DIR, s.manifest.key, s.file.file))).size,
+    })),
+  )
   const faces: EmbeddedFace[] = []
-  for (const w of [...chosen, ...alongside(chosen, [...others.values()], MAX_FILES, MAX_FONT_BYTES)])
+  for (const w of familyBudget(sized, MAX_FILES, MAX_FONT_BYTES))
     faces.push({
       manifest: w.manifest,
       file: w.file,

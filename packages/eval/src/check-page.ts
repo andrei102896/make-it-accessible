@@ -60,22 +60,25 @@ try {
         return clipped.length ? `${String(clipped.length)} clipped` : 'ok'
       })
     }
-    // Spans whose face differs from their element's in Text only: what a line printed in more than one style changed.
+    // Spans whose weight or style differs from their element's in Text only (segments.ts): words a line printed in
+    // more than one style sets apart, and italic words.
     const restyled =
       mode.name === 'desktop'
         ? await page.evaluate(() => {
             const text = document.querySelector<HTMLInputElement>('#view-text')
             if (text) text.click()
-            return [...document.querySelectorAll('main .fi, main .fn')].filter((s) => {
-              // Text only shows `[data-free]` words (the printed view hides them), never `.sr-only` copies.
-              if (s.closest('.sr-only')) return false
-              const [a, b] = [getComputedStyle(s), s.parentElement && getComputedStyle(s.parentElement)]
-              return !b || a.fontWeight !== b.fontWeight || a.fontStyle !== b.fontStyle
-            }).length
+            // Text only shows `[data-free]` words (the printed view hides them), never `.sr-only` copies.
+            const spans = [...document.querySelectorAll('main [class*="fw-"], main .fi')].filter(
+              (s) => !s.closest('.sr-only') && s.parentElement,
+            )
+            const differ = (k: 'fontWeight' | 'fontStyle'): number =>
+              spans.filter((s) => s.parentElement && getComputedStyle(s)[k] !== getComputedStyle(s.parentElement)[k])
+                .length
+            return { weight: differ('fontWeight'), italic: differ('fontStyle') }
           })
         : null
     out.push(
-      `${mode.name}: axe ${bad.join(' ') || 'ok'}${overflow ? ' OVERFLOW' : ''}${spacing ? ` | 1.4.12 ${spacing}` : ''}${restyled === null ? '' : ` | spans restyled ${String(restyled)}`}`,
+      `${mode.name}: axe ${bad.join(' ') || 'ok'}${overflow ? ' OVERFLOW' : ''}${spacing ? ` | 1.4.12 ${spacing}` : ''}${restyled === null ? '' : ` | spans restyled ${String(restyled.weight)} weight, ${String(restyled.italic)} italic`}`,
     )
     await ctx.close()
   }

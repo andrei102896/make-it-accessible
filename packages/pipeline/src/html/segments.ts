@@ -1,11 +1,11 @@
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { TextValue } from '../model/schema.ts'
-import type { Face } from './profile.ts'
 
-// A printed weight and style, what a word's span may change (never its family).
-export type Style = Pick<Face, 'weight' | 'italic'>
-// A shown text's characters grouped by colour, style (only words their line prints in more than one style have one)
-// and the icon they name (its printed left and width, hundredths of the page width).
+// What a word's span may change (never its family): its italic, as its font names it (reliable: 1,188 of 1,222 named
+// italic lines measured slanted), and its weight only where its line mixes styles (names alone mislead: Carmine's).
+export type Style = { weight: number | null; italic: boolean }
+// A shown text's characters grouped by colour, printed style and the icon they name (its printed left and width,
+// hundredths of the page width).
 export type Segment = { text: string; color: string | null; style: Style | null; icon: { x: number; w: number } | null }
 
 // Words printed farther apart than this (em) are two pieces of a line: a word space is ~0.25 em, a tab or a price
@@ -39,6 +39,7 @@ export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | nu
 // The shown text's characters each with its run's colour (whitespace takes the one before). When the letters differ,
 // one segment, coloured only when every run agrees.
 export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
+  // The model's reading has no runs: no printed style to show.
   if ('seen' in t) return [{ text: shown, color: null, style: null, icon: null }]
   const letters = Array.from(shown)
   const owners = shownRuns(t, e, shown)
@@ -46,7 +47,11 @@ export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment
     const hidden = new Set(e.hidden)
     const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
     const all = new Set(runs.map((r) => r.color ?? null))
-    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null, style: null, icon: null }]
+    // Its italic, from most of its runs' letters; no weight.
+    const lettersIn = (italic: boolean): number =>
+      runs.filter((r) => r.font?.italic === italic).reduce((n, r) => n + r.str.length, 0)
+    const style = runs.some((r) => r.font) ? { weight: null, italic: lettersIn(true) > lettersIn(false) } : null
+    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null, style, icon: null }]
   }
   return segmentsOf(letters, owners, e.width)
 }
@@ -61,7 +66,7 @@ function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[],
     const owner = owners[i]
     if (owner) {
       color = owner.color ?? null
-      style = owner.font && owner.styled ? { weight: owner.font.weight, italic: owner.font.italic } : null
+      style = owner.font ? { weight: owner.styled ? owner.font.weight : null, italic: owner.font.italic } : null
       icon = owner.icon ? { x: u(owner.box.x), w: u(owner.box.w) } : null
     } else if (i === 0) color = null
     // A space after an icon's words is not the tag's: the tag ends with its last word.
@@ -134,29 +139,30 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
   return parts.filter((p) => 'runs' in p).length > 1 ? parts : null
 }
 
-// A span's classes for words (a price's) sharing one style their line sets apart; none when they differ.
+// A span's classes for words (a price's) sharing one style; none when they differ.
 export function runsClasses(runs: readonly Run[]): string[] {
-  const styles = new Set(
-    runs.map((r) => (r.font && r.styled ? `${String(r.font.weight)}:${String(r.font.italic)}` : '')),
-  )
-  const font = runs[0]?.styled ? runs[0].font : undefined
-  return styles.size === 1 && font ? styleClasses(font) : []
+  const styles = runs.map((r) => (r.font ? { weight: r.styled ? r.font.weight : null, italic: r.font.italic } : null))
+  const [first] = styles
+  return first && styles.every((s) => sameStyle(s, first)) ? styleClasses(first) : []
 }
 
-// A word's printed weight and style as classes (style.ts), whatever its element's face: no copy of the brand's CSS.
-const styleClasses = (style: Style | null): string[] =>
-  style ? [`fw-${String(style.weight)}`, style.italic ? 'fi' : 'fn'] : []
+// A word's printed weight and italic as classes (style.ts), whatever its element's face: no copy of the brand's CSS,
+// which sets no italic.
+const styleClasses = (style: Style | null): string[] => [
+  ...((style?.weight ?? null) === null ? [] : [`fw-${String(style?.weight)}`]),
+  ...(style?.italic ? ['fi'] : []),
+]
 
 export type Each = (s: string) => string
-// The segments as HTML: brand inks in their class, styled words in a silent span (`fw-N` and `fi`/`fn`, never <em>), an
+// The segments as HTML: brand inks in their class, styled words in a silent span (`fw-N`, `fi`; never <em>), an
 // icon's words in the legend tag (`--iw`, `--ix`), the rest joined so `each` sees whole words.
 export function inkedHtml(segments: readonly Segment[], inks: ReadonlySet<string>, each: Each): string {
   const groups: Segment[] = []
   for (const s of segments) {
     const color = s.color !== null && inks.has(s.color) ? s.color : null
     const last = groups.at(-1)
-    if (last && last.color === color && sameStyle(last.style, s.style) && sameIcon(last.icon, s.icon))
-      last.text += s.text
+    const same = last && styleClasses(last.style).join() === styleClasses(s.style).join()
+    if (last && same && last.color === color && sameIcon(last.icon, s.icon)) last.text += s.text
     else groups.push({ ...s, color })
   }
   return groups

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { RoleStyle } from './profile.ts'
 
 // An open-licensed family vendored unmodified from Google Fonts (subsetting would break a Reserved Font Name).
 export const FontManifestSchema = z
@@ -98,31 +99,50 @@ export function fontFaces(faces: readonly EmbeddedFace[]): string {
     .join('\n')
 }
 
-// Files beside `chosen` in the budget it leaves (spanned weights and styles), each only of a family `chosen` embeds:
-// any file of a family turns the family on for every part set in it (brand.ts family).
-export function alongside<
-  T extends { bytes: number; words: number; manifest: { key: string }; file: { file: string } },
->(chosen: readonly T[], others: readonly T[], maxFiles: number, maxBytes: number): T[] {
-  const key = (w: T): string => `${w.manifest.key}/${w.file.file}`
-  const taken = new Set(chosen.map(key))
-  const families = new Set(chosen.map((w) => w.manifest.key))
-  const left = others.filter((w) => !taken.has(key(w)) && families.has(w.manifest.key))
-  const bytes = chosen.reduce((n, w) => n + w.bytes, 0)
-  return withinBudget(left, maxFiles - chosen.length, maxBytes - bytes)
+// The files a part's words draw in, with the letters each draws (profile.ts `letters`): the part's weight, a styled
+// word's own, in each word's italic (the brand sets none). A style built without its letters draws its role's face.
+export type ShownFile = { manifest: FontManifest; file: FontFile; letters: number }
+export function shownFiles(
+  parts: readonly { manifest: FontManifest | undefined; style: Pick<RoleStyle, 'face' | 'words' | 'letters'> }[],
+): ShownFile[] {
+  const out = new Map<string, ShownFile>()
+  for (const { manifest, style } of parts) {
+    if (!manifest) continue
+    const shown = style.letters ?? [{ weight: null, italic: false, letters: style.words }]
+    for (const s of shown) {
+      const file = fileFor(manifest, s.weight ?? style.face.weight, s.italic)
+      if (!file) continue
+      const k = `${manifest.key}/${file.file}`
+      out.set(k, { manifest, file, letters: (out.get(k)?.letters ?? 0) + s.letters })
+    }
+  }
+  return [...out.values()]
 }
 
-// The files to embed, most-used first, within a count and a byte budget; the rest fall back to their class stack.
-export function withinBudget<T extends { bytes: number; words: number }>(
-  wanted: readonly T[],
+// A part set in an embedded display face with no italic file draws its italic words upright: a script's slant is its
+// italic, a synthesised one would lean it twice (Lexington's Brush Script).
+export function uprightIn(m: FontManifest | undefined, faces: readonly EmbeddedFace[], sel: string): string[] {
+  const drawn = m?.category === 'display' && faces.some((f) => f.manifest.key === m.key)
+  return drawn && !m.files.some((f) => f.style === 'italic') ? [`${sel} .fi { font-style: normal; }`] : []
+}
+
+// The files to embed, most letters first, within a count and a byte budget; a family's other files only once its
+// most-used is in: any file of a family turns the family on for every part set in it (brand.ts family).
+export function familyBudget<T extends { bytes: number; letters: number; manifest: { key: string } }>(
+  shown: readonly T[],
   maxFiles: number,
   maxBytes: number,
 ): T[] {
   const out: T[] = []
+  const seen = new Set<string>()
   let bytes = 0
-  for (const w of [...wanted].sort((a, b) => b.words - a.words)) {
-    if (out.length >= maxFiles || bytes + w.bytes > maxBytes) continue
-    out.push(w)
-    bytes += w.bytes
+  for (const s of [...shown].sort((a, b) => b.letters - a.letters)) {
+    const first = !seen.has(s.manifest.key)
+    seen.add(s.manifest.key)
+    const family = out.some((o) => o.manifest.key === s.manifest.key)
+    if ((!first && !family) || out.length >= maxFiles || bytes + s.bytes > maxBytes) continue
+    out.push(s)
+    bytes += s.bytes
   }
   return out
 }

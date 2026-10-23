@@ -119,7 +119,7 @@ ${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0))
   font-size: calc(var(--fs, var(--h)) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw); white-space: var(--ws, normal);
   text-align: var(--ta, left); color: transparent; letter-spacing: 0; word-spacing: 0; text-indent: 0; font-size-adjust: none; }
 ${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
-${on} ${page} ${leaf} :is([class*="fw-"], .fi, .fn) { font-weight: inherit; font-style: inherit; }
+${on} ${page} ${leaf} [class*="fw-"] { font-weight: inherit; }
 /* The print shows its own letters (the backdrop); ours are read, selected and found over them, never seen. */
 ${on} ${page} ${leaf}::selection, ${on} ${page} ${leaf} *::selection { color: transparent; }
 /* A link's ring on its clipped box, which would cut one drawn round the link (WCAG 2.4.7). */

@@ -80,3 +80,6 @@
 - A gate deleted for a clip needs a measure in its place: clipping hides overflow without fixing it, so count clipped boxes and clipped prices (slice 3, 2026-10-23).
 - Fixing a style's data can flip a role's dominant face: count each role's faces per page before and after, the minority style is often the one the owner pointed at (Le Dive page 2 italic ingredients, 2026-10-23).
 - One face per role reproduces print only when the style changes at role boundaries; a style change inside a line (a cuvée name in a producer line, a price in a heading) needs a silent span, as colour does (Le Dive, 2026-10-23).
+- A computed `font-style` proves nothing when the family embeds only the other style: CSS falls back to it, so check the face drawn (italic plan, 2026-10-23).
+- A role styled italic with `font-synthesis: none` and no italic file draws upright, silently: Howies' notes were that CASES row (2026-10-23).
+- Taking a style off the roles also strips it from text with no runs (the band title, model-read leaves): list what is not built from segments first (2026-10-23).

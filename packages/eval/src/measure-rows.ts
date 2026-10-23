@@ -114,7 +114,9 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     add('printed boxes cut', Number(m?.[1] ?? 0))
     add('printed prices cut', Number(m?.[2] ?? 0))
     add('printed boxes overlapping', Number(m?.[3] ?? 0))
-    add('text view spans restyled', Number(/spans restyled (\d+)/.exec(l)?.[1] ?? 0))
+    const restyled = /spans restyled (\d+) weight, (\d+) italic/.exec(l)
+    add('text view spans restyled in weight', Number(restyled?.[1] ?? 0))
+    add('text view spans restyled in italic', Number(restyled?.[2] ?? 0))
   }
   // The measures: every page's whole-page findings, its printed shadows.
   const fidelity = await text(f.fidelity).then((raw) => (raw ? FidelityFile.parse(JSON.parse(raw)) : null))

@@ -3,7 +3,7 @@ import { contrast, distanceOk, fromHex, hex, readableOn, type Rgb } from './colo
 import { INK_DISTINCT, inkLike, ROLES, type Profile, type Role, type RoleStyle } from './profile.ts'
 import { mastheadCss, SEEN_TITLE_RATIO } from './masthead.ts'
 import { STACKS } from './style.ts'
-import { familyFor, fontFaces, type EmbeddedFace, type FontManifest } from './webfonts.ts'
+import { familyFor, fontFaces, uprightIn, type EmbeddedFace, type FontManifest } from './webfonts.ts'
 
 // The document's own look: its faces when open-licensed (embedded), its colours made readable on its background,
 // its sizes relative to its text. Accessibility corrects (4.5:1 for every text, 1rem minimum), never replaces.
@@ -154,14 +154,15 @@ function colour(c: string, bg: Rgb, alternate: string | null = null): string | n
   return ok ? hex(ok) : null
 }
 
-function declarations(b: Brand, part: Part, bg: Rgb, withColour = true): string {
+// No italic: each word carries its own (segments.ts `fi`), save text with no runs of its own (`italic`: the band title).
+function declarations(b: Brand, part: Part, bg: Rgb, withColour = true, italic: boolean | null = null): string {
   const { style: s, size, heading } = part
   const c = withColour ? colour(s.color, bg, b.alternate) : null
   const face = family(b, part)
   return [
     `font-family: ${face}`,
     `font-weight: ${String(s.face.weight)}`,
-    `font-style: ${s.face.italic ? 'italic' : 'normal'}`,
+    italic === null ? '' : `font-style: ${italic ? 'italic' : 'normal'}`,
     // Headings shrink on a phone: a measured 40px headline would break words at 320px; a display face never below
     // the size it was admitted at.
     heading
@@ -200,22 +201,25 @@ export function brandCss(b: Brand): string {
   const plan = brandPlan(p, b.library, solo ? mastSig : undefined)
   const roles = ROLES.flatMap((role) => {
     const part = plan.roles.get(role)
-    return part ? [`${ROLE_SELECTORS[role]} { ${declarations(b, part, bg)}; }`] : []
+    return part
+      ? [
+          `${ROLE_SELECTORS[role]} { ${declarations(b, part, bg)}; }`,
+          ...uprightIn(part.manifest, b.faces, `:is(${ROLE_SELECTORS[role]})`),
+        ]
+      : []
   })
   const price = plan.roles.get('price')
   const priceColour = price ? colour(price.style.color, bg, b.alternate) : null
   const cardPrice = price
     ? `.products.cards .price[data-role="current"] { font-family: ${family(b, price)}; font-size-adjust: none;${priceColour ? ` color: ${priceColour};` : ''} }`
     : ''
-  // A page that prints a role in another weight, face or style than the document keeps its own (Bernini).
+  // A page that prints a role in another weight or face than the document keeps its own (Bernini); its words their style.
   const perPage = (b.pages ?? []).flatMap((keyPage, i) =>
     ROLES.flatMap((role) => {
       const own = p.pageRoles?.[i]?.[role]
       const doc = p.roles[role]
       if (!own || !doc) return []
-      const differs =
-        own.face.key !== doc.face.key || own.face.weight !== doc.face.weight || own.face.italic !== doc.face.italic
-      if (!differs) return []
+      if (own.face.key === doc.face.key && own.face.weight === doc.face.weight) return []
       const part = {
         style: own,
         size: plan.roles.get(role)?.size ?? BASE_REM,
@@ -224,7 +228,7 @@ export function brandCss(b: Brand): string {
       }
       const face = family(b, part)
       return [
-        `section[data-page="${String(keyPage)}"] :is(${ROLE_SELECTORS[role]}) { font-family: ${face}; font-weight: ${String(own.face.weight)}; font-style: ${own.face.italic ? 'italic' : 'normal'}; }`,
+        `section[data-page="${String(keyPage)}"] :is(${ROLE_SELECTORS[role]}) { font-family: ${face}; font-weight: ${String(own.face.weight)}; }`,
       ]
     }),
   )
@@ -240,7 +244,7 @@ export function brandCss(b: Brand): string {
           `${sel}::after { content: ""; display: block; width: ${width}; border-top: 1px solid ${rule.color}; margin: .35em ${rule.centered ? 'auto' : '0'} 0; }`,
         ]
       : []
-    return [`${sel} { ${declarations(b, part, bg)}${align}; }`, ...line]
+    return [`${sel} { ${declarations(b, part, bg)}${align}; }`, ...line, ...uprightIn(part.manifest, b.faces, sel)]
   })
   const ornaments = b.ornaments.flatMap((o, i) => {
     const sel = `:is(h1, h2, h3, h4, h5, h6).orn-${String(i + 1)}`
@@ -259,7 +263,11 @@ export function brandCss(b: Brand): string {
     .filter(([id]) => id.startsWith('0:'))
     .sort((x, y) => x[0].localeCompare(y[0], 'en', { numeric: true }))[0]
   const top = first ? plan.headings[first[1]] : undefined
-  const title = top ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, bg, false)}; }` : ''
+  // Its words have no runs: the italic its masthead prints in (its signature's), else that heading's.
+  const italic = (mastSig === undefined ? top?.style : p.signatures[mastSig])?.face.italic ?? false
+  const title = top
+    ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, bg, false, italic)}; }`
+    : ''
   // A name read from the image (a wordmark with no text layer) has no measured size: it takes a wordmark's.
   const titleRatio =
     mastSig === undefined ? (b.masthead?.key ? SEEN_TITLE_RATIO : null) : (p.signatures[mastSig]?.size ?? 0) / p.body
