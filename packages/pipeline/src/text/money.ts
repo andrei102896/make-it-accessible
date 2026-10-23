@@ -15,13 +15,19 @@ const AS_PRINTED = new RegExp(
   'i',
 )
 // Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count
-// cut short ("$12/2") is no price.
-export const SIZED = new RegExp(String.raw`^(?:[$€£]${NUM}(?:\/${NUM})+|${CENTS}(?:\/${CENTS})+)$`)
+// cut short ("$12/2") is no price. A size not served is a dash ("£10/-/54").
+const NOT_SERVED = '[-\u2013\u2014]'
+const DASH = new RegExp(`^${NOT_SERVED}$`)
+const DIGITS_ONLY = new RegExp(String.raw`^[$€£]?(?:[\d./]|${NOT_SERVED})+$`)
+export const SIZED = new RegExp(
+  String.raw`^(?:[$€£]${NUM}(?:\/(?:${NUM}|${NOT_SERVED}))+|${CENTS}(?:\/(?:${CENTS}|${NOT_SERVED}))+)$`,
+)
 const rising = (words: string): boolean => {
-  if (!/^[$€£]?[\d./]+$/.test(words)) return true
+  if (!DIGITS_ONLY.test(words)) return true
   const amounts = words
     .replace(/^[$€£]/, '')
     .split('/')
+    .filter((a) => !DASH.test(a))
     .map(Number)
   return amounts.every((a, i) => i === 0 || a > (amounts[i - 1] ?? 0))
 }

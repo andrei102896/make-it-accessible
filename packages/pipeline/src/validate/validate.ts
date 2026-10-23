@@ -7,7 +7,7 @@ import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 import { consistencyFindings } from './consistency.ts'
 import { iconMarks } from './iconmarks.ts'
-import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, wordsOfPicture } from './proof.ts'
+import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, sizesPrinted, wordsOfPicture } from './proof.ts'
 
 const MAX_ALT_LENGTH = 250
 
@@ -156,7 +156,7 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
       const printed = asPrinted(cited)
       if (printed === null) errors.push({ path, problem: `price words "${words}" are not an amount` })
       // Sizes with no label read as numbers only ("3.99/4.99/5.99" whose SMALL/MEDIUM/LARGE is artwork).
-      else if (SIZED.test(printed) && !p.qualifier)
+      else if (SIZED.test(printed) && !p.qualifier && !sizesPrinted(printed, cited, onPage, cites))
         review.push({ path, problem: `prices of several sizes with no size label: "${words}"` })
     } else if (amount.currency === null) {
       if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page` })

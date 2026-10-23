@@ -17,14 +17,20 @@ const MIN_LETTERS = 4
 const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 const bottom = (b: Box): number => b.y + b.h
 
-// The page's amounts (run ids every price cites) and its headings' boxes: what a column head may stand above.
-export function pageCites(page: PageStructure, e: Extraction): { amounts: Set<string>; headings: Box[] } {
+type Cites = { amounts: Set<string>; headings: Box[]; read: Set<string> }
+
+// The page's amounts (run ids every price cites), its headings' boxes (what a column head may stand above) and the
+// words its headings and paragraphs read.
+export function pageCites(page: PageStructure, e: Extraction): Cites {
   const amounts = new Set<string>()
   const headings: Box[] = []
+  const read = new Set<string>()
   const runs = (src: readonly (readonly [number, number])[]): Run[] =>
     src.flatMap(([from, to]) => e.runs.slice(from, to + 1))
   const visit = (blocks: readonly Block[]): void => {
     for (const b of blocks) {
+      if ((b.kind === 'heading' || b.kind === 'paragraph') && 'src' in b.text)
+        for (const r of runs(b.text.src)) read.add(r.id)
       if (b.kind === 'heading' && 'src' in b.text) headings.push(...runs(b.text.src).map((r) => r.box))
       const prices =
         b.kind === 'products'
@@ -37,7 +43,19 @@ export function pageCites(page: PageStructure, e: Extraction): { amounts: Set<st
     }
   }
   visit(page.blocks)
-  return { amounts, headings }
+  return { amounts, headings, read }
+}
+
+// One measure, or several in one word: "125ml/500ml/750ml" names the sizes of "£7.5/26/38".
+const MEASURE = String.raw`\(?\d+(?:\.\d+)?\s?(?:ml|cl|l|oz|g|kg|lb)\)?`
+const MEASURES = new RegExp(String.raw`^${MEASURE}(?:\/${MEASURE})+$`, 'i')
+
+// A price of several sizes printed below the page's one word naming as many measures, which the answer reads.
+export function sizesPrinted(price: string, amount: readonly Run[], layer: readonly Run[], cites: Cites): boolean {
+  const count = price.split('/').length
+  const labels = layer.filter((r) => MEASURES.test(r.str) && r.str.split('/').length === count && cites.read.has(r.id))
+  const top = Math.min(...amount.map((r) => r.box.y))
+  return new Set(labels.map((r) => r.str.toLowerCase())).size === 1 && labels.some((r) => bottom(r.box) <= top)
 }
 
 // A price's label printed once as its column's head: the nearest words above the amount in its column, other
