@@ -37,8 +37,11 @@ type Range = [number, number]
 // A text citing only words that draw nothing: one finding per text, at the first such place.
 const NOTHING = 'cites words that draw nothing on the page'
 const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
+// Leader dots join a name to its price, fused into its word by pdftotext ("Dip . . . . ."): no letters. Three or more
+// spaced, or four together: a description's own "..." stays.
+const LEADER = /(?:\.\s+){2,}\.|\.{4,}/gu
 // The punctuation that ends a span parts it from what follows ("PERONI NASTRO AZZURRO," + its strength): not a word.
-const reading = (s: string): string => loose(s).replace(/[,;:]+$/u, '')
+const reading = (s: string): string => loose(s.replace(LEADER, ' ')).replace(/[,;:]+$/u, '')
 
 // Ligatures a font maps to no text: pdftotext splits the word where the glyph drew ("Pla" + "er", "Truf" + "e").
 // Seen on Gigi (ti, tt) and Noah's (fi, fl); a dropped glyph leaves LOST_GAP em or more, a word space ~0.25 em.
