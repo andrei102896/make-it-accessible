@@ -79,7 +79,9 @@ try {
           .replace(/\s+/g, ''),
       )
     const shown = await words()
-    await page.check('#view-text')
+    // As a reader does: the segment's label (the radio itself is hidden under its icon, print.ts).
+    await page.locator('label:has(#view-text)').click()
+    if (!(await page.isChecked('#view-text'))) throw new Error(`${tag}: the Text only segment did not switch the view`)
     const same = shown === (await words())
     out.push(`printed: axe ${bad.join(' ') || 'ok'} | text ${same ? 'same' : 'DIFFERS from the text view'}`)
     await ctx.close()

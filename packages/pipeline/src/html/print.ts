@@ -31,8 +31,13 @@ export function printWidth(pages: readonly { extraction: Extraction; backdrop?: 
 export const printFloor = (width: number): number =>
   Math.ceil(Math.max(MIN_PRINT_PX, ((width - GUTTER_PX) * MIN_FIT_PX) / MIN_BODY_PX) + GUTTER_PX)
 
+// A segmented control over the radios, which keep the keyboard (arrows) and the screen reader's group.
+const PAGE_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><rect x="4" y="2.5" width="12" height="15" rx="1.5"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>'
+const TEXT_ICON =
+  '<svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="M3 5h14M3 10h14M3 15h9"/></svg>'
 export const viewSwitch = (ui: Strings): string =>
-  `<fieldset class="view"><legend>${ui.view}</legend><label><input type="radio" name="view" id="view-print" checked> ${ui.printed}</label><label><input type="radio" name="view" id="view-text"> ${ui.textOnly}</label></fieldset>`
+  `<fieldset class="view"><legend>${ui.view}</legend><div class="seg"><label><input type="radio" name="view" id="view-print" checked>${PAGE_ICON}${ui.printed}</label><label><input type="radio" name="view" id="view-text">${TEXT_ICON}${ui.textOnly}</label></div></fieldset>`
 
 const SR_ONLY =
   'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;'
@@ -61,10 +66,19 @@ export const printFloorIn = (html: string): number =>
 export const printCss = (width: number, inks: readonly string[]): string => `
 .view, .backdrop { display: none; }
 @media screen and (min-width: ${String(printFloor(width))}px) and (forced-colors: none) {
-.view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem 1.25rem; align-items: center; border: 0;
-  margin: 0 0 .5rem; padding: 0; font-size: .875rem; color: var(--muted); }
-.view legend { float: left; font-weight: 500; padding: 0; }
-.view label { display: inline-flex; gap: .4rem; align-items: center; min-height: 44px; cursor: pointer; }
+.view { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem 1rem; align-items: center; border: 0;
+  margin: 0 0 .5rem; padding: 0; font-size: 1rem; color: var(--fg); }
+.view legend { float: left; font-weight: 600; padding: 0; }
+/* Its own colours, not the brand's: 4.5:1 on any menu ground (a tinted one took the selected text to 2.9:1). */
+.view .seg { display: inline-flex; border: 1px solid #c4c4c4; border-radius: .5rem; background: #ffffff; color: #1a1a1a; }
+.view label { display: inline-flex; gap: .5rem; align-items: center; min-height: 44px; padding: 0 1rem; cursor: pointer;
+  border: 1px solid transparent; margin: -1px; font-weight: 500; }
+.view label:first-child { border-start-start-radius: .5rem; border-end-start-radius: .5rem; }
+.view label:last-child { border-start-end-radius: .5rem; border-end-end-radius: .5rem; }
+.view label:has(:checked) { color: #1d4ed8; border-color: #1d4ed8; background: #eef2ff; position: relative; }
+.view label:has(:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; position: relative; }
+.view input { ${SR_ONLY} }
+.view svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 ${on} .back:not(:focus-within), ${on} nav.toc:not(:focus-within), ${on} nav.chips:not(:focus-within) { ${SR_ONLY} }
 ${on} main { max-width: max(64rem, ${String(width)}px); }
 ${on} ${lead} { display: grid; grid-template-columns: minmax(0, 1fr); }
