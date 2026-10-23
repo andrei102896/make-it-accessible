@@ -240,29 +240,3 @@ test('a line is cut before an icon the backdrop keeps: its words before it fit t
   const pieces = lineParts({ src: [[0, 3]] }, far, 'oaties ( NGCI available)') ?? []
   assert.equal(pieces.filter((p) => 'runs' in p)[0]?.text, 'oaties (')
 })
-
-test("only the words in another face than their placed element's are wrapped with it", () => {
-  const run = (id: string, weight: number): Run => ({
-    id,
-    str: '',
-    box: { x: 0, y: 0, w: 1, h: 1 },
-    flow: 0,
-    line: 0,
-    font: { key: 'gotham', size: 9, weight, italic: false },
-  })
-  const [bold, plain] = [run('1:0', 700), run('1:1', 400)]
-  const segments = [
-    { text: 'GAELIC ', color: null, icon: null, run: bold },
-    { text: '(Monkey Shoulder)', color: null, icon: null, run: plain },
-  ]
-  const face = (r: Run): string | null => (r === bold ? '--fw:700' : null)
-  assert.equal(
-    inkedHtml(segments, new Set(), (s) => s, face),
-    '<span class="face" style="--fw:700">GAELIC </span>(Monkey Shoulder)',
-  )
-  // Without a placed element (no printed view), the text is as before.
-  assert.equal(
-    inkedHtml(segments, new Set(), (s) => s),
-    'GAELIC (Monkey Shoulder)',
-  )
-})

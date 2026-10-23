@@ -35,6 +35,7 @@ Tracker: `docs/ROADMAP.md`. Current plan: `docs/HARDENING.md` (decisions and pre
 5. Regulation: EAA enforceable since 2025-06-28 (B2C services; microenterprises providing services exempt); BFSG warning letters in Germany (amounts unverified); ADA Title II deadlines 2027-04-26 (50k+) / 2028-04-26; FTC consent order against accessiBe ($1M) over compliance claims — never claim "compliant".
 
 ## Decisions made
+- **The printed view's text is a box per printed line, no face (Andrei, 2026-10-23: "nu il vede nimeni … ce conteaza ce font family are ?"):** fitting and stand-in faces deleted; weight and style dropped from the layer too (nothing reads them there); a box whose words run a quarter of its width past it, or half a line below it, counts as cut in check:page, reported, never a gate.
 - **The printed view shows the print itself (Andrei, 2026-10-23):** pdf.js draws each page with its words; our verified text lies transparent over it for selection, find and screen readers; Text only is the conforming alternate version. Chosen over repairing our stand-in faces, which missed a family, weight or style on every unseen PDF (DESIGN, CASES).
 - Product: upload a designed PDF (catalog, leaflet, brochure) → accessible HTML as the primary output + honest per-document report; review editor before publishing. Wedge = product grids with price fidelity.
 - Website with login (email + password / magic link; Google OAuth optional later).

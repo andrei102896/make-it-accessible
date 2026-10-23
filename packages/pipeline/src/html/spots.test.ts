@@ -30,7 +30,7 @@ test("a leaf of icon words alone keeps one line and no ink of its own; a line's 
     NOTHING_DRAWN,
     new Set(),
   )
-  assert.deepEqual([line.lines, line.color, line.size, line.font?.key], [1, '#073b5a', 12, 'montserrat'])
+  assert.deepEqual([line.lines, line.color, line.size], [1, '#073b5a', 12])
 })
 
 test('a leaf ends where its letters end, not where a tab read into its last word did (Howies\' "2022\\t")', () => {

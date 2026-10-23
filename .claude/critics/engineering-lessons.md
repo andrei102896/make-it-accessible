@@ -102,3 +102,10 @@
 - Moving a raster from Poppler to pdf.js moves its frame (crop box against media box): reuse the `SAME_FRAME` guard before stretching it under Poppler geometry (printed-view letters, 2026-10-23).
 - A deadline that resolves `null` inside a try skips the catch that marks the fallback: throw on timeout (`encoded()` on the pdf.js tab, 2026-10-23).
 - When the shown render changes, derive every measure from that same render; a second renderer adds an unguarded IO call and a second truth (luminance grid via pdftoppm, 2026-10-23).
+- A per-section hash that includes placement attributes cannot show that the text view is unchanged: compare the stripped DOM or innerText (slice 3 plan, measure-rows pageHashes, 2026-10-23).
+- Removing an input to a computed value moves every rule that reads that value, not only the visible one: stand-in metrics also set `--low`'s large-text target (slice 3 plan, placed.ts sized, 2026-10-23).
+- When a view's text turns transparent, list the rules kept for legibility (minimum weight, tracking gates): they now only move selection boxes (slice 3 plan, the --ls gate, 2026-10-23).
+- Deleting a module: grep its exported constants as well as its functions; a shared threshold (rows.ts `GAP` in segments.ts `apart`) outlives the feature that defined it (slice 3 plan, 2026-10-23).
+- Client rects ignore clipping: a geometry probe over a box must exclude its screen-reader-only descendants, or it measures hidden words (check-page cut, icon labels in 1 px spans, 2026-10-23).
+- A height ratio stands in for "one line more" only on one- or two-line boxes: measure overflow in line heights (check-page cut, 2026-10-23).
+- Folding a `!a && !b` guard into `a !== null && b !== null && a >= b*k` turns 0/0 into true: keep the zero case (capsFacesOf, 2026-10-23).

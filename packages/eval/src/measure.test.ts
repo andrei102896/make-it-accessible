@@ -27,10 +27,10 @@ test("a log line reads the same on every machine: paths cut, a step's timing dro
   const dir = `${ROOT}/out/rebuilt/fig`
   assert.deepEqual(
     cleanLines(
-      `${dir}/index.html: pdf-1 lacks a letter of "x"\nfig: 2 pages in 14 s\n${dir} p1: text view, misfit\n`,
+      `${dir}/p01/backdrop.json: written\nfig: 2 pages in 14 s\n${dir} p1: pdf.js did not draw the backdrop\n`,
       dir,
     ),
-    ['index.html: pdf-1 lacks a letter of "x"', '. p1: text view, misfit'],
+    ['p01/backdrop.json: written', '. p1: pdf.js did not draw the backdrop'],
   )
 })
 

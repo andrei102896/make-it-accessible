@@ -72,3 +72,9 @@
 - A raster's promised scale is not its achieved scale: count the fallback pages before relying on it (Le Dive at 1 px/pt, printed-view letters plan, 2026-10-23).
 - Invisible text is still read under the pointer: misplaced transparent boxes mislead Hover Text and mouse-echo users (printed view as images of text, 2026-10-23).
 - A viewport-width threshold misses users who zoom only text or use a magnifier: write the floor in em (printed view floor, 2026-10-23).
+- A value measured at build is only as stable as the face it was measured in: invisible text still needs a face that ships with the page, or its placement holds only on the build OS (slice 3 plan, 2026-10-23).
+- Once letters are invisible, limits that kept them looking right (minimum fit, spacing cap, never wider) protect nothing: fit each line exactly to its print (slice 3 plan, 2026-10-23).
+- Transparent text can still show: check find highlights and rich paste before calling a text layer "never seen" (slice 3 plan, 2026-10-23).
+- Clipping invisible text must not make a scroll container: find and focus scroll `overflow: hidden` content and leave it shifted under the pointer; use `overflow: clip` (slice 3 boxes, 2026-10-23).
+- A clip on a focusable element's parent clips its focus ring: draw the ring on the clipped box (`:has(:focus-visible)`) (printed links, slice 3, 2026-10-23).
+- A gate deleted for a clip needs a measure in its place: clipping hides overflow without fixing it, so count clipped boxes and clipped prices (slice 3, 2026-10-23).

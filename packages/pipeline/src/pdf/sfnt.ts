@@ -1,5 +1,5 @@
-// An OpenType/TrueType font program read and rewritten byte by byte: its tables, names, embedding permission and
-// character map. Only what the printed view needs to serve a font embedded in the PDF (pdf/ownfont.ts).
+// An OpenType/TrueType font program read and rewritten byte by byte: its tables, glyph count and character map. Only
+// what measuring a font embedded in the PDF needs (pdf/ownfont.ts, eval/facemetrics.ts).
 
 type Table = { tag: string; offset: number; length: number }
 const view = (d: Uint8Array): DataView => new DataView(d.buffer, d.byteOffset, d.byteLength)

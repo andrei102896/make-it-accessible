@@ -47,17 +47,16 @@ test('the expiry list round-trips, keeps commas in names, and names the rows pas
 
 test("a preview's backdrops become files in a folder named like the page; its crops stay inline", () => {
   const html =
-    '<img class="backdrop" src="p01/backdrop-1x.webp" srcset="p01/backdrop-1x.webp 1x, p01/backdrop-2x.webp 2x" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="p12/backdrop-1x.webp"><style>src: url(fonts/jost-normal.woff2)</style>'
+    '<img class="backdrop" src="p01/backdrop-1x.webp" srcset="p01/backdrop-1x.webp 1x, p01/backdrop-2x.webp 2x" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="p12/backdrop-1x.webp">'
   const out = withAssets(html, 'gigi-a1b2c3.html')
   assert.equal(
     out.html,
-    '<img class="backdrop" src="gigi-a1b2c3/p01-1x.webp" srcset="gigi-a1b2c3/p01-1x.webp 1x, gigi-a1b2c3/p01-2x.webp 2x" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="gigi-a1b2c3/p12-1x.webp"><style>src: url(gigi-a1b2c3/fonts/jost-normal.woff2)</style>',
+    '<img class="backdrop" src="gigi-a1b2c3/p01-1x.webp" srcset="gigi-a1b2c3/p01-1x.webp 1x, gigi-a1b2c3/p01-2x.webp 2x" alt=""><img src="data:image/jpeg;base64,AA"><img class="backdrop" src="gigi-a1b2c3/p12-1x.webp">',
   )
   assert.deepEqual(out.assets, [
     { from: 'p01/backdrop-1x.webp', to: 'gigi-a1b2c3/p01-1x.webp' },
     { from: 'p01/backdrop-2x.webp', to: 'gigi-a1b2c3/p01-2x.webp' },
     { from: 'p12/backdrop-1x.webp', to: 'gigi-a1b2c3/p12-1x.webp' },
-    { from: 'fonts/jost-normal.woff2', to: 'gigi-a1b2c3/fonts/jost-normal.woff2' },
   ])
 })
 

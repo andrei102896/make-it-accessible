@@ -66,11 +66,10 @@ packages/pipeline/src/        product code, reused by the MVP
   pdf/ocr.ts                  Tesseract on the rendered page (stored once per page hash and engine version); a page reads as a scan when its layer holds under a third of the printed words
   pdf/copies.ts               the shapes that draw placed words again (outlines, letter-shaped fills): under the words they mostly cover, never hidden by a later opaque box
   pdf/printedfaces.ts         per printed face, the pdf.js program printing most of its letters, rebuilt for a browser (measured by eval/facemetrics.ts)
-  pdf/tracking.ts             each word's printed letter spacing (ems) from its font's advance widths read by pdf.js
   pdf/pdfjs.ts                what the pipeline reads of pdf.js (text items, font objects; zod) and the item that prints a word
   pdf/actualtext.ts           the replacement text a PDF gives a drawn glyph (/ActualText spans with their own place), read from a content stream
   pdf/ligatures.ts            words a dropped ligature split, made whole from that text where Poppler left its copy at the page's edge
-  html/spots.ts               the printed view's spots: what the print shows of each leaf (box, lines, ink, face, baseline), split from placed.ts
+  html/spots.ts               the printed view's spots: where the print shows each leaf (box, lines, size) and how its ink reads there, split from placed.ts
   pdf/icons.ts                dietary icons on text lines, named by the document's legend of icon-and-label pairs; named ones appended to the runs as words
   pdf/sfnt.ts                 a font program's tables, glyph count and format 4 cmap, read and rewritten
   pdf/ownfont.ts              a PDF font rebuilt for a browser (pdf.js' program with a cmap from ToUnicode), measured by eval/facemetrics.ts
@@ -96,9 +95,8 @@ packages/pipeline/src/        product code, reused by the MVP
   html/boxes.ts               the PDF's frames and panels as boxes round the blocks inside them, the page frame, their CSS
   html/brand.ts               that style as CSS: embedded faces, role colours at 4.5:1, sizes relative to the body, heading rules
   html/lines.ts               the PDF's rules where it draws them: under or through a heading, above or below a block, a band's top, between columns; a rule crossing a band's columns splits it into rows
-  html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) placed as printed, line by line where its lines differ, a price's amount and label apart, tables as frames of placed cells; each line in its printed face and letter spacing; text set on its side or in doubt left printed
-  html/printink.ts            the printed view's ink: printed opacity, shadow and outline; moved to read on a flat backdrop, a halo only on a varying one; words in another brand ink in their own ink where it reads, colours as drawn
-  html/printface.ts           the printed view's face per line: own family, lookalike, or a vendored stand-in of its typeface class, at the weight the metrics matched; headings in an unmatched face stay printed; files beside the page (fonts/)
+  html/placed.ts              the printed view: each leaf (heading, dish name, price, picture) as an invisible box at its printed rectangle, line by line where its lines differ, its ink weighed for the --low count
+  html/printink.ts            the printed ink weighed on the backdrop under its box (opacity, shadow and outline count) for the --low count; colours as drawn for the text view's inks
   html/print.ts               the printed view's sheet and switch; fitted to the window while body text reads at 7 px or more
   html/rules.ts               rules under headings and hairlines between dishes, read from the page render (headings only on documents whose vector layer places no rule)
   html/ornament.ts            ornaments under headings, read from the render and kept as alpha masks
@@ -164,12 +162,11 @@ packages/eval/src/            evaluation harness, never shipped
   iconcites.ts                a saved structure's icon citations moved onto icon words read afresh
   deadline.ts                 withDeadline for pdf.js calls (60 s)
   backdrop.ts                 draws each page's backdrop with pdf.js in Chromium (Poppler where pdf.js cannot), WebP at 1× and 2×, and its light grid (pNN/backdrop-1x.webp, -2x.webp, backdrop.json)
-  facemetrics.ts              measures each printed face beside its lookalike in a browser (x-height, cap height, stem): the size scale and weight placed.ts applies (backdrop.json metrics)
-  pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page tracking and own faces; a page it cannot read has neither
+  facemetrics.ts              measures each printed face in a browser: the faces drawing capitals for lowercase (capsFaces, read by the text view)
+  pdfjs.ts                    reads the PDF with pdf.js (pdfjs-dist, eval only): per page each printed face's program, to measure; a page it cannot read has none
   streams.ts                  every FlateDecode stream of a PDF, inflated (capped): what wholewords reads
   wholewords.ts               extractWhole: a page read by Poppler with its ligature-split words whole (process, rerender, wiki)
   legend.ts                   documentLegend: a document's icon legend read once from every page (adhoc, rerender)
-  fit.ts                      measures each placed text in a browser: narrows (--k), then shrinks (--z), a wider lookalike face to its printed box, spreads a narrower one with letter spacing (--lx) (after checking every face loaded), and names the pages where text still overflows or collides (they show the text view)
   look.ts                     a document's title, colours, template and heading class (brief kept in brief.json for rescores)
   cost.ts                     model list prices and the cost of a call
   run.ts                      CLI: run and score against the answer keys
@@ -185,7 +182,7 @@ packages/eval/src/            evaluation harness, never shipped
   pdfshot.ts                  openPdf: a document open in pdf.js on a routed origin, its page drawn to a canvas kept in the tab; pdfShots: JPEGs for the review
   sources.ts                  the measured documents (saved run + PDF, local list) and where rebuilt pages go (out/rebuilt)
   rerender.ts                 CLI: render a saved run again with the current renderer, no model call (pnpm rerender <slug>|--all)
-  check-page.ts               CLI: axe, overflow and text-spacing checks of one page at 1280/390/320 and forced colours, with screenshots
+  check-page.ts               CLI: axe, overflow and text-spacing checks of one page at 1280/390/320 and forced colours, the printed view's words and boxes (cut, overlapping), with screenshots
   preview-refresh.ts          CLI: every listed preview takes its rebuilt page under the same unlisted name
   wiki.ts, wiki-facts.ts      the layout wiki: facts measured per document from its saved run and PDF (docs/wiki)
   preview.ts                  private previews: unlisted file names, noindex, the 30-day expiry list
@@ -200,6 +197,7 @@ out/                          run outputs (local only)
 ```
 
 ## Regression guards
+- **The printed view's boxes clip with `overflow: clip`, never `hidden`** (2026-10-23): `hidden` makes a scroll container, and find or focus scroll its words off the print; the link ring is drawn on the box (`:has(:focus-visible)`), which would cut one round the link (print.test).
 - **Never use the PDFKit page extracts as input.** They break the glyph mapping ("Kar!ol", "%45!%"); run on the originals, cut subsets with `qpdf --pages` if needed. Do not remove the warning in SOURCES.md.
 - **`joinRuns` touching gap is 0.02 of the box height.** At 0.15 it glued words in condensed bold fonts ("JEDENDONNERSTAG"); ligature splits are 0 pt apart. Do not raise it.
 - **`centPartner` needs cents ≥ 30 % of the euro height and picks the nearest candidate.** Without it "13" paired with "20 Flaschen". Do not loosen.
@@ -231,7 +229,7 @@ out/                          run outputs (local only)
 - **Drawn geometry comes from the PDF's vectors, not the render.** A box the PDF draws round a section is a stroked rectangle, a filled ring (Sarge's 5 pt red border is a fill with a hole) or a fill; some sit in compositing groups inside `<defs>` (blend modes), so definitions are stripped selectively, never wholesale (`vectors.test.ts`). White fills on paper are knock-outs behind words, not panels. Rules come from the same layer (`lines.test.ts`): a rule is matched to a heading by height *and* nearness (a rule at the same height in the next column is not its own: Sarge's UNREAL DELI, Prohibition PK PREMIUM SIDES), and a stroke's thickness follows the matrix's other axis (Kendells' rules sit under a 4.8× horizontal scale). Once a document's vector layer places a rule, the render-measured signature rules are dropped so a line is never drawn twice. Do not remove.
 - **Sealed keys never print their content** in tests, `pnpm stage0` or `keys:check` without `--details`. The developer of phase-B fixes must not see the test half.
 
-- **Icon words are appended to a page's runs, never inserted** (2026-10-18): citations and `runIndex` are array indices into the text layer's runs; the words carry `icon: true`, one run per icon with its whole label ("gluten free"), read afresh on every rerender (the count check compares text-layer runs only), and every matcher keyed by a glyph (the backdrop's copies and `undrawn`, a line's own face, fit's letter check) skips them. Do not place them as text: the backdrop keeps the drawing.
+- **Icon words are appended to a page's runs, never inserted** (2026-10-18): citations and `runIndex` are array indices into the text layer's runs; the words carry `icon: true`, one run per icon with its whole label ("gluten free"), read afresh on every rerender (the count check compares text-layer runs only), and every matcher keyed by a glyph (the backdrop's copies and `undrawn`, a line's own face) skips them. Do not place them as text: the backdrop keeps the drawing.
 - **A lost ligature is filled only where the gap shows it** (held-out batch 1, Gigi's 31 and Noah's 10 words): a font that maps its ti, tt, fi, fl, ff, ft glyphs to no text splits the word on one line with a 0.35–1 em gap; the model's letters there are accepted and listed as read from the image (`validate.test.ts`). A normal word space ("of ice" written "office") and a capital after the gap stay errors. Do not widen the fill set (th, st, ct let "Plaster" pass for "Platter"). Since 2026-10-18 the PDF's own /ActualText fills them first (`pdf/ligatures.ts`: Gigi's 56 and Noah's 10, all of the set); the model's letters stay the fallback.
 - **Prices shown as printed are bounded forms** (`text/money.ts` printedAsIs): sizes need a sign or cents and must rise ("$12/2", a count cut short, is no price), a price per unit needs a sign or cents, so a date ("10/16/2026") or a measure ("1/2 lb") stays an error; sizes with no size label go to review. Do not remove.
 - **A copy-protected PDF is refused by name in `extractPage`**, the one call every run path makes (Hogfish: pdftohtml stops with no message). Do not move it to `pageCount`, which only `adhoc` calls.
@@ -242,6 +240,7 @@ out/                          run outputs (local only)
 - **The logo comes from the brief, its box from the vector layer** (`art.test.ts`, `document-layout.test.ts`). Position alone picks the wrong picture (La Segunda's mid-spread logo, FIG's footer, Bernini's bust for its wordmark); the brief (Sonnet: Haiku chose the bust and missed FIG) names page and box, `pictureIn` snaps to the picture or union that fits it best. An artwork logo leads the masthead with `alt=""` (the band's h1 names the place) and a big heading that is not the name stays its section. A figure the model gave is not repeated (Sarge's). Figures take the exact picture box; a logo crop moves only the edge a neighbouring word sticks past (Michael's oval kept whole). Rasters never join: photos edge to edge are separate pictures (Carew). Do not remove.
 
 ## Dead ends
+- **Fitting the invisible layer word by word** (2026-10-20 to 2026-10-23): our transparent text set in stand-in faces and fitted at build (fit.ts) placed each word only on the build machine and sent misfit pages to Text only. Each printed line is now a box at the PDF's word boxes, its words clipped to it. Do not bring back a face or a fit for the layer.
 - **Redrawing the print's words in our faces** (2026-10-17 to 2026-10-23): the printed view cut the PDF's glyphs from the backdrop and set our text in its own embeddable programs, lookalikes or class stand-ins, sized and weighted by measure. Every unseen PDF brought a family, weight or style it missed (batch 2: serifs as sans, bold names italic). The printed view now shows the page as pdf.js draws it, our text transparent over it. Do not rebuild glyph cutting.
 - **Effort `low` on Sonnet 5.5:** 3 of 6 pages failed outright (broken JSON or schema after the retry), alt text vanished on BILLA p3; not cheaper once retries count. Do not use without new evidence.
 - **`pdftohtml` image boxes as final figure boxes:** they are raster bounds, not the visible area (transparent margins, clipped photos, backgrounds). Kept only as hints for the model.

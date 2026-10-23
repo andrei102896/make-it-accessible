@@ -1,14 +1,12 @@
 import type { Block, PriceValue, TextValue } from '../model/schema.ts'
 import type { Grid } from '../pdf/backdrop.ts'
-import { faceKey } from '../pdf/face.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { turned } from '../pdf/runs.ts'
-import type { Box, Extraction, Run, RunFont } from '../pdf/types.ts'
-import { inlinesOf, type Inline } from './printink.ts'
+import type { Box, Extraction, Run } from '../pdf/types.ts'
 import { unionOf } from './profile.ts'
 
-// The printed view's spots: what the print shows of each leaf of a page (its box, lines, ink, face, baseline), read
-// from the text layer and the backdrop's measurements; placed.ts writes them as custom properties.
+// The printed view's spots: where the print shows each leaf of a page (its box, lines, size) and how its ink reads
+// there, from the text layer and the backdrop's measurements; placed.ts writes them as custom properties.
 
 type Align = 'left' | 'center' | 'right'
 type Shadow = Grid['shadows'][string]
@@ -23,36 +21,11 @@ export type Spot = {
   alpha: number
   shadow: Shadow | null
   stroke: Stroke | null
+  // The weight most of its letters are printed in: bold text is large from 18.66 px (WCAG 1.4.3, placed.ts).
   weight: number
-  italic: boolean
-  // The face most of its letters are printed in, and their printed letter spacing (ems, pdf/tracking.ts).
-  font: RunFont | null
-  tracking: number
-  // Its lowercase letters as a share of its letters and digits (a lookalike's size blends by it, placed.ts).
-  lowercase: number
-  // The PDF's own face most of its letters are printed in (pdf/ownfont.ts); a word in another carries its own.
-  own: string | null
-  // Its first line's printed baseline (pt from the page's top): fit.ts sets ours on it.
-  baseline: number | null
-  // Its words in another brand ink, shown in it where it reads (printink.ts).
-  inline: Inline[]
 }
-export type Drawn = Pick<
-  Grid,
-  'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'tracking' | 'faces' | 'baselines' | 'ends'
->
-export const NOTHING_DRAWN: Drawn = {
-  inks: {},
-  alpha: {},
-  shadows: {},
-  strokes: {},
-  undrawn: [],
-  kept: [],
-  tracking: {},
-  faces: {},
-  baselines: {},
-  ends: {},
-}
+export type Drawn = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'kept' | 'ends'>
+export const NOTHING_DRAWN: Drawn = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], kept: [], ends: {} }
 
 // A word's box ends where its letters do (a tab read into it would stretch its line: `drawn.ends`).
 export const trimmedRun = (r: Run, drawn: Pick<Drawn, 'ends'>): Run => {
@@ -100,13 +73,6 @@ export function spotsOf(
       shadow: null,
       stroke: null,
       weight: 400,
-      italic: false,
-      font: null,
-      tracking: 0,
-      lowercase: 0,
-      own: null,
-      baseline: null,
-      inline: [],
     })
   }
   const block = (path: string, b: Block): void => {
@@ -170,10 +136,10 @@ export function spotsOf(
   return out
 }
 
-// What most of the words show (by letters): the leaf's size, colour and face. One line is centred on its printed
-// box, so a lookalike face's different width spreads to both sides; lines share the edge the print aligns.
+// What most of the words show (by letters): the leaf's size and colour. One line is centred on its printed box, so
+// our text's other width spreads to both sides; lines share the edge the print aligns.
 export function spotOf(box: Box, all: readonly Run[], drawn: Drawn, inks: ReadonlySet<string>): Spot {
-  // An icon's words (pdf/icons.ts) have no glyphs: they shape the box, never the line's ink, face or size.
+  // An icon's words (pdf/icons.ts) have no glyphs: they shape the box, never the line's ink or size.
   const runs = all.filter((r) => !r.icon)
   const most = <T>(value: (r: Run) => T, among = runs): T | null => {
     const tally = new Map<T, number>()
@@ -192,21 +158,12 @@ export function spotOf(box: Box, all: readonly Run[], drawn: Drawn, inks: Readon
     ['center', spread((b) => b.x + b.w / 2)],
     ['right', spread((b) => b.x + b.w)],
   ]
-  const face = most((r) => (r.font ? faceKey(r.font) : null))
   // A printed shadow or outline the line's most letters carry: one word's (an asterisk's) is not the line's.
   const carried = <T>(of: (r: Run) => T | undefined): T | null => {
     const key = most((r) => JSON.stringify(of(r) ?? null))
     const run = runs.find((r) => JSON.stringify(of(r) ?? null) === key)
     return (run && of(run)) ?? null
   }
-  // The first line's words with a printed baseline, each weighted by its letters.
-  const lead = runs[0]
-  const first = runs.flatMap((r) => {
-    const b = drawn.baselines[r.id]
-    return lead && r.flow === lead.flow && r.line === lead.line && b !== undefined
-      ? [[b, r.str.length] satisfies [number, number]]
-      : []
-  })
   const align = lines.length === 1 ? 'center' : (edges.sort((a, b) => a[1] - b[1])[0]?.[0] ?? 'left')
   // The line's ink is its unmarked words' when some words carry their own (Almond's red "Micky's" before "Ramen").
   const plain = runs.filter((r) => r.color === undefined || !inks.has(r.color))
@@ -221,24 +178,5 @@ export function spotOf(box: Box, all: readonly Run[], drawn: Drawn, inks: Readon
     shadow: carried((r) => drawn.shadows[r.id]),
     stroke: carried((r) => drawn.strokes[r.id]),
     weight: most((r) => r.font?.weight ?? 400) ?? 400,
-    italic: most((r) => r.font?.italic ?? false) ?? false,
-    font: runs.find((r) => r.font && faceKey(r.font) === face)?.font ?? null,
-    tracking: median(runs.map((r) => [drawn.tracking[r.id] ?? 0, r.str.length])),
-    lowercase: lowercaseShare(runs.map((r) => r.str).join('')),
-    // Most of its letters' own program: a word printed in another keeps it (segments.ts `.face`).
-    own: most((r) => drawn.faces[r.id] ?? null),
-    baseline: first.length ? median(first) : null,
-    inline: inlinesOf(runs, drawn, inks, color),
   }
-}
-const lowercaseShare = (text: string): number => {
-  const all = text.match(/[\p{L}\p{N}]/gu)?.length ?? 0
-  return all ? (text.match(/\p{Ll}/gu)?.length ?? 0) / all : 0
-}
-// The value half the letters reach, each word weighted by its letters.
-const median = (weighted: readonly [number, number][]): number => {
-  const sorted = [...weighted].sort((a, b) => a[0] - b[0])
-  const half = sorted.reduce((n, [, w]) => n + w, 0) / 2
-  let seen = 0
-  return sorted.find(([, w]) => (seen += w) >= half)?.[0] ?? 0
 }

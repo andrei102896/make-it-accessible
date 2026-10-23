@@ -9,8 +9,8 @@ import { heldErrors } from './preview.ts'
 import { parseReport } from './report.ts'
 
 // What one document of the round shows, as lines per category, in the order a reviewer reads them: what fell back or
-// was refused first, then held content, the view each page opens in, check:page, injections, missing letters,
-// cosmetic findings, the measures, every other log line, and last the pages that changed only.
+// was refused first, then held content, the view each page opens in, check:page, injections, cosmetic findings,
+// the measures, every other log line, and last the pages that changed only.
 const Lines = z.array(z.string())
 export const DocRow = z.object({
   problems: Lines,
@@ -18,7 +18,6 @@ export const DocRow = z.object({
   view: Lines,
   check: Lines,
   injections: Lines,
-  letters: Lines,
   cosmetic: Lines,
   measures: Lines,
   log: Lines,
@@ -52,9 +51,7 @@ export const cleanLines = (log: string, docDir: string): string[] =>
     .map((l) => l.split(`${docDir}/`).join('').split(docDir).join('.').split(`${ROOT}/`).join('').trimEnd())
     .filter((l) => l && !/ in \d+ s$/.test(l))
 
-const PROBLEM = /refused|still misplaced|^DEGRADED /
-const VIEW = /: text view, |: \w[\w-]* first at /
-const LETTERS = /lacks a letter of/
+const PROBLEM = /refused|^DEGRADED /
 
 export type DocFiles = {
   dir: string
@@ -74,10 +71,8 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   add('documents')
   const text = (file: string): Promise<string> => readFile(file, 'utf8').catch(() => '')
   row.problems.push(...notes)
-  for (const l of cleanLines(await text(f.rebuild), f.dir))
-    (PROBLEM.test(l) ? row.problems : VIEW.test(l) ? row.view : LETTERS.test(l) ? row.letters : row.log).push(l)
+  for (const l of cleanLines(await text(f.rebuild), f.dir)) (PROBLEM.test(l) ? row.problems : row.log).push(l)
   add('refused', row.problems.filter((l) => l.includes('refused')).length)
-  add('letters missing', row.letters.length)
   // A held.json missing or unreadable in a folder this round built is a problem, never "nothing held".
   const [held, unread] = partition(await heldErrors(f.dir), (l) => !l.endsWith('rebuild it'))
   row.held.push(...held)
@@ -93,9 +88,17 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   }
   // Lines the printed view shows under 4.5:1 (3:1 large) as printed, per printed sheet (html/placed.ts `--low`).
   const html = await readFile(join(f.dir, 'index.html'), 'utf8').catch(() => '')
-  for (const [section, page] of html.matchAll(/<section[^>]*\bdata-page="(\d+)"[^>]*--ar:[\s\S]*?<\/section>/g)) {
-    const low = section.split('--low:1').length - 1
-    if (low) row.view.push(`p${page ?? ''} printed lines under contrast: ${String(low)}`)
+  const sheets = [
+    ...[...html.matchAll(/<section[^>]*\bdata-page="(\d+)"[^>]*--ar:[\s\S]*?<\/section>/g)].map(([s, p]) => [
+      s,
+      `p${p ?? ''}`,
+    ]),
+    // The masthead stands over the first sheet, outside its section.
+    ...[...html.matchAll(/<header class="masthead[^"]*">[\s\S]*?<\/header>/g)].map(([s]) => [s, 'masthead']),
+  ]
+  for (const [sheet = '', at = ''] of sheets) {
+    const low = sheet.split('--low:1').length - 1
+    if (low) row.view.push(`${at} printed lines under contrast: ${String(low)}`)
     add('printed lines under contrast', low)
   }
   add('approvals no longer matching', held.filter((l) => l.endsWith('no longer matches its words')).length)
@@ -105,6 +108,12 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     'check issues',
     !check.length || check.some((l) => /axe (?!ok)|OVERFLOW|DIFFERS|clipped|overflow/.test(l)) ? 1 : 0,
   )
+  for (const l of check) {
+    const m = /boxes cut (\d+) \(prices (\d+)\), overlapping (\d+)/.exec(l)
+    add('printed boxes cut', Number(m?.[1] ?? 0))
+    add('printed prices cut', Number(m?.[2] ?? 0))
+    add('printed boxes overlapping', Number(m?.[3] ?? 0))
+  }
   // The measures: every page's whole-page findings, its printed shadows.
   const fidelity = await text(f.fidelity).then((raw) => (raw ? FidelityFile.parse(JSON.parse(raw)) : null))
   for (const p of fidelity?.documents.flatMap((d) => d.pages) ?? []) {
@@ -168,7 +177,6 @@ export const emptyRow = (): DocRow => ({
   view: [],
   check: [],
   injections: [],
-  letters: [],
   cosmetic: [],
   measures: [],
   log: [],

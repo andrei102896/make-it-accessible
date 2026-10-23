@@ -55,8 +55,6 @@ export const viewSwitch = (ui: Strings): string =>
 
 const SR_ONLY =
   'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;'
-// fit.ts: `--k`, `--z` narrow, then shrink, a lookalike to its printed width, `--lx` spreads a narrow one (the box
-// grows by one `--ls`, which follows the last letter), `--ti` starts a one-line row on its printed edge (rows.ts).
 // `on`'s id outranks the brand's classes: their layout stays out.
 // A page the browser translated shows the text view: the print would stand untranslated over the words read.
 const on = ':root:not([class*="translated-"]) body:has(#view-print:checked)'
@@ -75,7 +73,7 @@ export const printFloorIn = (html: string): number =>
   Number(/@media screen and \(min-width: ([\d.]+)em\)/.exec(html)?.[1] ?? 0) * 16
 
 // A sign added for reading (page.ts) is 1 px and transparent: VoiceOver skips text at size 0, and its inherited
-// line height and spacing are lengths, not ems.
+// line height is a length, not ems.
 export const printCss = (width: number): string => `
 .view, .backdrop { display: none; }
 @media screen and (min-width: ${String(printFloor(width) / 16)}em) and (forced-colors: none) and (max-resolution: ${String(MAX_DPPX)}dppx) {
@@ -112,27 +110,26 @@ ${on} ${page} :is(div, ul)[data-frame] { position: absolute; left: calc(var(--tx
   width: calc(var(--tw) * 1cqw); height: calc(var(--th) * 1cqw); overflow: visible; }
 ${on} ${page} [data-frame] :is(table, caption, thead, tbody, tr, th, td) { border: 0; padding: 0; background: none;
   font-size: 0; }
-${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0)) * 1cqw);
-  top: calc((var(--y) - var(--ty, 0) + var(--dy, 0)) * 1cqw);
-  width: calc(var(--w) / var(--k, 1) * 1cqw + var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); transform: scaleX(var(--k, 1)); transform-origin: left top;
+/* Each leaf an invisible box at its printed rectangle (the PDF's word boxes, the same on every OS): its words at their
+   printed size in the page's face, clipped to it, never a scroll container (find and focus would scroll them off
+   the print); no spacing of the text view's (a tracked heading) moves them. */
+${on} ${page} ${leaf} { position: absolute; left: calc((var(--x) - var(--tx, 0)) * 1cqw); top: calc((var(--y) - var(--ty, 0)) * 1cqw);
+  width: calc(var(--w) * 1cqw); height: calc(var(--h) * 1cqw); overflow: clip;
   display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; list-style: none; max-width: none;
-  font-size: calc(var(--fs, var(--h)) * var(--z, 1) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw);
-  white-space: var(--ws, normal); text-align: var(--ta, left); color: transparent; font-weight: var(--fw, 400); font-style: var(--fi, normal);
-  letter-spacing: calc(var(--ls, 0) * 1em + var(--lx, 0) * 1cqw); font-size-adjust: none; }
-${on} ${page} ${leaf}[style*="--ti:"] { text-align: left; text-indent: calc(var(--ti) * 1cqw); }
-${on} ${page} [style*="--ff:"] { font-family: var(--ff); font-synthesis: small-caps; }
-${on} ${page} [style*="--ff:'pdf-"] { font-variant-caps: normal; }
-${on} ${page} ${leaf} * { color: inherit; white-space: inherit; font-weight: inherit; font-style: inherit; }
+  font-size: calc(var(--fs, var(--h)) * 1cqw); line-height: calc(var(--lh, var(--h)) * 1cqw); white-space: var(--ws, normal);
+  text-align: var(--ta, left); color: transparent; letter-spacing: 0; word-spacing: 0; text-indent: 0; font-size-adjust: none; }
+${on} ${page} ${leaf} * { color: inherit; white-space: inherit; }
 /* The print shows its own letters (the backdrop); ours are read, selected and found over them, never seen. */
 ${on} ${page} ${leaf}::selection, ${on} ${page} ${leaf} *::selection { color: transparent; }
-${on} ${page} ${leaf} .face { font-weight: var(--fw); font-style: var(--fi); }
-${on} ${page} ${leaf} .sign { font-size: 1px; line-height: 0; letter-spacing: 0; }
-/* A link is the print's own words: nothing drawn over them (Andrei on Brawn's www.brawn.co, 2026-10-23); the
-   keyboard's focus ring still marks it. */
+/* A link's ring on its clipped box, which would cut one drawn round the link (WCAG 2.4.7). */
+${on} ${page} ${leaf}:has(:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+${on} ${page} ${leaf} :focus-visible { outline: none; box-shadow: none; }
+${on} ${page} ${leaf} .sign { font-size: 1px; line-height: 0; }
+/* A link is the print's own words: nothing drawn over them (Andrei on Brawn's www.brawn.co, 2026-10-23). */
 ${on} ${page} ${leaf} a { display: inline; padding: 0; margin: 0; text-decoration: none; }
 ${on} ${page} ${leaf} .icon { display: inline-block; width: calc(var(--iw) * 1cqw); height: 1px; border: 0; padding: 0;
   margin: 0; vertical-align: baseline; font-size: inherit; line-height: inherit; }
 ${on} ${page} ${leaf} .icon > span { ${SR_ONLY} }
-${on} ${page} img${leaf} { height: calc(var(--h) * 1cqw); opacity: 0; }
+${on} ${page} img${leaf} { opacity: 0; }
 }
 `

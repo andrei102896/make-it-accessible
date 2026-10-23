@@ -8,7 +8,7 @@ import { printFloorIn } from '@make-it-accessible/pipeline/html/print'
 
 // pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe (critical and serious) at 1280, 390 and 320 px, in
 // forced colours and in the printed view, a horizontal-overflow check, WCAG 1.4.12 text spacing at 320 px, the
-// printed view's words against the text view's, and screenshots when asked. One line per page, as a table.
+// printed view's words and boxes (cut, overlapping), screenshots when asked. One line per page, as a table.
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { shots: { type: 'string' }, tag: { type: 'string' } },
@@ -16,6 +16,10 @@ const { values, positionals } = parseArgs({
 const [file] = positionals
 if (!file) throw new Error('usage: pnpm check:page <page.html> [--shots <dir> --tag <name>]')
 const tag = values.tag ?? 'page'
+// The page's face is not the printed one (Howies' Montserrat 1.3× Brandon): words a quarter of the box past it are
+// cut. Two boxes share a spot past this share of the smaller.
+const CUT_WIDTH = 0.25
+const OVERLAP = 0.2
 const MODES = [
   { name: 'desktop', width: 1280, forced: false },
   { name: 'phone', width: 390, forced: false },
@@ -79,11 +83,61 @@ try {
           .replace(/\s+/g, ''),
       )
     const shown = await words()
+    // The layer's boxes (print.ts): a text past its box is cut (find and the cursor lose its end), two boxes over one
+    // spot mislead the pointer. Counted per document, never a gate (Text only reads every word).
+    const layer = await page.evaluate(
+      ({ cutWidth, overlap }) => {
+        const leaves = [...document.querySelectorAll<HTMLElement>('[style*="--x:"]')].filter(
+          (el) => el.tagName !== 'IMG' && getComputedStyle(el).position === 'absolute',
+        )
+        const boxes = leaves.map((el) => el.getBoundingClientRect())
+        // What a leaf lays out: its text nodes but those read only (1 px icon labels, signs, legends), and each icon's
+        // own drawn box. Client rects ignore the clip, so they show how far the words run.
+        const extent = (el: HTMLElement): DOMRect[] => {
+          const rects: DOMRect[] = [...el.querySelectorAll<HTMLElement>('.icon')].map((i) => i.getBoundingClientRect())
+          const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+          for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+            if (!n.textContent?.trim() || n.parentElement?.closest('.sr-only, [data-free], .icon, .sign')) continue
+            const range = document.createRange()
+            range.selectNodeContents(n)
+            rects.push(...range.getClientRects())
+          }
+          return rects.filter((r) => r.width > 0)
+        }
+        let cut = 0
+        let prices = 0
+        leaves.forEach((el, i) => {
+          const b = boxes[i]
+          const rects = extent(el)
+          if (!b || !rects.length) return
+          const [left, right] = [Math.min(...rects.map((r) => r.left)), Math.max(...rects.map((r) => r.right))]
+          const bottom = Math.max(...rects.map((r) => r.bottom))
+          const wide = Math.max(0, b.left - left) + Math.max(0, right - b.right) > b.width * cutWidth
+          // A line more than printed: its words fall half a line or more below the box.
+          const deep = bottom - b.bottom > parseFloat(getComputedStyle(el).lineHeight) / 2
+          if (!wide && !deep) return
+          cut++
+          if (el.closest('.price')) prices++
+        })
+        let overlapping = 0
+        boxes.forEach((a, i) => {
+          for (const b of boxes.slice(i + 1)) {
+            const w = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+            const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+            if (w > 0 && h > 0 && w * h > overlap * Math.min(a.width * a.height, b.width * b.height)) overlapping++
+          }
+        })
+        return { cut, prices, overlapping }
+      },
+      { cutWidth: CUT_WIDTH, overlap: OVERLAP },
+    )
     // As a reader does: the segment's label (the radio itself is hidden under its icon, print.ts).
     await page.locator('label:has(#view-text)').click()
     if (!(await page.isChecked('#view-text'))) throw new Error(`${tag}: the Text only segment did not switch the view`)
     const same = shown === (await words())
-    out.push(`printed: axe ${bad.join(' ') || 'ok'} | text ${same ? 'same' : 'DIFFERS from the text view'}`)
+    out.push(
+      `printed: axe ${bad.join(' ') || 'ok'} | text ${same ? 'same' : 'DIFFERS from the text view'} | boxes cut ${String(layer.cut)} (prices ${String(layer.prices)}), overlapping ${String(layer.overlapping)}`,
+    )
     await ctx.close()
   }
 } finally {

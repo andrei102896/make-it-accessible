@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import { PRINT_FONTS_DIR } from '@make-it-accessible/pipeline/html/printface'
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
@@ -40,7 +39,7 @@ export function withNoindex(html: string): string {
   return html.replace(/<meta name="viewport"[^>]*>/, (m) => `${m}\n<meta name="robots" content="noindex, nofollow">`)
 }
 
-// A preview's files that stay beside it (the printed view's backdrops and faces: a phone never shows them, so the
+// A preview's files that stay beside it (the printed view's backdrops: a phone never shows them, so the
 // page must not carry them inline): its folder is the file's name without `.html`, each backdrop named by page.
 export const assetsDir = (file: string): string => file.replace(/\.html$/, '')
 export function withAssets(html: string, file: string): { html: string; assets: { from: string; to: string }[] } {
@@ -51,13 +50,7 @@ export function withAssets(html: string, file: string): { html: string; assets: 
     if (!assets.some((a) => a.from === from)) assets.push({ from, to })
     return to
   })
-  // The printed view's faces (html/printface.ts), fetched only by the printed view.
-  const fonted = out.replace(new RegExp(`url\\((${PRINT_FONTS_DIR}/[\\w.-]+\\.woff2)\\)`, 'g'), (_, from: string) => {
-    const to = `${assetsDir(file)}/${from}`
-    if (!assets.some((a) => a.from === from)) assets.push({ from, to })
-    return `url(${to})`
-  })
-  return { html: fonted, assets }
+  return { html: out, assets }
 }
 
 // Writes a rendered page (its pictures relative to `pageDir`) as the preview `file` in `dir`, its assets beside it.

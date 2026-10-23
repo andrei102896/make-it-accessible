@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import type { Checked, Held } from './approved.ts'
-import type { PrintCheck, TextWhy } from './printcheck.ts'
 
 // report.json beside held.json: per page which layout it opens in and why, in the owner's words (CLIENT_FLOW §5),
 // and how many of its details wait for their confirmation; never "compliant" or "certified".
@@ -22,9 +21,7 @@ export const parseReport = (raw: string): Report => Report.parse(JSON.parse(raw)
 // The page's switch reads "As printed" / "Text only" (html/strings.ts): the owner finds it by those words.
 const OPENS_AS_TEXT = 'opens as Text only, where every word reads clearly.'
 // Why a page shows Text only: one sentence after "Page N opens as Text only…".
-const WHY: Record<TextWhy | 'scan' | 'no-print', string> = {
-  misfit: 'As printed, some words would not have fitted where your PDF prints them.',
-  'not-checked': "We couldn't check where this page's words sit on your PDF.",
+const WHY: Record<'scan' | 'no-print', string> = {
   scan: 'This page is a picture of the menu, so we read its words rather than redraw them.',
   'no-print': "We couldn't draw this page's printed layout.",
 }
@@ -46,12 +43,11 @@ const checkedBy = (cs: readonly { label: string; name: string; at: string }[]): 
 }
 
 // A page that did not convert is listed too: it is open until it does (`converted: false`).
-export type ReportPage = { keyPage: number; pdfPage: number; printed: boolean; scan: boolean; converted: boolean }
+export type ReportPage = { pdfPage: number; printed: boolean; scan: boolean; converted: boolean }
 
-// `printed`: pages that kept the printed view; `check`: why the others lost it (printcheck.ts); `held`: open content.
+// `printed`: pages shown as printed; `held`: open content.
 export function reportOf(
   pages: readonly ReportPage[],
-  check: PrintCheck,
   held: readonly Held[],
   checked: readonly Checked[] = [],
 ): Report {
@@ -67,9 +63,7 @@ export function reportOf(
         checked: mine,
         say: `Page ${String(p.pdfPage)} isn't ready yet. We'll email you when it is.`,
       }
-    const reason: TextWhy | 'scan' | 'no-print' | null = p.printed
-      ? null
-      : (check.text.get(p.keyPage) ?? (p.scan ? 'scan' : 'no-print'))
+    const reason: 'scan' | 'no-print' | null = p.printed ? null : p.scan ? 'scan' : 'no-print'
     const say = [
       reason
         ? `Page ${String(p.pdfPage)} ${OPENS_AS_TEXT}${open.length || mine.length ? '' : ' Nothing for you to do.'}`

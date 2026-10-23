@@ -124,7 +124,7 @@ test("a word whose glyphs rise along one line is set at an angle (Fig's rubber s
   assert.deepEqual([...tilted], ['OCT'])
 })
 
-test("each word's baseline is where its own glyphs stand, on tight lines too: the line above's baseline at its box's top is not its own (Kenny & Ziggy's)", () => {
+test("each word's ink is its own glyphs', on tight lines too: the line above's glyphs at its box's top are not its own (Kenny & Ziggy's)", () => {
   const at = (fill: string, x: number, y: number): string =>
     `<g fill="${fill}"><use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/></g>`
   const upper = at('rgb(100%, 0%, 0%)', 100, 110) + at('rgb(100%, 0%, 0%)', 106, 110)
@@ -133,7 +133,6 @@ test("each word's baseline is where its own glyphs stand, on tight lines too: th
     { id: 'YOUR', box: { x: 98, y: 96, w: 16, h: 18 } },
     { id: '11.95', box: { x: 102, y: 110, w: 14, h: 18 } },
   ])
-  assert.deepEqual(printed.baselines, { YOUR: 110, '11.95': 125 })
   assert.deepEqual(printed.inks, { YOUR: '#ff0000', '11.95': '#0000ff' })
 })
 
@@ -144,7 +143,6 @@ test("a glyph in two words' boxes belongs to the word of its line starting last 
     { id: 'C', box: { x: 100, y: 100, w: 40, h: 80 } },
     { id: 'A', box: { x: 136, y: 100, w: 44, h: 80 } },
   ])
-  assert.deepEqual(letters.baselines, { C: 160, A: 160 })
   assert.deepEqual(letters.inks, { C: '#ff0000', A: '#ff0000' })
   const script = at('rgb(0%, 0%, 0%)', 36, 287) + at('rgb(0%, 0%, 0%)', 44, 287)
   const dish = at('rgb(0%, 0%, 100%)', 36, 308) + at('rgb(0%, 0%, 100%)', 44, 308)
@@ -152,16 +150,16 @@ test("a glyph in two words' boxes belongs to the word of its line starting last 
     { id: 'entrees', box: { x: 36, y: 244, w: 93, h: 76 } },
     { id: 'MOOSEWOOD', box: { x: 36, y: 294, w: 76, h: 19 } },
   ])
-  assert.deepEqual(menu.baselines, { entrees: 287, MOOSEWOOD: 308 })
+  assert.deepEqual(menu.inks, { entrees: '#000000', MOOSEWOOD: '#0000ff' })
 })
 
-test("a word's baseline is its first letter's: the ink over a copy drawn under it, where the box starts on the copy (Kenny & Ziggy's NEVER), not the dish line in a script's tall box (Moosewood's soups)", () => {
+test("a word's ink is its first letter's: the ink over a copy drawn under it, where the box starts on the copy (Kenny & Ziggy's NEVER), not the dish line in a script's tall box (Moosewood's soups)", () => {
   const at = (fill: string, x: number, y: number): string =>
     `<g fill="${fill}"><use xlink:href="#glyph-0-1" x="${String(x)}" y="${String(y)}"/></g>`
   const copy = at('rgb(0%, 0%, 0%)', 100, 111) + at('rgb(0%, 0%, 0%)', 106, 111)
   const ink = at('rgb(100%, 0%, 0%)', 100.02, 110) + at('rgb(100%, 0%, 0%)', 106.02, 110)
   const shadowed = printedOf(page(glyphs, copy + ink), [{ id: 'FAMOUS', box: { x: 100, y: 96, w: 20, h: 18 } }])
-  assert.deepEqual(shadowed.baselines, { FAMOUS: 110 })
+  assert.deepEqual(shadowed.inks, { FAMOUS: '#ff0000' })
   const script = at('rgb(0%, 0%, 0%)', 200, 287) + at('rgb(0%, 0%, 0%)', 208, 287)
   const dish = [180, 188, 196, 200, 212, 220, 228].map((x) => at('rgb(0%, 0%, 100%)', x, 308)).join('')
   const stray = at('rgb(0%, 0%, 100%)', 199.6, 316)
@@ -169,7 +167,7 @@ test("a word's baseline is its first letter's: the ink over a copy drawn under i
     { id: 'soups', box: { x: 200, y: 244, w: 60, h: 76 } },
     { id: 'CAULIFLOWER', box: { x: 178, y: 294, w: 30, h: 19 } },
   ])
-  assert.deepEqual(menu.baselines, { soups: 287, CAULIFLOWER: 308 })
+  assert.deepEqual(menu.inks, { soups: '#000000', CAULIFLOWER: '#0000ff' })
 })
 
 test("a word's ink is its first letter's: a glyph drawn after its letters in another ink does not set it (Kenny & Ziggy's gold &)", () => {

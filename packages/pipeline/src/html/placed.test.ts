@@ -5,7 +5,7 @@ import type { Grid } from '../pdf/backdrop.ts'
 import type { Extraction } from '../pdf/types.ts'
 import { renderDocument } from './document.ts'
 import { placement, placer } from './placed.ts'
-import { spotsOf } from './spots.ts'
+import { spotsOf, type Spot } from './spots.ts'
 import { printWidth } from './print.ts'
 import { inkedHtml } from './segments.ts'
 import { visibleText } from './source.ts'
@@ -43,7 +43,7 @@ const structure = parsePage(
 const shown = (grid: Grid): { src: string; src2x: string; grid: Grid } => ({ src: 'b.webp', src2x: 'b2.webp', grid })
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 9,
+  version: 10,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -56,16 +56,11 @@ const white: Grid = {
   strokes: {},
   undrawn: [],
   kept: [],
-  baselines: {},
   ends: {},
-  tracking: {},
-  faces: {},
-  metrics: {},
   capsFaces: [],
-  fonts: {},
 }
 
-test('each leaf takes its printed box, size, face and drawn ink, kept as printed on a flat backdrop; text read from a picture has no spot', () => {
+test('each leaf is a box at its printed place and size, its ink only counted; text read from a picture has no spot', () => {
   const spots = spotsOf(structure.blocks, extraction, white)
   assert.deepEqual(
     [...spots.keys()],
@@ -74,13 +69,14 @@ test('each leaf takes its printed box, size, face and drawn ink, kept as printed
   const title = spots.get('blocks[0]')
   assert.ok(title)
   assert.equal(
-    placement(title, extraction.width, white, 2, []),
+    placement(title, extraction.width, white, 2),
     // The yellow title reads under 4.5:1 on white as printed: counted (`--low`).
-    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--fw:700;--fi:normal;--ls:0;--c:#fff100;--ts:none;--low:1"',
+    ' style="--x:33.333;--y:6.667;--w:33.333;--h:5;--fs:4.667;--lh:5;--ws:nowrap;--ta:center;--low:1"',
   )
   const name = spots.get('blocks[2].items[0].name')
   assert.ok(name)
-  assert.match(placement(name, extraction.width, white, 2, []), /--ts:none/)
+  // Nothing of a face, an ink or a fit: the box is the print's, whatever the reader's fonts (2026-10-23).
+  assert.doesNotMatch(placement(name, extraction.width, white, 2), /--(c|ts|st|ff|fw|fi|ls|bl|k|lx|ti)[:-]|--ink-/)
 })
 
 test('a page with a backdrop renders both views from one document; without one, nothing of the printed view', () => {
@@ -116,16 +112,6 @@ test('the printed view needs a width that shows the body text at 12 px, never a 
     800,
   )
   assert.equal(printWidth([{ extraction: cover, backdrop: {} }]), null)
-})
-
-test("on a varying backdrop (a photo) a failing ink keeps its colour and gets a halo in the ground's own colour", () => {
-  const photo: Grid = { ...white, min: white.min.map(() => 0.1), max: white.max.map(() => 0.9) }
-  const name = spotsOf(structure.blocks, extraction, photo).get('blocks[2].items[0].name')
-  assert.ok(name)
-  assert.match(
-    placement(name, extraction.width, photo, 2, []),
-    /--c:#222222;--ts:0 0 \.04em #ffffff, 0 0 \.08em #ffffff, 0 0 \.3em #ffffff/,
-  )
 })
 
 test('a title printed as two lines in two faces is placed line by line, each with its own size and ink (Bannatyne)', () => {
@@ -208,7 +194,7 @@ test("words printed inside a picture under an invisible text layer are not drawn
   assert.ok(spotsOf(structure.blocks, extraction, cover).has('blocks[2].items[0].name'))
 })
 
-test('an ink printed at an opacity is blended over its ground; a printed shadow that carries the contrast replaces the halo', () => {
+test('an ink printed at an opacity is weighed blended over its ground; a printed shadow that carries the contrast reads', () => {
   const olive: Grid = {
     ...white,
     mean: white.mean.map(() => '#aa9f62'),
@@ -220,52 +206,14 @@ test('an ink printed at an opacity is blended over its ground; a printed shadow 
   }
   const title = spotsOf(structure.blocks, extraction, olive).get('blocks[0]')
   assert.ok(title)
-  assert.match(placement(title, extraction.width, olive, 2, []), /--c:#f1f0e6;--ts:none/)
+  assert.match(placement(title, extraction.width, olive, 2), /--low:1/)
   const shadowed: Grid = { ...olive, alpha: {}, shadows: { '1:0': { color: '#231f20', dx: 0, dy: 2 } } }
   const lifted = spotsOf(structure.blocks, extraction, shadowed).get('blocks[0]')
   assert.ok(lifted)
-  assert.match(
-    placement(lifted, extraction.width, shadowed, 2, []),
-    /--ts:calc\(0 \* 1cqw\) calc\(0\.333 \* 1cqw\) 0 #231f20"/,
-  )
+  assert.doesNotMatch(placement(lifted, extraction.width, shadowed, 2), /--low/)
 })
 
-test('a placed line takes its printed face and letter spacing; small text is never set tighter than its face', () => {
-  const jost = {
-    family: 'Jost',
-    key: 'jost',
-    license: 'OFL' as const,
-    copyright: '',
-    category: 'text' as const,
-    files: [{ file: 'jost.woff2', style: 'normal' as const, weight: '100 900', unicodeRange: 'U+0000-00FF' }],
-  }
-  const gothic = { key: 'centurygothic', size: 9, weight: 300, italic: false }
-  const e: Extraction = { ...extraction, runs: extraction.runs.map((r) => ({ ...r, font: gothic })) }
-  const tracked: Grid = { ...white, tracking: { '1:0': 0.157, '1:1': -0.05, '1:2': -0.05, '1:3': -0.05, '1:4': -0.05 } }
-  const spots = spotsOf(structure.blocks, e, tracked)
-  const title = spots.get('blocks[0]')
-  const name = spots.get('blocks[2].items[0].name')
-  assert.ok(title && name)
-  assert.match(
-    placement(title, e.width, tracked, 2, [jost]),
-    /--fw:300;--fi:normal;--ff:'print-jost', sans-serif;--ls:0\.157;/,
-  )
-  assert.match(placement(name, e.width, tracked, 2, [jost]), /--ls:0;/)
-})
-
-test("a placed text stands on its first line's printed baseline, where most of that line's letters stand (Moosewood's entrees)", () => {
-  const runs = extraction.runs.map((r) => (r.id === '1:4' ? { ...r, line: 2, box: { ...r.box, y: 215 } } : r))
-  const e: Extraction = { ...extraction, runs }
-  const measured: Grid = { ...white, baselines: { '1:1': 209, '1:2': 208, '1:3': 208, '1:4': 223 } }
-  const name = spotsOf(structure.blocks, e, measured).get('blocks[2].items[0].name')
-  assert.ok(name)
-  assert.match(placement(name, e.width, measured, 2, []), /--bl:34\.667;/)
-  const unmeasured = spotsOf(structure.blocks, extraction, white).get('blocks[2].items[0].name')
-  assert.ok(unmeasured)
-  assert.doesNotMatch(placement(unmeasured, extraction.width, white, 2, []), /--bl:/)
-})
-
-test("a line's ink is its unmarked words'; a word in another brand ink shows it where it reads or where the ground is flat, on a whole leaf and on each printed line (Almond's red Micky's)", () => {
+test("a line's ink is its unmarked words' (Almond's red Micky's before Ramen); its words keep their brand-ink spans, each printed line its own box", () => {
   const runs = [
     { str: "Micky's", box: { x: 60, y: 200, w: 40, h: 10 }, line: 0, color: '#c00000' },
     { str: 'Ramen', box: { x: 104, y: 200, w: 34, h: 10 }, line: 0, color: '#000000' },
@@ -299,16 +247,29 @@ test("a line's ink is its unmarked words'; a word in another brand ink shows it 
       imageSrc: () => undefined,
       backdrop: { src: 'b.webp', src2x: 'b2.webp', grid },
     },
-    { printPx: null, library: [], inks },
+    { printPx: null, inks },
   )
-  assert.match(pl.place('blocks[0]'), /--c:#000000;.*--ink-c00000:#c00000"/)
+  // Red on white reads; the line is weighed by its black words all the same.
+  assert.doesNotMatch(pl.place('blocks[0]'), /--low|--c:|--ink-/)
   const text = page.blocks[1]?.kind === 'paragraph' ? page.blocks[1].text : { seen: '' }
   const lines = pl.lined('blocks[1]', text, visibleText(text, e), (s) => inkedHtml(s, inks, (x) => x)) ?? ''
-  assert.match(
-    lines,
-    /<span class="pl" style="[^"]*--c:#000000[^"]*--ink-c00000:#c00000[^"]*"><span class="ink-c00000">Farm/,
-  )
-  // Yellow does not read on white, but the ground is flat: it stays as printed, as a whole yellow line would.
-  assert.match(lines, /--ink-ffee00:#ffee00/)
-  assert.doesNotMatch(pl.place('blocks[2]'), /--ink-/)
+  assert.match(lines, /<span class="pl" style="[^"]*"><span class="ink-c00000">Farm/)
+  assert.doesNotMatch(lines, /--ink-/)
+})
+
+test('bold text from 18.66 px is large and reads at 3:1 as printed; at its regular weight it needs 4.5:1', () => {
+  // Grey #888888 on white is 3.5:1; 10 pt at 2 px a point is 20 px.
+  const spot = (weight: number): Spot => ({
+    box: { x: 100, y: 100, w: 80, h: 12 },
+    size: 10,
+    lines: 1,
+    align: 'left',
+    color: '#888888',
+    alpha: 1,
+    shadow: null,
+    stroke: null,
+    weight,
+  })
+  assert.doesNotMatch(placement(spot(700), extraction.width, white, 2), /--low/)
+  assert.match(placement(spot(400), extraction.width, white, 2), /--low:1/)
 })

@@ -8,8 +8,7 @@ import { MAX_BUFFER, pageSvg, popplerBytes } from '@make-it-accessible/pipeline/
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
 import { turned } from '@make-it-accessible/pipeline/pdf/runs'
-import { fontLibrary } from './brand.ts'
-import { faceMetrics, type Cache } from './facemetrics.ts'
+import { capsFacesOf, type Cache } from './facemetrics.ts'
 import { pdfFacts, SAME_FRAME } from './pdfjs.ts'
 import { CAPTURE_PX, openPdf, type PdfTab } from './pdfshot.ts'
 import { degraded } from '@make-it-accessible/pipeline/degraded'
@@ -31,7 +30,6 @@ export async function clearBackdrop(dir: string): Promise<void> {
 // cell (DESIGN, The printed view: Poppler only where pdf.js cannot); a page neither draws gets none, and keeps the text view.
 export async function writeBackdrops(pdf: string, results: readonly PageResult[]): Promise<void> {
   const facts = await pdfFacts(pdf)
-  const library = await fontLibrary()
   const browser = await chromium.launch()
   const faces: Cache = new Map()
   const width = printWidth(results.map((r) => ({ extraction: r.extraction, backdrop: true })))
@@ -43,8 +41,8 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
       const e = r.extraction
       if (width === null) continue
       const page = await pageSvg(pdf, r.pdfPage)
-      const { tracking, printed } = await facts.of(e)
-      const { metrics, capsFaces } = await faceMetrics(browser, printed, library, faces)
+      const { printed } = await facts.of(e)
+      const capsFaces = await capsFacesOf(browser, printed, faces)
       // Words set at an angle stay unplaced: a level box over them would select across the print (pdf/backdrop.ts).
       const tilted = tiltedOf(page, e.runs)
       const words = placedRuns(r.structure, e, flaggedPaths(r.validation), (w) => turned(w) || tilted.has(w.id)).filter(
@@ -99,10 +97,6 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           ...grid,
           ...printedOf(page, words),
           kept: [...tilted],
-          tracking,
-          faces: {},
-          fonts: {},
-          metrics,
           capsFaces,
         }),
       )

@@ -12,7 +12,7 @@ import type { Box } from './types.ts'
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 9
+export const BACKDROP_VERSION = 10
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -40,19 +40,6 @@ const EDGE = 0.5
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 const Shadow = z.object({ color: Hex, dx: z.number(), dy: z.number() }).strict()
-// A face id is its family and file name; its range goes into CSS: both from our own bytes, checked all the same.
-const FaceId = z.string().regex(/^pdf-[0-9a-f]+$/)
-const RANGE = /^U\+[0-9A-F]+(-[0-9A-F]+)?(, U\+[0-9A-F]+(-[0-9A-F]+)?)*$/
-// `lower`: the size scale giving the lookalike the printed x-height; `caps`: the printed cap height; a line blends
-// them by its share of lowercase letters (placed.ts). `weight`: the lookalike weight with the printed stem.
-const FaceMetrics = z
-  .object({
-    lower: z.number().positive().nullable(),
-    caps: z.number().positive().nullable(),
-    weight: z.number().int().positive(),
-  })
-  .strict()
-export type FaceMetrics = z.infer<typeof FaceMetrics>
 const Stroke = z.object({ color: Hex, width: z.number().positive() }).strict()
 // pNN/backdrop.json: per cell (row by row) the darkest and lightest relative luminance and the mean colour; per
 // placed word its drawn ink and opacity, its printed shadow, and whether it is drawn at all (printedOf).
@@ -70,28 +57,17 @@ const Grid = z
     shadows: z.record(z.string(), Shadow),
     strokes: z.record(z.string(), Stroke),
     undrawn: z.array(z.string()),
-    // Per placed word its printed baseline (pt from the page's top): its first letter's origin.
-    baselines: z.record(z.string(), z.number()),
     // Per placed word whose layer box runs past its letters (a tab read into it: Howies' "2022\t"), where they end.
     ends: z.record(z.string(), z.number()),
-    // Words the backdrop keeps as printed and ours only read: set at an angle, or in a hand we cannot draw
-    // (keptRuns, eval: a script face neither embeddable nor stood in for; Fig's stamp and signature).
+    // Words set at an angle (Fig's rubber stamp): they get no box over the print, ours is read (tiltedOf).
     kept: z.array(z.string()),
-    // Per placed word its printed letter spacing in ems (pdf/tracking.ts), where tracked.
-    tracking: z.record(z.string(), z.number()),
-    // Per placed word the PDF's own face it is printed in, and per face the letters it draws and its maker's
-    // notice (pdf/ownfont.ts); its file is fonts/<face>.otf beside the page.
-    faces: z.record(z.string(), FaceId),
-    fonts: z.record(FaceId, z.object({ range: z.string().regex(RANGE), notice: z.string() }).strict()),
-    // Per printed face (pdf/face.ts faceKey) set in a lookalike: its size scales and weight (eval/facemetrics.ts).
-    metrics: z.record(z.string(), FaceMetrics),
     // Printed faces whose lowercase glyphs are capitals (Howies' Lulo Clean): the layer's "dinner menu" prints
     // DINNER MENU, and so does ours.
     capsFaces: z.array(z.string()),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>
-export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'baselines' | 'ends'>
+export type Printed = Pick<Grid, 'inks' | 'alpha' | 'shadows' | 'strokes' | 'undrawn' | 'ends'>
 export const parseGrid = (json: string): Grid => Grid.parse(JSON.parse(json))
 
 type Word = { id: string; box: Box; str?: string }
@@ -99,7 +75,7 @@ const round = (v: number): number => Math.round(v * 100) / 100
 const near = (dx: number, dy: number, h: number): boolean =>
   Math.hypot(dx, dy) >= MIN_OFFSET && Math.abs(dx) <= h * SHADOW_REACH && Math.abs(dy) <= h * SHADOW_REACH
 
-// How each placed word is printed: ink, opacity and baseline from its first letter; glyphs in another ink a little
+// How each placed word is printed: ink and opacity from its first letter; glyphs in another ink a little
 // offset, or a letter-shaped fill under it, are its shadow; with no glyph it is inside a picture (Stone House's cover).
 export function printedOf(svg: string, words: readonly Word[]): Printed {
   // pdftocairo draws glyph uses in a group with their fill.
@@ -108,7 +84,7 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     const between = svg.slice(open, g.range[0])
     return { ...g, fill: open >= 0 && !between.includes('</g>') ? colourOf(attr(between, 'fill')) : null }
   })
-  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], baselines: {}, ends: {} }
+  const out: Printed = { inks: {}, alpha: {}, shadows: {}, strokes: {}, undrawn: [], ends: {} }
   const blank = new Set([...svg.matchAll(/<g id="(glyph-[^"]+)">\s*<\/g>/g)].map((m) => m[1]))
   // A word's own glyphs: origins in the lower part of its box, as its top reaches the line above's baseline (Kenny &
   // Ziggy's tight lines). Another word's glyph is never its ink or copy (Ferrara's black asterisks by the red SYRUPS).
@@ -141,7 +117,6 @@ export function printedOf(svg: string, words: readonly Word[]): Printed {
     }
     if (letter.fill) out.inks[id] = letter.fill
     if (letter.alpha < 1) out.alpha[id] = Math.round(letter.alpha * 1000) / 1000
-    if (foot) out.baselines[id] = round(foot.at[1])
     // Letters end one mean step past the last origin; the box of a word with outer spacing ends wherever its tab did
     // (a space is a drawn glyph too, an empty one: Howies' tab drawn as a space 206 pt on).
     const xs = mine

@@ -92,9 +92,9 @@ test('colours map onto the shown text letter by letter, whitespace and case asid
   ])
   const html = inkedHtml(
     [
-      { text: 'a ', color: '#000000', icon: null, run: null },
-      { text: 'b', color: '#111111', icon: null, run: null },
-      { text: ' c', color: '#c00000', icon: null, run: null },
+      { text: 'a ', color: '#000000', icon: null },
+      { text: 'b', color: '#111111', icon: null },
+      { text: ' c', color: '#c00000', icon: null },
     ],
     new Set(['#c00000']),
     (s) => `[${s}]`,

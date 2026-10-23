@@ -31,7 +31,7 @@ test('the printed view leaves a translated page, a zoom past the backdrop, and a
     /@media screen and \(min-width: 50em\) and \(forced-colors: none\) and \(max-resolution: 2\.5dppx\)/,
   )
   assert.match(css, /:root:not\(\[class\*="translated-"\]\) body:has\(#view-print:checked\) \.backdrop/)
-  assert.match(css, /color: transparent; font-weight/)
+  assert.match(css, /color: transparent; letter-spacing: 0; word-spacing: 0; text-indent: 0;/)
 })
 
 test('the printed view draws nothing of ours over the print: no colour, shadow, outline or underline on placed text', () => {
@@ -41,4 +41,16 @@ test('the printed view draws nothing of ours over the print: no colour, shadow, 
     /text-shadow: var|-webkit-text-stroke: var|color: var\(--c|text-decoration: underline|\.ink-/,
   )
   assert.match(css, /\[style\*="--x:"\] a \{ display: inline; padding: 0; margin: 0; text-decoration: none; \}/)
+})
+
+test('each placed text is a box clipped at its printed rectangle, never a scroll container, its link ring on the box', () => {
+  const css = printCss(1100)
+  assert.match(css, /width: calc\(var\(--w\) \* 1cqw\); height: calc\(var\(--h\) \* 1cqw\); overflow: clip;/)
+  assert.doesNotMatch(css, /overflow: hidden; display: block/)
+  assert.match(
+    css,
+    /\[style\*="--x:"\]:has\(:focus-visible\) \{ outline: 3px solid var\(--focus\); outline-offset: 2px; \}/,
+  )
+  // No face, fit, baseline or tracking reaches the layer: its place is the print's on every OS.
+  assert.doesNotMatch(css, /var\(--(ff|fw|fi|k|z|lx|ls|dy|ti|bl)\b/)
 })
