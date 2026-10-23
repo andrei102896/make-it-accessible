@@ -71,10 +71,13 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
     if (line.font) r.font = line.font
     onLine.set(line, [...(onLine.get(line) ?? []), r])
   }
+  let unmatched = 0
   for (const [{ font, segments }, words] of onLine) {
     if (!font || !segments) continue
     const inOrder = [...words].sort((a, b) => a.box.x - b.box.x)
-    segmentFonts({ font, segments }, inOrder)?.forEach((f, i) => {
+    const fonts = segmentFonts({ font, segments }, inOrder)
+    if (!fonts) unmatched++
+    fonts?.forEach((f, i) => {
       const w = inOrder[i]
       if (!w) return
       w.font = f
@@ -100,7 +103,7 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
   })
   const lost = lettersDrawnBeside(art, glyphs, words)
   const read = { pdfPage, width, height, runs, images, duplicates, hidden, vectors: boxes, rules, pictures, icons }
-  return lost.length ? { ...read, lost } : read
+  return { ...read, ...(lost.length ? { lost } : {}), ...(unmatched ? { unmatched } : {}) }
 }
 
 // The page as pdftocairo draws it in SVG (0.1–0.8 s a page): the vector layer and the printed view's backdrop.

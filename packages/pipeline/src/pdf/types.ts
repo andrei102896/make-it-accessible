@@ -72,6 +72,8 @@ const Extraction = z.object({
   hidden: z.array(z.string()).default([]),
   // Words a glyph the text layer dropped leaves unwhole, its letters named nowhere in the PDF (pdf/ligatures.ts).
   lost: z.array(z.string()).optional(),
+  // Lines printed in more than one style whose words did not match their pieces: each word keeps the line's face.
+  unmatched: z.number().int().positive().optional(),
   // Frames and panels from the vector layer; runs extracted before they were read have none.
   vectors: z.array(Vector).optional(),
   rules: z.array(Rule).optional(),

@@ -6,9 +6,8 @@ import { AxeBuilder } from '@axe-core/playwright'
 import { chromium } from 'playwright'
 import { printFloorIn } from '@make-it-accessible/pipeline/html/print'
 
-// pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe (critical and serious) at 1280, 390 and 320 px, in
-// forced colours and in the printed view, a horizontal-overflow check, WCAG 1.4.12 text spacing at 320 px, the
-// printed view's words and boxes (cut, overlapping), screenshots when asked. One line per page, as a table.
+// pnpm check:page <page.html> [--shots <dir> --tag <name>]: axe, overflow, 1.4.12, the printed view's words and boxes,
+// the text view's restyled spans, screenshots when asked (WORKFLOW lists them). One line per page, as a table.
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { shots: { type: 'string' }, tag: { type: 'string' } },
@@ -61,8 +60,22 @@ try {
         return clipped.length ? `${String(clipped.length)} clipped` : 'ok'
       })
     }
+    // Spans whose face differs from their element's in Text only: what a line printed in more than one style changed.
+    const restyled =
+      mode.name === 'desktop'
+        ? await page.evaluate(() => {
+            const text = document.querySelector<HTMLInputElement>('#view-text')
+            if (text) text.click()
+            return [...document.querySelectorAll('main .fi, main .fn')].filter((s) => {
+              // Text only shows `[data-free]` words (the printed view hides them), never `.sr-only` copies.
+              if (s.closest('.sr-only')) return false
+              const [a, b] = [getComputedStyle(s), s.parentElement && getComputedStyle(s.parentElement)]
+              return !b || a.fontWeight !== b.fontWeight || a.fontStyle !== b.fontStyle
+            }).length
+          })
+        : null
     out.push(
-      `${mode.name}: axe ${bad.join(' ') || 'ok'}${overflow ? ' OVERFLOW' : ''}${spacing ? ` | 1.4.12 ${spacing}` : ''}`,
+      `${mode.name}: axe ${bad.join(' ') || 'ok'}${overflow ? ' OVERFLOW' : ''}${spacing ? ` | 1.4.12 ${spacing}` : ''}${restyled === null ? '' : ` | spans restyled ${String(restyled)}`}`,
     )
     await ctx.close()
   }

@@ -115,3 +115,6 @@
 - A TypeScript copy of "which face this element shows" goes stale against the CSS (cards, tables, `.note`, `.qualifier` outrank the roles): give the span its own explicit face instead of a difference from a guessed base (segments review, 2026-10-23).
 - Embedding any file of a family switches the whole family on for every part: extra weights and styles go only to families whose main file is already embedded (leftover font budget, 2026-10-23).
 - Word-level faces cannot show a style change inside a word: check the plan's acceptance examples against the unit the data comes in (Le Dive's quoted cuvées, 2026-10-23).
+- Name a count by the unit it counts: spans of same-style words are not words, words marked only on success are not "words in mixed lines" (round style measures, 2026-10-23).
+- An "unmatched" count is the failures inside the loop that tried, never candidates minus successes (poppler.ts unmatched, 2026-10-23).
+- An exclusion borrowed from one view can be wrong in the other: `[data-free]` is hidden in the printed view and shown in Text only (spans restyled went 38 → 4 on the sealed set, 2026-10-23).

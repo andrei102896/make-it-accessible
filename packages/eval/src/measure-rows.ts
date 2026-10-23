@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import { PageScore } from '@make-it-accessible/pipeline/pdf/fidelity-types'
 import { judgePage } from '@make-it-accessible/pipeline/pdf/fidelity-verdict'
+import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { ROOT } from './paths.ts'
 import { heldErrors } from './preview.ts'
 import { parseReport } from './report.ts'
@@ -113,6 +114,7 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     add('printed boxes cut', Number(m?.[1] ?? 0))
     add('printed prices cut', Number(m?.[2] ?? 0))
     add('printed boxes overlapping', Number(m?.[3] ?? 0))
+    add('text view spans restyled', Number(/spans restyled (\d+)/.exec(l)?.[1] ?? 0))
   }
   // The measures: every page's whole-page findings, its printed shadows.
   const fidelity = await text(f.fidelity).then((raw) => (raw ? FidelityFile.parse(JSON.parse(raw)) : null))
@@ -128,6 +130,18 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   }
   row.measures.push(...cleanLines(await text(f.fidelity.replace(/\.json$/, '.log')), f.dir))
   for (const d of (await readdir(f.dir)).filter((x) => /^p\d+$/.test(x)).sort()) {
+    // Words styled by their line's piece, and lines in mixed styles whose words did not match (pdf/face.ts).
+    const read = await text(join(f.dir, d, 'extraction.json'))
+    let e = null
+    try {
+      e = read ? parseExtraction(read) : null
+    } catch {
+      row.problems.push(`${d} extraction.json unreadable`)
+    }
+    const styled = e?.runs.filter((r) => r.styled).length ?? 0
+    if (e?.unmatched) row.measures.push(`${d} lines in mixed styles unmatched: ${String(e.unmatched)}`)
+    add('words styled by their piece', styled)
+    add('mixed-style lines unmatched', e?.unmatched ?? 0)
     const grid = await text(join(f.dir, d, 'backdrop.json'))
     const shadows = grid
       ? Object.keys(z.object({ shadows: z.record(z.string(), z.unknown()) }).parse(JSON.parse(grid)).shadows).length

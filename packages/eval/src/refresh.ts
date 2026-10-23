@@ -39,6 +39,7 @@ export async function refreshedPage(
     throw new Error(`${dir}: the PDF gives ${String(freshBase.length)} runs, the saved run has ${String(base.length)}`)
   extraction.hidden = fresh.hidden
   extraction.lost = fresh.lost
+  extraction.unmatched = fresh.unmatched
   extraction.vectors = fresh.vectors
   extraction.rules = fresh.rules
   extraction.pictures = fresh.pictures

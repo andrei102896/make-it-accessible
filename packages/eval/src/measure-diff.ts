@@ -78,7 +78,9 @@ export function diff(now: Baseline, was: Baseline | null): { shown: string[]; fu
     both(`\n${name}: ${String(Object.keys(set.docs).length)} documents`)
     for (const k of [...new Set([...Object.keys(t), ...Object.keys(tb ?? {})])].sort()) {
       const [a, b] = [t[k] ?? 0, tb?.[k] ?? 0]
-      both(`  ${!tb || a === b ? ' ' : '*'} ${k}: ${String(a)}${tb && a !== b ? ` (was ${String(b)})` : ''}`)
+      // A measure HEAD's round did not take is new, not a change from 0.
+      const change = tb && !(k in tb) ? ' (new)' : tb && a !== b ? ` (was ${String(b)})` : ''
+      both(`  ${!tb || a === b ? ' ' : '*'} ${k}: ${String(a)}${change}`)
     }
     const [r, rb] = [rates(t), tb ? rates(tb) : []]
     for (const l of r) both(`  ${!tb || rb.includes(l) ? ' ' : '*'} ${l}`)
