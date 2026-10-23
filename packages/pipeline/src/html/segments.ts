@@ -1,15 +1,19 @@
 import type { Extraction, Run } from '../pdf/types.ts'
 import type { TextValue } from '../model/schema.ts'
+import type { Face } from './profile.ts'
 
-// A shown text's characters grouped by colour and the icon they name (its printed left and width, hundredths of the
-// page width).
-export type Segment = { text: string; color: string | null; icon: { x: number; w: number } | null }
+// A printed weight and style, what a word's span may change (never its family).
+export type Style = Pick<Face, 'weight' | 'italic'>
+// A shown text's characters grouped by colour, style (only words their line prints in more than one style have one)
+// and the icon they name (its printed left and width, hundredths of the page width).
+export type Segment = { text: string; color: string | null; style: Style | null; icon: { x: number; w: number } | null }
 
 // Words printed farther apart than this (em) are two pieces of a line: a word space is ~0.25 em, a tab or a price
 // column far more.
 const GAP = 1
 
 const sameIcon = (a: Segment['icon'], b: Segment['icon']): boolean => a?.x === b?.x && a?.w === b?.w
+const sameStyle = (a: Style | null, b: Style | null): boolean => a?.weight === b?.weight && a?.italic === b?.italic
 
 // Each shown character's run, matched to the cited runs' characters (whitespace and case aside): null for
 // whitespace, and null for the whole text when the letters differ (the model's text stands in for a broken layer).
@@ -35,14 +39,14 @@ export function shownRuns(t: TextValue, e: Extraction, shown: string): (Run | nu
 // The shown text's characters each with its run's colour (whitespace takes the one before). When the letters differ,
 // one segment, coloured only when every run agrees.
 export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment[] {
-  if ('seen' in t) return [{ text: shown, color: null, icon: null }]
+  if ('seen' in t) return [{ text: shown, color: null, style: null, icon: null }]
   const letters = Array.from(shown)
   const owners = shownRuns(t, e, shown)
   if (!owners) {
     const hidden = new Set(e.hidden)
     const runs = t.src.flatMap(([from, to]) => e.runs.slice(from, to + 1)).filter((r) => !hidden.has(r.id))
     const all = new Set(runs.map((r) => r.color ?? null))
-    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null, icon: null }]
+    return [{ text: shown, color: all.size === 1 ? ([...all][0] ?? null) : null, style: null, icon: null }]
   }
   return segmentsOf(letters, owners, e.width)
 }
@@ -50,19 +54,21 @@ export function inkSegments(t: TextValue, e: Extraction, shown: string): Segment
 function segmentsOf(letters: readonly string[], owners: readonly (Run | null)[], pageWidth: number): Segment[] {
   const out: Segment[] = []
   let color: string | null = null
+  let style: Style | null = null
   let icon: Segment['icon'] = null
   const u = (v: number): number => Math.round((v / pageWidth) * 100_000) / 1000
   letters.forEach((ch, i) => {
     const owner = owners[i]
     if (owner) {
       color = owner.color ?? null
+      style = owner.font && owner.styled ? { weight: owner.font.weight, italic: owner.font.italic } : null
       icon = owner.icon ? { x: u(owner.box.x), w: u(owner.box.w) } : null
     } else if (i === 0) color = null
     // A space after an icon's words is not the tag's: the tag ends with its last word.
     else if (!owners.slice(i + 1).find((o) => o)?.icon) icon = null
     const last = out.at(-1)
-    if (last && last.color === color && sameIcon(last.icon, icon)) last.text += ch
-    else out.push({ text: ch, color, icon })
+    if (last && last.color === color && sameStyle(last.style, style) && sameIcon(last.icon, icon)) last.text += ch
+    else out.push({ text: ch, color, style, icon })
   })
   return out
 }
@@ -128,23 +134,35 @@ export function lineParts(t: TextValue, e: Extraction, shown: string): LinePart[
   return parts.filter((p) => 'runs' in p).length > 1 ? parts : null
 }
 
-// The segments as HTML: brand inks in their class, an icon's words in the legend tag (`--iw`, `--ix`), the rest
-// joined so `each` sees whole words.
-export function inkedHtml(
-  segments: readonly Segment[],
-  inks: ReadonlySet<string>,
-  each: (s: string) => string,
-): string {
+// A span's classes for words (a price's) sharing one style their line sets apart; none when they differ.
+export function runsClasses(runs: readonly Run[]): string[] {
+  const styles = new Set(
+    runs.map((r) => (r.font && r.styled ? `${String(r.font.weight)}:${String(r.font.italic)}` : '')),
+  )
+  const font = runs[0]?.styled ? runs[0].font : undefined
+  return styles.size === 1 && font ? styleClasses(font) : []
+}
+
+// A word's printed weight and style as classes (style.ts), whatever its element's face: no copy of the brand's CSS.
+const styleClasses = (style: Style | null): string[] =>
+  style ? [`fw-${String(style.weight)}`, style.italic ? 'fi' : 'fn'] : []
+
+export type Each = (s: string) => string
+// The segments as HTML: brand inks in their class, styled words in a silent span (`fw-N` and `fi`/`fn`, never <em>), an
+// icon's words in the legend tag (`--iw`, `--ix`), the rest joined so `each` sees whole words.
+export function inkedHtml(segments: readonly Segment[], inks: ReadonlySet<string>, each: Each): string {
   const groups: Segment[] = []
   for (const s of segments) {
     const color = s.color !== null && inks.has(s.color) ? s.color : null
     const last = groups.at(-1)
-    if (last && last.color === color && sameIcon(last.icon, s.icon)) last.text += s.text
+    if (last && last.color === color && sameStyle(last.style, s.style) && sameIcon(last.icon, s.icon))
+      last.text += s.text
     else groups.push({ ...s, color })
   }
   return groups
     .map((g) => {
-      const inked = g.color ? `<span class="ink-${g.color.slice(1)}">${each(g.text)}</span>` : each(g.text)
+      const classes = [...(g.color ? [`ink-${g.color.slice(1)}`] : []), ...styleClasses(g.style)]
+      const inked = classes.length ? `<span class="${classes.join(' ')}">${each(g.text)}</span>` : each(g.text)
       return g.icon === null
         ? inked
         : `<span class="diet icon" style="--iw:${String(g.icon.w)};--ix:${String(g.icon.x)}"><span>${inked}</span></span>`

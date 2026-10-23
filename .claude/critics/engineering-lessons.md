@@ -109,3 +109,9 @@
 - Client rects ignore clipping: a geometry probe over a box must exclude its screen-reader-only descendants, or it measures hidden words (check-page cut, icon labels in 1 px spans, 2026-10-23).
 - A height ratio stands in for "one line more" only on one- or two-line boxes: measure overflow in line heights (check-page cut, 2026-10-23).
 - Folding a `!a && !b` guard into `a !== null && b !== null && a >= b*k` turns 0/0 into true: keep the zero case (capsFacesOf, 2026-10-23).
+- pdftohtml nests its style tags (`<i><b>…</b></i>`, 878 lines) and leaves regular text untagged inside styled lines (181 of 225 mixed lines): read segments with a bold/italic state, never by splitting at each tag (segments plan, 2026-10-23).
+- `pdftohtml -xml -stdout` writes every page image beside the PDF: probes pass `-i` or write to a temporary folder (12,500 images left in validation/, 2026-10-23).
+- A change to role faces shows in the brand CSS and the embedded fonts, not in innerText: diff the `<style>` rules and the `@font-face` list against the font budget (segments plan, 2026-10-23).
+- A TypeScript copy of "which face this element shows" goes stale against the CSS (cards, tables, `.note`, `.qualifier` outrank the roles): give the span its own explicit face instead of a difference from a guessed base (segments review, 2026-10-23).
+- Embedding any file of a family switches the whole family on for every part: extra weights and styles go only to families whose main file is already embedded (leftover font budget, 2026-10-23).
+- Word-level faces cannot show a style change inside a word: check the plan's acceptance examples against the unit the data comes in (Le Dive's quoted cuvées, 2026-10-23).

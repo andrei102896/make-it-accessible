@@ -41,6 +41,8 @@ test('the printed view draws nothing of ours over the print: no colour, shadow, 
     /text-shadow: var|-webkit-text-stroke: var|color: var\(--c|text-decoration: underline|\.ink-/,
   )
   assert.match(css, /\[style\*="--x:"\] a \{ display: inline; padding: 0; margin: 0; text-decoration: none; \}/)
+  // The text view's style spans take no face in the box layer: it has none.
+  assert.match(css, /:is\(\[class\*="fw-"\], \.fi, \.fn\) \{ font-weight: inherit; font-style: inherit; \}/)
 })
 
 test('each placed text is a box clipped at its printed rectangle, never a scroll container, its link ring on the box', () => {

@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { brandPlan, type Brand } from '@make-it-accessible/pipeline/html/brand'
 import { fromHex } from '@make-it-accessible/pipeline/html/color'
 import type { HtmlPage } from '@make-it-accessible/pipeline/html/document'
-import { profileOf, type Profile } from '@make-it-accessible/pipeline/html/profile'
+import { profileOf, type Face, type Profile } from '@make-it-accessible/pipeline/html/profile'
+import { faceKey } from '@make-it-accessible/pipeline/pdf/face'
 import {
   groupOrnaments,
   ornamentBelow,
@@ -15,6 +16,7 @@ import {
   fileFor,
   FontManifestSchema,
   withinBudget,
+  alongside,
   type EmbeddedFace,
   type FontManifest,
 } from '@make-it-accessible/pipeline/html/webfonts'
@@ -30,8 +32,9 @@ const MAX_FONT_BYTES = 150_000
 const LINES_DPI = 100
 // An ornament's mask: 3 pixels per point stays sharp on a 2x phone screen at the printed size.
 const ORNAMENT_DPI = 216
-// Bumped when lines.json gains a measurement, so older files are measured again.
-const LINES_VERSION = 3
+// Bumped when lines.json gains a measurement or its signatures may regroup (4: faces per line piece), so older files
+// are measured again.
+const LINES_VERSION = 4
 // Dishes are stacked in one column when the next starts below and within this share of the page width.
 const SAME_COLUMN = 0.1
 
@@ -150,18 +153,34 @@ export async function documentBrand(
   if (!profile) return null
   const library = await fontLibrary()
   const plan = brandPlan(profile, library)
-  const wanted = new Map<string, { manifest: FontManifest; file: EmbeddedFace['file']; words: number; bytes: number }>()
-  for (const part of [...plan.roles.values(), ...plan.headings]) {
-    const manifest = part.manifest
-    const file = manifest && fileFor(manifest, part.style.face.weight, part.style.face.italic)
-    if (!manifest || !file) continue
+  type Wanted = { manifest: FontManifest; file: EmbeddedFace['file']; words: number; bytes: number }
+  const want = async (into: Map<string, Wanted>, manifest: FontManifest, face: Face, words: number): Promise<void> => {
+    const file = fileFor(manifest, face.weight, face.italic)
+    if (!file) return
     const k = `${manifest.key}/${file.file}`
-    const seen = wanted.get(k)
+    const seen = into.get(k)
     const bytes = seen?.bytes ?? (await stat(join(FONTS_DIR, manifest.key, file.file))).size
-    wanted.set(k, { manifest, file, words: (seen?.words ?? 0) + part.style.words, bytes })
+    into.set(k, { manifest, file, words: (seen?.words ?? 0) + words, bytes })
   }
+  const wanted = new Map<string, Wanted>()
+  const parts = [...plan.roles.values(), ...plan.headings]
+  for (const { manifest, style } of parts) if (manifest) await want(wanted, manifest, style.face, style.words)
+  const chosen = withinBudget([...wanted.values()], MAX_FILES, MAX_FONT_BYTES)
+  // The other weights and styles a part's family prints (words spanned, segments.ts), only in the budget left over.
+  const printed = new Map<string, Map<string, { face: Face; words: number }>>()
+  for (const r of pages.flatMap((p) => p.extraction.runs)) {
+    if (!r.font || !r.styled) continue
+    const byFace = printed.get(r.font.key) ?? new Map<string, { face: Face; words: number }>()
+    const seen = byFace.get(faceKey(r.font)) ?? { face: r.font, words: 0 }
+    seen.words++
+    printed.set(r.font.key, byFace.set(faceKey(r.font), seen))
+  }
+  const others = new Map<string, Wanted>()
+  for (const { manifest, style } of parts)
+    for (const { face, words } of printed.get(style.face.key)?.values() ?? [])
+      if (manifest) await want(others, manifest, face, words)
   const faces: EmbeddedFace[] = []
-  for (const w of withinBudget([...wanted.values()], MAX_FILES, MAX_FONT_BYTES))
+  for (const w of [...chosen, ...alongside(chosen, [...others.values()], MAX_FILES, MAX_FONT_BYTES)])
     faces.push({
       manifest: w.manifest,
       file: w.file,

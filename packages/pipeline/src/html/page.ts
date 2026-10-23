@@ -3,7 +3,7 @@ import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
 import { formatMoney, pageCurrency, signAround } from '../text/money.ts'
-import { inkedHtml, inkSegments } from './segments.ts'
+import { inkedHtml, inkSegments, runsClasses } from './segments.ts'
 import { visibleText } from './source.ts'
 import { listNotes } from './notes.ts'
 import { unionOf } from './profile.ts'
@@ -110,7 +110,8 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const amountBox = unionOf(words)
     const after = labelBox !== null && amountBox !== null && labelBox.x > amountBox.x
     const sep = SEPARATOR.exec(after ? printedLabel : printed)?.[0] ?? ''
-    const amountHtml = `<span class="amount"${own('amount')}>${amountText}</span>`
+    // An amount its line prints in a style of its own keeps it (Le Dive's italic "Cidre 10", segments.ts).
+    const amountHtml = `<span class="${['amount', ...runsClasses(words)].join(' ')}"${own('amount')}>${amountText}</span>`
     const parts = (after ? [amountHtml, qualifier] : [qualifier, amountHtml]).filter(Boolean).join(' ')
     return `<span class="price${inkOf(words)}" data-role="${p.role}"${data}${attrs(path)}>${parts}</span>${sep}`
   }

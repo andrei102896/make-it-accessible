@@ -5,7 +5,7 @@ import type { Extraction, Run } from '../pdf/types.ts'
 import type { Brand } from './brand.ts'
 import { renderDocument } from './document.ts'
 import { profileOf } from './profile.ts'
-import { inkedHtml, inkSegments, type Segment } from './segments.ts'
+import { inkedHtml, inkSegments, runsClasses, type Segment } from './segments.ts'
 
 // A segment's text, ink and icon (its run is the fixture's own).
 const inked = (s: readonly Segment[]): Pick<Segment, 'text' | 'color' | 'icon'>[] =>
@@ -92,14 +92,36 @@ test('colours map onto the shown text letter by letter, whitespace and case asid
   ])
   const html = inkedHtml(
     [
-      { text: 'a ', color: '#000000', icon: null },
-      { text: 'b', color: '#111111', icon: null },
-      { text: ' c', color: '#c00000', icon: null },
+      { text: 'a ', color: '#000000', style: null, icon: null },
+      { text: 'b', color: '#111111', style: null, icon: null },
+      { text: ' c', color: '#c00000', style: null, icon: null },
     ],
     new Set(['#c00000']),
     (s) => `[${s}]`,
   )
   assert.equal(html, '[a b]<span class="ink-c00000">[ c]</span>')
+})
+
+test('words their line prints in more than one style are spanned silently with their own face (Le Dive), others not', () => {
+  const run = (str: string, x: number, weight: number, italic: boolean, styled: boolean): Run => ({
+    id: `1:${String(x)}`,
+    str,
+    box: { x: x * 40, y: 0, w: 30, h: 10 },
+    flow: 0,
+    line: 0,
+    font: { key: 'louize', weight, italic, size: 12 },
+    ...(styled ? { styled: true as const } : {}),
+  })
+  // "High Life Lager 6": the name bold, the beer italic; "Gold" bold by its font's name alone, on a line of one style.
+  const runs = [run('High', 0, 700, false, true), run('Lager', 1, 400, true, true), run('Gold', 2, 700, false, false)]
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  const html = (from: number, to: number, shown: string): string =>
+    inkedHtml(inkSegments({ src: [[from, to]] }, e, shown), new Set(), (s) => s)
+  assert.equal(html(0, 1, 'High Lager'), '<span class="fw-700 fn">High </span><span class="fw-400 fi">Lager</span>')
+  assert.equal(html(1, 2, 'Lager Gold'), '<span class="fw-400 fi">Lager </span>Gold')
+  // An amount takes its words' class when they agree on one, none when one is not styled.
+  assert.deepEqual(runsClasses(runs.slice(1, 2)), ['fw-400', 'fi'])
+  assert.deepEqual(runsClasses(runs.slice(1)), [])
 })
 
 test('with a brand the red words are wrapped and coloured at 4.5:1; the contents label stays plain; without, nothing', () => {

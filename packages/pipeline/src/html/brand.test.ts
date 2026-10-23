@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { brandCss, type Brand } from './brand.ts'
 import { contrast, fromHex } from './color.ts'
 import type { Profile, RoleStyle } from './profile.ts'
-import { familyFor, fileFor, fontFaces, withinBudget, type FontManifest } from './webfonts.ts'
+import { alongside, familyFor, fileFor, fontFaces, withinBudget, type FontManifest } from './webfonts.ts'
 
 const manifest = (family: string, category: 'text' | 'display', weights: string[]): FontManifest => ({
   family,
@@ -63,6 +63,23 @@ test('fonts to embed: most-used first, within the file count and the byte budget
     withinBudget(wanted, 1, 150).map((w) => w.id),
     ['b'],
   )
+})
+
+test("spanned faces' files go in the budget the roles leave, only for a family already embedded", () => {
+  const f = (family: string, file: string, words: number, bytes: number) => ({
+    manifest: { key: family },
+    file: { file },
+    words,
+    bytes,
+  })
+  const chosen = [f('lato', 'regular', 50, 60)]
+  // Lato's italic fits; Bodoni's main file was left out, so its italic would switch Bodoni on for upright words.
+  const others = [f('lato', 'regular', 9, 60), f('lato', 'italic', 5, 50), f('bodoni', 'italic', 20, 10)]
+  assert.deepEqual(
+    alongside(chosen, others, 4, 150).map((w) => `${w.manifest.key}/${w.file.file}`),
+    ['lato/italic'],
+  )
+  assert.deepEqual(alongside(chosen, others, 4, 100), [])
 })
 
 test('a weight is drawn by the variable file containing it, else the nearest static weight', () => {

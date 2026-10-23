@@ -106,9 +106,54 @@ export function bodySize(runs: readonly Pick<Run, 'str' | 'font'>[]): number {
   return [...sized].sort((a, b) => a[0] - b[0]).find(([, w]) => (seen += w) >= half)?.[0] ?? 0
 }
 
-export type Line = { box: Box; color?: string; font?: RunFont }
+// `segments`: a line printed in more than one style, its text cut where the style changes (pdftohtml's tags).
+export type Segment = { text: string; font: RunFont }
+export type Line = { box: Box; color?: string; font?: RunFont; segments?: Segment[] }
 
-// pdftohtml -xml text lines with the colour and face of their fontspec; bold and italic come from the line's tags.
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
+const decoded = (s: string): string =>
+  s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) =>
+    e.startsWith('#')
+      ? ((n: number) => (n <= 0x10ffff ? String.fromCodePoint(n) : m))(
+          e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1)),
+        )
+      : (ENTITIES[e] ?? m),
+  )
+
+// The face most of these pieces' letters are printed in (the first on a tie: a Map keeps order, sort is stable).
+function mostLetters(pieces: readonly Segment[]): RunFont | undefined {
+  const tally = new Map<string, { font: RunFont; n: number }>()
+  for (const { text, font } of pieces) {
+    const seen = tally.get(faceKey(font)) ?? { font, n: 0 }
+    seen.n += Array.from(text.replace(/\s+/g, '')).length
+    tally.set(faceKey(font), seen)
+  }
+  return [...tally.values()].sort((a, b) => b.n - a.n)[0]?.font
+}
+
+// A line's text in pieces of one style: pdftohtml nests its tags (`<i><b>…</b></i>`) and leaves regular text untagged.
+function styledPieces(content: string): { text: string; bold: boolean; italic: boolean }[] {
+  const out: { text: string; bold: boolean; italic: boolean }[] = []
+  let bold = 0
+  let italic = 0
+  for (const tok of content.split(/(<[^>]*>)/)) {
+    const tag = /^<(\/?)([bi])>$/.exec(tok)
+    if (tag) {
+      const step = tag[1] ? -1 : 1
+      if (tag[2] === 'b') bold = Math.max(0, bold + step)
+      else italic = Math.max(0, italic + step)
+    } else if (!tok.startsWith('<') && tok) {
+      const text = decoded(tok)
+      const last = out.at(-1)
+      if (last && last.bold === bold > 0 && last.italic === italic > 0) last.text += text
+      else out.push({ text, bold: bold > 0, italic: italic > 0 })
+    }
+  }
+  return out
+}
+
+// pdftohtml -xml text lines with their fontspec's colour and the face most of their letters take (a <b> round a space
+// alone counts for nothing: Le Dive's "16 / 64<b> </b>"); a line in more than one style keeps each piece's face.
 export function textLines(xml: string): Line[] {
   const specs = new Map(
     [...xml.matchAll(/<fontspec id="(\d+)" size="(-?[\d.]+)" family="([^"]*)" color="(#[0-9a-fA-F]{6})"/g)].map(
@@ -119,12 +164,33 @@ export function textLines(xml: string): Line[] {
     ...xml.matchAll(/<text top="(-?\d+)" left="(-?\d+)" width="(\d+)" height="(\d+)" font="(\d+)">(.*?)<\/text>/g),
   ].map(([, top, left, w, h, id, content = '']): Line => {
     const spec = specs.get(id ?? '')
-    const face =
-      spec && spec.size > 0 ? printedFace(spec.family, content.includes('<b>'), content.includes('<i>')) : null
-    return {
-      box: { x: Number(left), y: Number(top), w: Number(w), h: Number(h) },
-      ...(spec?.color ? { color: spec.color } : {}),
-      ...(face && spec ? { font: { ...face, size: spec.size } } : {}),
-    }
+    const box = { x: Number(left), y: Number(top), w: Number(w), h: Number(h) }
+    const color = spec?.color ? { color: spec.color } : {}
+    if (!spec || spec.size <= 0) return { box, ...color }
+    const pieces = styledPieces(content).filter((p) => /\S/.test(p.text))
+    const faceOf = (bold: boolean, italic: boolean): RunFont => ({
+      ...printedFace(spec.family, bold, italic),
+      size: spec.size,
+    })
+    const segments = pieces.map((p) => ({ text: p.text, font: faceOf(p.bold, p.italic) }))
+    const font = mostLetters(segments) ?? faceOf(false, false)
+    const mixed = new Set(segments.map((s) => faceKey(s.font))).size > 1
+    return { box, ...color, font, ...(mixed ? { segments } : {}) }
+  })
+}
+
+// Each word's face on a line printed in more than one style, the words in reading order: the face of the piece
+// holding most of its letters (the first on a tie). Null when their letters are not the line's, each keeping the line's.
+export function segmentFonts(
+  { font: lineFont, segments }: { font: RunFont; segments: readonly Segment[] },
+  words: readonly Pick<Run, 'str'>[],
+): RunFont[] | null {
+  const owners = segments.flatMap((s) => Array.from(s.text.replace(/\s+/g, '')).map((ch) => ({ ch, font: s.font })))
+  const letters = words.flatMap((w) => Array.from(w.str.replace(/\s+/g, '')))
+  if (letters.length !== owners.length || letters.some((ch, i) => owners[i]?.ch !== ch)) return null
+  let at = 0
+  return words.map((w) => {
+    const own = owners.slice(at, (at += Array.from(w.str.replace(/\s+/g, '')).length))
+    return mostLetters(own.map(({ ch, font }) => ({ text: ch, font }))) ?? lineFont
   })
 }

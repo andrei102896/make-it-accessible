@@ -78,3 +78,5 @@
 - Clipping invisible text must not make a scroll container: find and focus scroll `overflow: hidden` content and leave it shifted under the pointer; use `overflow: clip` (slice 3 boxes, 2026-10-23).
 - A clip on a focusable element's parent clips its focus ring: draw the ring on the clipped box (`:has(:focus-visible)`) (printed links, slice 3, 2026-10-23).
 - A gate deleted for a clip needs a measure in its place: clipping hides overflow without fixing it, so count clipped boxes and clipped prices (slice 3, 2026-10-23).
+- Fixing a style's data can flip a role's dominant face: count each role's faces per page before and after, the minority style is often the one the owner pointed at (Le Dive page 2 italic ingredients, 2026-10-23).
+- One face per role reproduces print only when the style changes at role boundaries; a style change inside a line (a cuvée name in a producer line, a price in a heading) needs a silent span, as colour does (Le Dive, 2026-10-23).

@@ -19,6 +19,9 @@ const Run = z.object({
   font: Font.optional(),
   // Its letters include a dropped ligature's, from the PDF's replacement text (pdf/ligatures.ts).
   restored: z.literal(true).optional(),
+  // Its face is its own piece's, on a line printed in more than one style (pdf/face.ts segmentFonts): the one face
+  // reading set apart from its role's (font names alone disagree where the print does not: Carmine's Bodoni).
+  styled: z.literal(true).optional(),
   // A word of an icon's legend label, standing for the icon drawn at its box (pdf/icons.ts): no glyphs of its own.
   icon: z.literal(true).optional(),
   // Read by OCR from a page with no text layer (pdf/ocr.ts); the model read the page independently.

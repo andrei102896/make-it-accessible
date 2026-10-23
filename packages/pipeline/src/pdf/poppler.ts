@@ -7,7 +7,7 @@ import { LIMITS, preflight, type Limits } from './preflight.ts'
 import { Refused } from './refused.ts'
 import { parsePpm, type Pixels } from './pixels.ts'
 import { findDuplicates } from './runs.ts'
-import { lineAt, textLines, type Line } from './face.ts'
+import { lineAt, segmentFonts, textLines, type Line } from './face.ts'
 import type { Box, Extraction, PageImage, Run } from './types.ts'
 import { piecesOf, picturesOf, shapeIn } from './art.ts'
 import { iconsOn } from './icons.ts'
@@ -61,11 +61,25 @@ export async function extractPage(pdf: string, pdfPage: number, limits: Limits =
   if (!width || !height) throw new Error(`pdftotext returned no page size for ${pdf} p${pdfPage}`)
   const duplicates = findDuplicates(runs)
   const { images, lines } = await extractLayout(pdf, pdfPage, width * height)
-  // Each word takes the colour and face of the smallest pdftohtml text line its centre falls in (lines overlap).
+  // Each word takes the colour and face of the smallest pdftohtml text line its centre falls in (lines overlap), and
+  // on a line printed in more than one style the face of its own piece (face.ts segmentFonts).
+  const onLine = new Map<Line, Run[]>()
   for (const r of runs) {
     const line = lineAt(lines, r.box)
-    if (line?.color) r.color = line.color
-    if (line?.font) r.font = line.font
+    if (!line) continue
+    if (line.color) r.color = line.color
+    if (line.font) r.font = line.font
+    onLine.set(line, [...(onLine.get(line) ?? []), r])
+  }
+  for (const [{ font, segments }, words] of onLine) {
+    if (!font || !segments) continue
+    const inOrder = [...words].sort((a, b) => a.box.x - b.box.x)
+    segmentFonts({ font, segments }, inOrder)?.forEach((f, i) => {
+      const w = inOrder[i]
+      if (!w) return
+      w.font = f
+      w.styled = true
+    })
   }
   // RGB pixels within MAX_BUFFER whatever the page's shape (a square A0 page at the edge cap would exceed it).
   const fits = Math.sqrt(MAX_BUFFER / 3 / (width * height)) * 72

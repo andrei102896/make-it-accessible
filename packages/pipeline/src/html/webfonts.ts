@@ -98,6 +98,19 @@ export function fontFaces(faces: readonly EmbeddedFace[]): string {
     .join('\n')
 }
 
+// Files beside `chosen` in the budget it leaves (spanned weights and styles), each only of a family `chosen` embeds:
+// any file of a family turns the family on for every part set in it (brand.ts family).
+export function alongside<
+  T extends { bytes: number; words: number; manifest: { key: string }; file: { file: string } },
+>(chosen: readonly T[], others: readonly T[], maxFiles: number, maxBytes: number): T[] {
+  const key = (w: T): string => `${w.manifest.key}/${w.file.file}`
+  const taken = new Set(chosen.map(key))
+  const families = new Set(chosen.map((w) => w.manifest.key))
+  const left = others.filter((w) => !taken.has(key(w)) && families.has(w.manifest.key))
+  const bytes = chosen.reduce((n, w) => n + w.bytes, 0)
+  return withinBudget(left, maxFiles - chosen.length, maxBytes - bytes)
+}
+
 // The files to embed, most-used first, within a count and a byte budget; the rest fall back to their class stack.
 export function withinBudget<T extends { bytes: number; words: number }>(
   wanted: readonly T[],
