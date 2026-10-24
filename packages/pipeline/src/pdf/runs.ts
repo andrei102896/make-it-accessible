@@ -48,9 +48,8 @@ export function joinRuns(runs: readonly Run[]): string {
     .join('')
 }
 
-// A price set glyph by glyph ("£8." + "95", "1" + ".1" + "9") is one amount when its pieces are close, share a
-// height and meet at the separator; small cents are a pair instead, and a third decimal ("1.99" + "²", a year) is not
-// joined. `sorted` puts the pieces in reading order; the renderer keeps the citation order instead.
+// A price set glyph by glyph ("£8." + "95", "$13" + small ".95") is one amount when its close pieces meet at the
+// separator at one height, or the cents print their separator; never a third decimal ("1.99" + "²", a year).
 function joinPriceGlyphs(runs: readonly Run[], sorted = true): Run[] {
   const ordered = sorted ? [...runs].sort((a, b) => a.line - b.line || a.box.x - b.box.x) : runs
   const out: Run[] = []
@@ -72,7 +71,14 @@ function joinPriceGlyphs(runs: readonly Run[], sorted = true): Run[] {
     // A decimal separator cannot end a price: "9." then two digits on its line are one amount however wide the
     // letter-spacing (a text layer splits tracked digits: "$9. 30", "18. 99").
     const cents = prev !== undefined && row && /[.,]$/.test(prev.str) && /^\d{2}$/.test(r.str)
-    if (prev && (near || cents) && sameHeight && atSeparator && !/[.,]\d{3}/.test(str)) {
+    // Small raised cents that print their separator are their digits' ("$13" + ".95"), never a second decimal's.
+    const ownCents =
+      near &&
+      /^[€£$]?\d+$/.test(prev.str) &&
+      /^[.,]\d{2}$/.test(r.str) &&
+      r.box.h <= prev.box.h &&
+      r.box.h >= prev.box.h * MIN_CENTS_RATIO
+    if (prev && (near || cents) && (sameHeight || ownCents) && atSeparator && !/[.,]\d{3}/.test(str)) {
       const right = Math.max(prev.box.x + prev.box.w, r.box.x + r.box.w)
       out[out.length - 1] = { ...prev, str, box: { ...prev.box, w: right - prev.box.x } }
     } else out.push(r)

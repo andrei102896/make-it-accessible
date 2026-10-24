@@ -152,6 +152,10 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
     // On a scan the two readers' amounts must agree (model/align.ts); neither is believed over the other.
     if (p.text !== undefined && reading(p.text) !== reading(words))
       errors.push({ path, problem: `the page image reads "${p.text}" where OCR reads "${words}"` })
+    // An amount uses every digit its words print ("$13" + a dropped ".95" is no 13): cents = digits × 1, 10 or 100.
+    const digits = Number(words.replace(/\D/g, ''))
+    if (amount && ![1, 10, 100].some((k) => digits * k === Math.abs(amount.cents)))
+      errors.push({ path, problem: `the amount leaves out digits its words print: "${words}"` })
     if (amount === null) {
       const printed = asPrinted(cited)
       if (printed === null) errors.push({ path, problem: `price words "${words}" are not an amount` })

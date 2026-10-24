@@ -93,3 +93,5 @@
 - Before writing "cited as text today", grep the built pages for that class as a price element (+N add-ons: 19 held prices, 2026-10-24).
 - A new printed-as-is pattern covers every variant the set prints, or sibling prices split between freed and held (a sign before "pp", cents with no leading digit, 2026-10-24).
 - out/rebuilt holds the sealed documents too: before grepping it, drop every slug whose group is verify-sealed in validation/private/verify-sources.json, and report sealed only as totals (add-on round, 2026-10-24: four sealed menus were read and named).
+- An amount must account for every digit its cited words print: a dropped ".95" read "$13.95" as 13, and with the sign on the digits it would show "$24.00" as proven (2026-10-24).
+- Count changes in shown text, not only wrong amounts: Bernie's ".00" prices "read right" yet move from printed to formatted, some to whole (2026-10-24).

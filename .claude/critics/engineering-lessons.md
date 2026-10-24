@@ -138,3 +138,10 @@
 - Check "X never happens today" on the saved structures, not on the holds list: holds show only failures (2026-10-24).
 - Check each document's set in the sources file before using it as evidence: a judge's "working + verify-learn" list held 4 sealed documents, and the sealed gain was those same 4 (add-on round, 2026-10-24).
 - A file hash going back and forth between the same values across rounds is nondeterminism, not a change: an open case, or every round reports it (Kenny p7, Howies Waterloo dinner p1, 2026-10-22…24).
+- A "wrong" count from a hand-written check is no baseline: size a rule by diffing old against new outputs (Bernie's 15 by the probe, 47 by the diff, 2026-10-24).
+- A join allowed by a separator on one side needs whole digits on the other, or it chains a second separator ("9.99" + ".50", 2026-10-24).
+- A per-price probe misses list-level effects: one amount can reformat its siblings through shared decisions (withWhole); verify on rendered text (2026-10-24).
+- A join rule written for one market runs on every page that shares the function: check it on the other market's forms (the raised-cents rule joined leaflet "2" + ",69", 2026-10-24).
+- A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).
+- A join rule written for one market runs on every page that shares the function: check it on the other market's forms (the raised-cents rule joined leaflet "2" + ",69", 2026-10-24).
+- A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).

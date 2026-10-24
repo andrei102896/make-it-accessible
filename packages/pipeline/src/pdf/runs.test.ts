@@ -140,3 +140,26 @@ test('price grammar, not layout: tracked cents join, fused leaders and words dro
   // Leader dots before a leading zero are garbled text, not an amount.
   assert.equal(amountOf([run(0, '.....044', 100, 0, 30, 10)]), null)
 })
+
+test('small raised cents that print their separator join whole digits before them (Bernie\'s "$13" + ".95")', () => {
+  // Bernie's: "$" 8.9 high, "13" 12.5, ".95" 8.9 top-aligned, touching.
+  const bernies = [
+    run(0, '$', 520.4, 133.6, 3.1, 8.9),
+    run(1, '13', 523, 133.3, 8.8, 12.5),
+    run(2, '.95', 532.4, 133.6, 7.6, 8.9),
+  ]
+  assert.equal(amountOf(bernies)?.cents, 1395)
+  assert.equal(printedAmount(bernies), '$ 13.95')
+  assert.equal(amountOf([run(0, '$24', 10, 100, 15, 12.5), run(1, '.95', 25.5, 100, 7.6, 8.9)])?.cents, 2495)
+  // Never a second decimal, never far, taller or tiny.
+  assert.equal(printedAmount([run(0, '9.99', 10, 100, 20, 12.5), run(1, '.50', 30.5, 100, 7, 8.9)]), '9.99 .50')
+  assert.equal(printedAmount([run(0, '13', 10, 100, 9, 12.5), run(1, '.95', 40, 100, 7, 8.9)]), '13 .95')
+  assert.equal(printedAmount([run(0, '13', 10, 100, 9, 8.9), run(1, '.95', 19.5, 100, 7, 12.5)]), '13 .95')
+  assert.equal(printedAmount([run(0, '13', 10, 100, 9, 12.5), run(1, '.95', 19.5, 100, 2, 2)]), '13 .95')
+  // A leaflet's small cents that print a comma join too (they were bare euros before).
+  assert.deepEqual(amountOf([run(0, '2', 10, 100, 6, 12.5), run(1, ',69', 16.5, 100, 7, 8)], 'EUR'), {
+    cents: 269,
+    currency: 'EUR',
+    fromBareDigits: false,
+  })
+})

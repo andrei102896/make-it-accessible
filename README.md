@@ -203,6 +203,7 @@ out/                          run outputs (local only)
 - **`centPartner` needs cents ≥ 30 % of the euro height and picks the nearest candidate.** Without it "13" paired with "20 Flaschen". Do not loosen.
 - **Euro/cent pairs are found by position, not stream order.** BILLA p3 emits several euro digits before their cents.
 - **Scorer reads `innerText`, not `textContent`.** `textContent` glued "€ 2.99" to "2+1" and hid the amount.
+- **An amount accounts for every digit its cited words print** (2026-10-24, Bernie's "$13" + a dropped small ".95" read 13; The Shed "£ 8 . 5 0" read 8): cents = digits × 1, 10 or 100, else an error (`validate.ts` price). Do not remove.
 - **`amountOf` picks one amount or fails.** A euro/cent pair, else the single word with a separator, else one bare number. Joining all cited numbers turned "(1 kg 22.34)" into 122,34 (`runs.test.ts`). The model never writes amounts, so this is the only guard.
 - **Pound and dollar amounts are often one word with the sign ("£7500").** `amountOf` splits the sign off; before that every price on the GBP test documents was unreadable (`runs.test.ts`).
 - **Table rows are scored by column on the rendered grid.** A text check passed a ■ moved one column over (`score.test.ts`); keys written as full-width rows rely on it.
