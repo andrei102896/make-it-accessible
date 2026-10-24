@@ -17,4 +17,5 @@ export const emptyGrid = (cols: number): Grid => ({
   ends: {},
   kept: [],
   capsFaces: [],
+  ground: null,
 })

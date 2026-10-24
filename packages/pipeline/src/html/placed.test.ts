@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
-import type { Grid } from '../pdf/backdrop.ts'
+import { BACKDROP_VERSION, type Grid } from '../pdf/backdrop.ts'
 import type { Extraction } from '../pdf/types.ts'
 import { renderDocument } from './document.ts'
 import { placement, placer } from './placed.ts'
@@ -43,7 +43,7 @@ const structure = parsePage(
 const shown = (grid: Grid): { src: string; src2x: string; grid: Grid } => ({ src: 'b.webp', src2x: 'b2.webp', grid })
 // White everywhere: the white title fails on it, the dark dish passes.
 const white: Grid = {
-  version: 10,
+  version: BACKDROP_VERSION,
   cell: 8,
   cols: 75,
   rows: 100,
@@ -58,6 +58,7 @@ const white: Grid = {
   kept: [],
   ends: {},
   capsFaces: [],
+  ground: null,
 }
 
 test('each leaf is a box at its printed place and size, its ink only counted; text read from a picture has no spot', () => {

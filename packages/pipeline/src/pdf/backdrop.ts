@@ -12,7 +12,7 @@ import type { Box } from './types.ts'
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 10
+export const BACKDROP_VERSION = 11
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -64,6 +64,8 @@ const Grid = z
     // Printed faces whose lowercase glyphs are capitals (Howies' Lulo Clean): the layer's "dinner menu" prints
     // DINNER MENU, and so does ours.
     capsFaces: z.array(z.string()),
+    // The ground behind most of the page's words when it is not plain paper (eval/backdrop.ts), else null.
+    ground: Hex.nullable(),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>

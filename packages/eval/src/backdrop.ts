@@ -12,6 +12,9 @@ import { capsFacesOf, type Cache } from './facemetrics.ts'
 import { pdfFacts, SAME_FRAME } from './pdfjs.ts'
 import { CAPTURE_PX, openPdf, type PdfTab } from './pdfshot.ts'
 import { degraded } from '@make-it-accessible/pipeline/degraded'
+import { hex, paper, type Rgb } from '@make-it-accessible/pipeline/html/color'
+import { pageGround } from '@make-it-accessible/pipeline/html/theme'
+import { visible } from './look.ts'
 
 // WebP at this quality draws Ferrara's 8 pt red italic as the lossless render does, at a seventh of its size.
 const QUALITY = 0.85
@@ -98,6 +101,7 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           ...printedOf(page, words),
           kept: [...tilted],
           capsFaces,
+          ground: await groundOf(pdf, r),
         }),
       )
     }
@@ -107,6 +111,21 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
     await browser.close()
   }
 }
+
+// A page's own ground: the colour behind at least PAGE_GROUND of the ring round its words, measured as the document's
+// background is (theme.ts, Poppler). Shares cluster at .45–.55 and the next is .76: the bar sits in that gap.
+const PAGE_GROUND = 2 / 3
+async function groundOf(pdf: string, r: PageResult): Promise<string | null> {
+  const runs = visible(r)
+  if (!runs.length) return null
+  const g = await pageGround(pdf, r.pdfPage, runs).catch((error: unknown) => {
+    degraded(`${r.dir}: no ground measured (${error instanceof Error ? error.message : String(error)})`)
+    return null
+  })
+  return groundHex(g)
+}
+export const groundHex = (g: { c: Rgb; share: number } | null): string | null =>
+  g && g.share >= PAGE_GROUND && !paper(g.c) ? hex(g.c) : null
 
 // The two WebP files, and the page at one pixel per point as RGBA (its light per cell, pdf/backdrop.ts).
 type Encoded = { x1: Buffer; x2: Buffer; rgba: Buffer }

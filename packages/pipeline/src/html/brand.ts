@@ -2,6 +2,7 @@ import { classOf } from '../pdf/face.ts'
 import { contrast, distanceOk, fromHex, hex, readableOn, type Rgb } from './color.ts'
 import { INK_DISTINCT, inkLike, ROLES, type Profile, type Role, type RoleStyle } from './profile.ts'
 import { mastheadCss, SEEN_TITLE_RATIO } from './masthead.ts'
+import { DARK } from './ground.ts'
 import { MUTED, STACKS } from './style.ts'
 import { familyFor, fontFaces, uprightIn, type EmbeddedFace, type FontManifest } from './webfonts.ts'
 
@@ -64,8 +65,6 @@ const RUNNING: ReadonlySet<Role> = new Set(['desc', 'text', 'th'])
 const MIN_RULE = '2.5rem'
 const SYSTEM_TEXT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 const WHITE: Rgb = [255, 255, 255]
-const DARK_FG = '#f2f2f2'
-const DARK_MUTED = '#c4c4c4'
 const LINKS = 'section a, .back a'
 const BLACK: Rgb = [0, 0, 0]
 // The base stylesheet's own selectors, so a role wins by order, not by specificity. Card prices keep their size.
@@ -221,7 +220,7 @@ export function paintedOf(b: Brand): Drawn {
     add(headingSelector(i), h.style.color, colour(h.style.color, bg, b.alternate))
   })
   const body = plan.roles.get('desc') ?? plan.roles.get('text')
-  const text = (body ? colour(body.style.color, bg, b.alternate) : null) ?? (dark ? DARK_FG : '#1a1a1a')
+  const text = (body ? colour(body.style.color, bg, b.alternate) : null) ?? (dark ? DARK.fg : '#1a1a1a')
   // Inline brand colours made readable on the page, never swapped for another colour; one that lands on the text
   // colour is left to it. On a menu price the class outranks the role rules.
   for (const c of b.profile.inks) {
@@ -229,7 +228,7 @@ export function paintedOf(b: Brand): Drawn {
     if (ok && distanceOk(ok, fromHex(text)) >= INK_DISTINCT) add(inkSelector(c), c, hex(ok))
   }
   if (b.profile.accent) add(LINKS, b.profile.accent, colour(b.profile.accent, bg, b.alternate))
-  return { text, muted: dark ? DARK_MUTED : MUTED, accent: painted.find((x) => x.selector === LINKS) ?? null, painted }
+  return { text, muted: dark ? DARK.muted : MUTED, accent: painted.find((x) => x.selector === LINKS) ?? null, painted }
 }
 
 export function brandCss(b: Brand, drawn: Drawn = paintedOf(b)): string {
@@ -315,7 +314,7 @@ export function brandCss(b: Brand, drawn: Drawn = paintedOf(b)): string {
     mastSig === undefined ? (b.masthead?.key ? SEEN_TITLE_RATIO : null) : (p.signatures[mastSig]?.size ?? 0) / p.body
   const masthead = mastheadCss(b, titleRatio)
   const palette = dark
-    ? `--fg: ${DARK_FG}; --muted: ${DARK_MUTED}; --line: #4a4a4a; --panel: #1e1e1e; --focus: #93b4ff; color-scheme: dark;`
+    ? `--fg: ${DARK.fg}; --muted: ${DARK.muted}; --line: ${DARK.line}; --panel: ${DARK.panel}; --focus: ${DARK.focus}; color-scheme: dark;`
     : ''
   const inks = p.inks.flatMap((c) => {
     const sel = inkSelector(c)

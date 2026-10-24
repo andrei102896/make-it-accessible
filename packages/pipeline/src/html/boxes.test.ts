@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Extraction, Run, Vector } from '../pdf/types.ts'
-import { boxesCss, boxesOf, topLevel, wrapBoxes } from './boxes.ts'
+import { boxesCss, boxesOf, wrapBoxes } from './boxes.ts'
+import { topLevel } from './ground.ts'
 import { unfilled } from '../pdf/vectors.ts'
 import { contrast, fromHex } from './color.ts'
 
@@ -163,6 +164,8 @@ test("a filled frame keeps its fill and its printed rule; its colours move each 
   // One stroke, two looks: the card's class names its fill.
   assert.match(css, /\.frame-eaceb0-1-f7ecdf \{ background: #f7ecdf; border: 1px solid #eaceb0;/)
   assert.match(css, /\.frame-eaceb0-1 \{ border: 1px solid #eaceb0; \}/)
+  // A light fill restates the page's text, so a box never inherits a dark page's.
+  assert.match(css, /f7ecdf \{ background: #f7ecdf; border: 1px solid #eaceb0; --fg: #1a1a1a; color: #1a1a1a;/)
   // Gold stays gold, darkened to read on cream; navy already reads and is left alone.
   const gold =
     /\.products\.menu \.prices:where\(\.frame-eaceb0-1-f7ecdf \*\), td\.num:where\(\.frame-eaceb0-1-f7ecdf \*\) \{ color: (#[0-9a-f]{6}); \}/.exec(

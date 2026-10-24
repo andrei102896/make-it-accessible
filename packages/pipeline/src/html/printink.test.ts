@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
-import type { Grid } from '../pdf/backdrop.ts'
+import { BACKDROP_VERSION, type Grid } from '../pdf/backdrop.ts'
 import { asDrawn, printedReads } from './printink.ts'
 import type { HtmlPage } from './types.ts'
 
 const blank: Grid = {
-  version: 10,
+  version: BACKDROP_VERSION,
   cell: 8,
   cols: 1,
   rows: 1,
@@ -21,6 +21,7 @@ const blank: Grid = {
   kept: [],
   ends: {},
   capsFaces: [],
+  ground: null,
 }
 
 test("each word takes its drawn colour, named by the brand ink it matches: the text layer's colour on the wrong letters moves (Kenny & Ziggy's CAKES & PIES)", () => {

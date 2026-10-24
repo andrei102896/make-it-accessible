@@ -3,11 +3,12 @@ import type { Theme } from './theme.ts'
 
 // Secondary text (descriptions, qualifiers); a light panel moves it to read on its fill (boxes.ts).
 export const MUTED = '#555555'
+export const FOCUS = '#1d4ed8'
 
 // No non-empty `content:` anywhere: generated text is read by screen readers but not by the scorer (innerText).
 const BASE = `
 :root { color-scheme: light; --fg: #1a1a1a; --bg: #ffffff; --muted: ${MUTED}; --line: #d9d9d9; --panel: #f4f4f4;
-  --focus: #1d4ed8; --accent: var(--fg); --band-bg: var(--bg); --band-fg: var(--fg); }
+  --focus: ${FOCUS}; --accent: var(--fg); --band-bg: var(--bg); --band-fg: var(--fg); }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 1.0625rem/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
   overflow-wrap: anywhere; }

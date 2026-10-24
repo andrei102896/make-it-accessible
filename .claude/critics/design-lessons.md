@@ -51,3 +51,5 @@ list is in git history.
 - out/rebuilt holds the sealed documents: drop every verify-sealed slug before grepping it, report sealed only as totals. (four sealed menus named, 2026-10-24)
 - A light fill keeps every colour the page draws, each moved on its own; one ink for a whole box is for dark fills only, or the second brand colour disappears (Howies' gold, Scotts' green, step 4a, 2026-10-24).
 - A heading on a box's edge sits on the ground it is printed on: on the fill (a tab) inside, above it on the page; pulled out onto the page ground it must not take the box's colours (Katzinger's SALADS, Exeter's Bar Snacks, 2026-10-24).
+- A histogram bucket's centre is not the print: share and colour come from the real pixels (Carew #212c46 painted #282848); a ground every page shares is the document's (per-page colour stripes one navy menu), and a ground in a panel's colour is the panels' (Gigi, step 4b, 2026-10-24).
+- Pick the focus colour per ground for its own 3:1: a mid-tone ground fails both palettes' rings (Stonehouse #a45a41: 1.31 and 2.48, 2026-10-24).

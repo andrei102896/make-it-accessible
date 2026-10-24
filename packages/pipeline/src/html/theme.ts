@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Pixels } from '../pdf/pixels.ts'
 import { renderPixels } from '../pdf/poppler.ts'
 import type { Run } from '../pdf/types.ts'
-import { contrast, hex, readableOn, type Rgb } from './color.ts'
+import { bucket, contrast, hex, readableOn, type Rgb } from './color.ts'
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 // `band`: the document's own background and text colour for the title band (none for a plain white page);
@@ -28,20 +28,27 @@ const MAX_SWATCHES = 5
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
 
-// Colours quantised to 16 levels per channel, most frequent first, at each bucket's centre.
+// Colours quantised to 16 levels per channel, most frequent first, each the mean of its own pixels (the print's
+// colour, not the bucket's centre: Carew's #212c46 was #282848).
 function ranked(samples: readonly Rgb[]): { c: Rgb; share: number }[] {
-  const counts = new Map<string, number>()
-  for (const [r, g, b] of samples) {
-    const key = `${String(r >> 4)},${String(g >> 4)},${String(b >> 4)}`
-    counts.set(key, (counts.get(key) ?? 0) + 1)
+  const buckets = new Map<string, { n: number; sum: Rgb }>()
+  for (const c of samples) {
+    const k = bucket(c)
+    const into = buckets.get(k) ?? { n: 0, sum: [0, 0, 0] }
+    buckets.set(k, { n: into.n + 1, sum: [into.sum[0] + c[0], into.sum[1] + c[1], into.sum[2] + c[2]] })
   }
-  return [...counts]
-    .sort((a, b) => b[1] - a[1])
-    .map(([key, n]) => {
-      const [r = 0, g = 0, b = 0] = key.split(',').map((q) => Number(q) * 16 + 8)
-      const c: Rgb = [r, g, b]
-      return { c, share: n / samples.length }
-    })
+  return [...buckets.values()]
+    .sort((a, b) => b.n - a.n)
+    .map(({ n, sum }) => ({ c: [sum[0] / n, sum[1] / n, sum[2] / n], share: n / samples.length }))
+}
+// The ground behind a page's words: the commonest colour in the ring round them (sample), with its share of it.
+export async function pageGround(
+  pdf: string,
+  pdfPage: number,
+  runs: readonly Run[],
+): Promise<{ c: Rgb; share: number } | null> {
+  const { img, boxes } = await pagePixels(pdf, pdfPage, runs)
+  return ranked(sample(img, boxes).ring)[0] ?? null
 }
 
 // Colours are read only at the text: ink inside the word boxes, background in a ring around them, so photos

@@ -76,3 +76,14 @@ export function readableOn(c: Rgb, bg: Rgb, target: number): Rgb | null {
   }
   return best && contrast(best, bg) >= target ? best : null
 }
+
+// A 16-level bucket per channel: the swatches' unit (theme.ts); a float mean stays in its own bucket.
+export const bucket = ([r, g, b]: Rgb): string => `${String(r >> 4)},${String(g >> 4)},${String(b >> 4)}`
+// Two colours in one 16-level bucket are one ground (a page's paper against the document's measured background).
+export const sameGround = (a: Rgb, b: Rgb): boolean => bucket(a) === bucket(b)
+
+// Plain paper: a near-white grey page is white (#f8f8f8 cost a brand red its 4.5:1), a tinted one (Bernini's cream
+// #f8f8e8) the page's own colour; for the document's background and a page's ground alike.
+const NEAR_WHITE = 1.1
+const TINT_CHROMA = 0.02
+export const paper = (c: Rgb): boolean => contrast(c, [255, 255, 255]) < NEAR_WHITE && chromaOk(c) < TINT_CHROMA

@@ -6,6 +6,7 @@ import { renderPage } from './page.ts'
 import { navigation, titleWordsOf } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
 import { brandCss, headingClasses, paintedOf } from './brand.ts'
+import { pagesCss, type PageGround } from './ground.ts'
 import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
 import { GUTTER_PX, printCss, printFloor, printWidth, viewSwitch } from './print.ts'
@@ -13,7 +14,7 @@ import { asDrawn } from './printink.ts'
 import { css } from './style.ts'
 
 export type { HtmlDocument, HtmlPage } from './types.ts'
-import type { HtmlDocument } from './types.ts'
+import type { HtmlDocument, HtmlPage } from './types.ts'
 
 // Long documents get a contents list; a page marker on a one- or two-page document is for screen readers only.
 const TOC_PAGES = 3
@@ -48,8 +49,11 @@ export function renderDocument(doc: HtmlDocument): string {
   const look = brand ? { ...brand, rules, masthead, columns, pages: doc.pages.map((p) => p.keyPage) } : null
   const drawn = look && paintedOf(look)
   const inks = new Set(brand?.profile.inks ?? [])
-  const rendered = doc.pages.map((p, index) =>
-    renderPage(asDrawn(p, inks), {
+  // Each word in the ink it is drawn in: the text layer can colour it otherwise (Ruth's yellow drawn, black in it).
+  const shown = doc.pages.map((p) => asDrawn(p, inks))
+  const grounds = shown.map(groundOf)
+  const rendered = shown.map((p, index) =>
+    renderPage(p, {
       ui,
       lang: doc.lang,
       index,
@@ -116,7 +120,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, look && drawn ? brandCss(look, drawn) + boxesCss(vectors, drawn) + linesCss(looks) : '')}${print === null ? '' : printCss(print)}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, look && drawn ? brandCss(look, drawn) + pagesCss(grounds, look.background, drawn) + boxesCss(vectors, drawn) + linesCss(looks) : '')}${print === null ? '' : printCss(print)}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
@@ -139,4 +143,16 @@ function withLogo(masthead: string, logo: HtmlDocument['logo']): string {
   return unread
     ? unread.replace(/^(<header class="masthead[^"]*">)\n/, `$1\n${img}\n`)
     : `<header class="masthead centered">\n${img}\n</header>`
+}
+
+// A page's ground, its visible words and its large fills (a ground in their colour is theirs: ground.ts).
+const LARGE_FILL = 0.1
+function groundOf(p: HtmlPage): PageGround {
+  const hidden = new Set(p.extraction.hidden)
+  const runs = p.extraction.runs.filter((r) => !hidden.has(r.id) && r.str.trim())
+  const page = p.extraction.width * p.extraction.height
+  const fills = (p.extraction.vectors ?? []).flatMap((v) =>
+    v.box.w * v.box.h < page * LARGE_FILL ? [] : v.kind === 'panel' ? [v.color] : v.fill ? [v.fill] : [],
+  )
+  return { keyPage: p.keyPage, ground: p.backdrop?.grid.ground ?? null, measured: !!p.backdrop, runs, fills }
 }

@@ -15,9 +15,9 @@ const page = (bg: Rgb, ink: Rgb): Pixels => ({
 })
 const word = [{ x: 10, y: 10, w: 40, h: 10 }]
 
-test('the band takes the page colour around the words and the ink inside them, never the photo', () => {
+test('the band takes the page colour around the words and the ink inside them, as printed, never the photo', () => {
   assert.deepEqual(themeFromPixels(page(NAVY, CREAM), word), {
-    band: { bg: '#282848', fg: '#f8f8e8' },
+    band: { bg: '#282848', fg: '#f8f4e6' },
     accent: { light: '#282848' },
   })
 })

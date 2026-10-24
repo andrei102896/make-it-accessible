@@ -2,10 +2,11 @@ import type { Block, PageStructure } from '../model/schema.ts'
 import { fitScale } from '../pdf/raster.ts'
 import { unfilled } from '../pdf/vectors.ts'
 import type { Box, Extraction, Run, Vector } from '../pdf/types.ts'
-import { contrast, fromHex, hex, readableOn, type Rgb } from './color.ts'
+import { fromHex } from './color.ts'
 import { unionOf } from './profile.ts'
 import { citedRuns } from './source.ts'
-import type { Drawn, Painted } from './brand.ts'
+import type { Drawn } from './brand.ts'
+import { darkGround, lightMoves, onFill, paintOf, type Paint } from './ground.ts'
 
 // The PDF's frames and panels (pdf/vectors.ts) as boxes round the blocks printed inside them. A frame holding most
 // of the page's content is the page's own frame (Almond, Rucola, Noah's drinks): a border round the page section.
@@ -113,28 +114,10 @@ export function boxesOf(page: Page, skip: ReadonlySet<number>): Boxes {
 // What a box is filled with: a panel's colour, a frame's fill; null for a frame that is only a rule.
 const groundOf = (v: Vector): string | null => (v.kind === 'panel' ? v.color : (v.fill ?? null))
 // A frame's colour is its printed rule, never recoloured: a moved fill goes to `fill`, an unreadable one is dropped.
-type Paint = { fill: string; ink: string | null }
 function painted(v: Vector, paint: Paint | null | undefined): Vector {
   if (paint === undefined) return v
   if (v.kind === 'panel') return paint ? { ...v, color: paint.fill } : v
   return paint ? { ...v, fill: paint.fill } : unfilled(v)
-}
-
-// A light fill keeps every colour the page draws, each moved by lightness on its own where it does not read there
-// (boxesCss). On a dark fill (Osteria's red, Sarge's black and red) the words take their printed colour (the
-// commonest) moved to 4.5:1; when it cannot move far enough (white), the fill darkens instead. Null: neither reads.
-const AA = 4.5
-const PAGE_TEXT: readonly [number, number, number] = [26, 26, 26]
-function paintOf(ground: string, runs: readonly Run[]): Paint | null {
-  const fill = fromHex(ground)
-  if (contrast(fill, PAGE_TEXT) >= AA) return { fill: ground, ink: null }
-  const tally = new Map<string, number>()
-  for (const r of runs) if (r.color) tally.set(r.color, (tally.get(r.color) ?? 0) + r.str.length)
-  const printed = fromHex([...tally].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '#ffffff')
-  const ink = readableOn(printed, fill, AA)
-  if (ink) return { fill: ground, ink: hex(ink) }
-  const moved = readableOn(fill, printed, AA)
-  return moved ? { fill: hex(moved), ink: hex(printed) } : null
 }
 
 // The class naming a box's look, shared by every box drawn alike.
@@ -214,12 +197,12 @@ export function boxesCss(boxes: readonly { vector: Vector; ink: string | null }[
         : 'border: 1px solid transparent;'
     if (ground === null) return [`.${cls} { ${rule} }`]
     // A fill whose words cannot be made readable stays a frame in its colour.
-    if (!ink && contrast(fromHex(ground), PAGE_TEXT) < AA) return [`.${cls} { border: 2px solid ${ground}; }`]
+    if (!ink && darkGround(fromHex(ground))) return [`.${cls} { border: 2px solid ${ground}; }`]
     // Words on a dark fill take its ink over every role colour (the doubled class outranks the role selectors).
     if (ink) return [`.${cls} { background: ${ground}; ${rule} }`, `section .box.${cls}.${cls} * { color: ${ink}; }`]
     return [
       `.${cls} { background: ${ground}; ${rule}${onFill(drawn, fromHex(ground))} }`,
-      ...movedOn(drawn, ground, cls),
+      ...lightMoves(drawn, fromHex(ground), `.${cls}`),
     ]
   })
   return [
@@ -229,47 +212,4 @@ export function boxesCss(boxes: readonly { vector: Vector; ink: string | null }[
     '.box.notched.centred > :first-child { margin-inline: auto; }',
     ...looks,
   ].join('\n')
-}
-
-// A painted colour on a light fill: as shown where it reads, else moved by lightness from its printed colour.
-function onLight(p: Painted, fill: Rgb): string {
-  if (contrast(fromHex(p.shown), fill) >= AA) return p.shown
-  const moved = readableOn(fromHex(p.printed), fill, AA) ?? readableOn(fromHex(p.shown), fill, AA)
-  return moved ? hex(moved) : 'var(--fg)'
-}
-// The page's own text, grey and accent on a light fill, moved where they do not read on it (the grey falls back to the
-// text colour: Kenny & Ziggy's salmon, #555 at 4.17:1); the accent is set here, `:root`'s `var(--fg)` resolving there.
-function onFill(drawn: Drawn, fill: Rgb): string {
-  const text = fromHex(drawn.text)
-  const fg = contrast(text, fill) >= AA ? null : readableOn(text, fill, AA)
-  const muted = readableOn(fromHex(drawn.muted), fill, AA)
-  const accent = drawn.accent ? onLight(drawn.accent, fill) : 'var(--fg)'
-  return `${fg ? ` --fg: ${hex(fg)}; color: ${hex(fg)};` : ''} --muted: ${muted ? hex(muted) : 'var(--fg)'}; --accent: ${accent};`
-}
-// The page's painted colours on a light fill, never swapped (Howies' gold prices on cream). Once one moves, all are
-// written again in the page's order: `:where()` keeps each rule's specificity, so ties fall as on the page.
-function movedOn(drawn: Drawn, ground: string, cls: string): string[] {
-  const fill = fromHex(ground)
-  if (drawn.painted.every((p) => contrast(fromHex(p.shown), fill) >= AA)) return []
-  return drawn.painted.map((p) => {
-    const within = topLevel(p.selector).map((s) => `${s}:where(.${cls} *)`)
-    return `${within.join(', ')} { color: ${onLight(p, fill)}; }`
-  })
-}
-// A selector list split at its own commas, not those inside :not() or :is().
-export function topLevel(list: string): string[] {
-  const out: string[] = []
-  let depth = 0
-  let from = 0
-  for (let i = 0; i < list.length; i++) {
-    const c = list[i]
-    if (c === '(') depth++
-    else if (c === ')') depth--
-    else if (c === ',' && depth === 0) {
-      out.push(list.slice(from, i).trim())
-      from = i + 1
-    }
-  }
-  out.push(list.slice(from).trim())
-  return out
 }
