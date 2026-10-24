@@ -2,7 +2,7 @@ import { classOf } from '../pdf/face.ts'
 import { contrast, distanceOk, fromHex, hex, readableOn, type Rgb } from './color.ts'
 import { INK_DISTINCT, inkLike, ROLES, type Profile, type Role, type RoleStyle } from './profile.ts'
 import { mastheadCss, SEEN_TITLE_RATIO } from './masthead.ts'
-import { STACKS } from './style.ts'
+import { MUTED, STACKS } from './style.ts'
 import { familyFor, fontFaces, uprightIn, type EmbeddedFace, type FontManifest } from './webfonts.ts'
 
 // The document's own look: its faces when open-licensed (embedded), its colours made readable on its background,
@@ -64,6 +64,9 @@ const RUNNING: ReadonlySet<Role> = new Set(['desc', 'text', 'th'])
 const MIN_RULE = '2.5rem'
 const SYSTEM_TEXT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 const WHITE: Rgb = [255, 255, 255]
+const DARK_FG = '#f2f2f2'
+const DARK_MUTED = '#c4c4c4'
+const LINKS = 'section a, .back a'
 const BLACK: Rgb = [0, 0, 0]
 // The base stylesheet's own selectors, so a role wins by order, not by specificity. Card prices keep their size.
 const ROLE_SELECTORS: Record<Role, string> = {
@@ -155,9 +158,8 @@ function colour(c: string, bg: Rgb, alternate: string | null = null): string | n
 }
 
 // No italic: each word carries its own (segments.ts `fi`), save text with no runs of its own (`italic`: the band title).
-function declarations(b: Brand, part: Part, bg: Rgb, withColour = true, italic: boolean | null = null): string {
+function declarations(b: Brand, part: Part, c: string | null, italic: boolean | null = null): string {
   const { style: s, size, heading } = part
-  const c = withColour ? colour(s.color, bg, b.alternate) : null
   const face = family(b, part)
   return [
     `font-family: ${face}`,
@@ -186,32 +188,70 @@ function declarations(b: Brand, part: Part, bg: Rgb, withColour = true, italic: 
     .join('; ')
 }
 
-// The accent: the headings' brand colour made readable on the page (see colour), else the text colour.
-const accentOf = (b: Brand, bg: Rgb): string =>
-  (b.profile.accent ? colour(b.profile.accent, bg, b.alternate) : null) ?? 'var(--fg)'
+// The masthead keeps the printed ratio to the body (bounded), outside the section headings' compression when no
+// section heading shares its signature.
+function planOf(b: Brand): { plan: ReturnType<typeof brandPlan>; mastSig: number | undefined } {
+  const mastSig = b.masthead?.key ? b.profile.headings.get(b.masthead.key) : undefined
+  const solo = mastSig !== undefined && [...b.profile.headings.values()].filter((v) => v === mastSig).length === 1
+  return { plan: brandPlan(b.profile, b.library, solo ? mastSig : undefined), mastSig }
+}
 
-export function brandCss(b: Brand): string {
+const CARD_PRICE = '.products.cards .price[data-role="current"]'
+const headingSelector = (i: number): string => `:is(h3, h4, h5, h6).hs-${String(i + 1)}`
+const inkSelector = (c: string): string => `.ink-${c.slice(1)}, .products.menu .price.ink-${c.slice(1)}`
+export type Painted = { selector: string; printed: string; shown: string }
+export type Drawn = { text: string; muted: string; accent: Painted | null; painted: Painted[] }
+// Every printed colour the text view paints, by the selector painting it, as shown on the page (made readable there);
+// `text` and `muted` are the page's own as shown. A box moves them again on its fill (boxes.ts).
+export function paintedOf(b: Brand): Drawn {
+  const bg = fromHex(b.background)
+  const dark = contrast(bg, WHITE) > contrast(bg, BLACK)
+  const { plan } = planOf(b)
+  const painted: Painted[] = []
+  const add = (selector: string, printed: string, shown: string | null): void => {
+    if (shown) painted.push({ selector, printed, shown })
+  }
+  for (const role of ROLES) {
+    const part = plan.roles.get(role)
+    if (part) add(ROLE_SELECTORS[role], part.style.color, colour(part.style.color, bg, b.alternate))
+  }
+  const price = plan.roles.get('price')
+  if (price) add(CARD_PRICE, price.style.color, colour(price.style.color, bg, b.alternate))
+  plan.headings.forEach((h, i) => {
+    add(headingSelector(i), h.style.color, colour(h.style.color, bg, b.alternate))
+  })
+  const body = plan.roles.get('desc') ?? plan.roles.get('text')
+  const text = (body ? colour(body.style.color, bg, b.alternate) : null) ?? (dark ? DARK_FG : '#1a1a1a')
+  // Inline brand colours made readable on the page, never swapped for another colour; one that lands on the text
+  // colour is left to it. On a menu price the class outranks the role rules.
+  for (const c of b.profile.inks) {
+    const ok = readableOn(fromHex(c), bg, AA)
+    if (ok && distanceOk(ok, fromHex(text)) >= INK_DISTINCT) add(inkSelector(c), c, hex(ok))
+  }
+  if (b.profile.accent) add(LINKS, b.profile.accent, colour(b.profile.accent, bg, b.alternate))
+  return { text, muted: dark ? DARK_MUTED : MUTED, accent: painted.find((x) => x.selector === LINKS) ?? null, painted }
+}
+
+export function brandCss(b: Brand, drawn: Drawn = paintedOf(b)): string {
   const bg = fromHex(b.background)
   const dark = contrast(bg, WHITE) > contrast(bg, BLACK)
   const p = b.profile
-  // The masthead keeps the printed ratio to the body (bounded), outside the section headings' compression when
-  // no section heading shares its signature.
-  const mastSig = b.masthead?.key ? p.headings.get(b.masthead.key) : undefined
-  const solo = mastSig !== undefined && [...p.headings.values()].filter((v) => v === mastSig).length === 1
-  const plan = brandPlan(p, b.library, solo ? mastSig : undefined)
+  const { plan, mastSig } = planOf(b)
+  const { painted } = drawn
+  const shown = (selector: string): string | null => painted.find((x) => x.selector === selector)?.shown ?? null
   const roles = ROLES.flatMap((role) => {
     const part = plan.roles.get(role)
     return part
       ? [
-          `${ROLE_SELECTORS[role]} { ${declarations(b, part, bg)}; }`,
+          `${ROLE_SELECTORS[role]} { ${declarations(b, part, shown(ROLE_SELECTORS[role]))}; }`,
           ...uprightIn(part.manifest, b.faces, `:is(${ROLE_SELECTORS[role]})`),
         ]
       : []
   })
   const price = plan.roles.get('price')
-  const priceColour = price ? colour(price.style.color, bg, b.alternate) : null
+  const priceColour = shown(CARD_PRICE)
   const cardPrice = price
-    ? `.products.cards .price[data-role="current"] { font-family: ${family(b, price)}; font-size-adjust: none;${priceColour ? ` color: ${priceColour};` : ''} }`
+    ? `${CARD_PRICE} { font-family: ${family(b, price)}; font-size-adjust: none;${priceColour ? ` color: ${priceColour};` : ''} }`
     : ''
   // A page that prints a role in another weight or face than the document keeps its own (Bernini); its words their style.
   const perPage = (b.pages ?? []).flatMap((keyPage, i) =>
@@ -234,7 +274,7 @@ export function brandCss(b: Brand): string {
   )
   const body = plan.roles.get('desc') ?? plan.roles.get('text')
   const headings = plan.headings.flatMap((part, i) => {
-    const sel = `:is(h3, h4, h5, h6).hs-${String(i + 1)}`
+    const sel = headingSelector(i)
     const rule = b.rules[i]
     const align = rule?.centered ? '; text-align: center' : ''
     // Drawn, not written: an empty box with a border (kept in forced colours), read by nobody.
@@ -244,7 +284,11 @@ export function brandCss(b: Brand): string {
           `${sel}::after { content: ""; display: block; width: ${width}; border-top: 1px solid ${rule.color}; margin: .35em ${rule.centered ? 'auto' : '0'} 0; }`,
         ]
       : []
-    return [`${sel} { ${declarations(b, part, bg)}${align}; }`, ...line, ...uprightIn(part.manifest, b.faces, sel)]
+    return [
+      `${sel} { ${declarations(b, part, shown(sel))}${align}; }`,
+      ...line,
+      ...uprightIn(part.manifest, b.faces, sel),
+    ]
   })
   const ornaments = b.ornaments.flatMap((o, i) => {
     const sel = `:is(h1, h2, h3, h4, h5, h6).orn-${String(i + 1)}`
@@ -265,32 +309,25 @@ export function brandCss(b: Brand): string {
   const top = first ? plan.headings[first[1]] : undefined
   // Its words have no runs: the italic its masthead prints in (its signature's), else that heading's.
   const italic = (mastSig === undefined ? top?.style : p.signatures[mastSig])?.face.italic ?? false
-  const title = top
-    ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, bg, false, italic)}; }`
-    : ''
+  const title = top ? `.band h1 { ${declarations(b, { ...top, size: Math.max(1.5, top.size) }, null, italic)}; }` : ''
   // A name read from the image (a wordmark with no text layer) has no measured size: it takes a wordmark's.
   const titleRatio =
     mastSig === undefined ? (b.masthead?.key ? SEEN_TITLE_RATIO : null) : (p.signatures[mastSig]?.size ?? 0) / p.body
   const masthead = mastheadCss(b, titleRatio)
   const palette = dark
-    ? '--fg: #f2f2f2; --muted: #c4c4c4; --line: #4a4a4a; --panel: #1e1e1e; --focus: #93b4ff; color-scheme: dark;'
+    ? `--fg: ${DARK_FG}; --muted: ${DARK_MUTED}; --line: #4a4a4a; --panel: #1e1e1e; --focus: #93b4ff; color-scheme: dark;`
     : ''
-  // Inline brand colours made readable on the page, never swapped for another colour; one that lands on the text
-  // colour is left to it. On a menu price the class outranks the role rules.
-  const textColour = fromHex(
-    (body ? colour(body.style.color, bg, b.alternate) : null) ?? (dark ? '#f2f2f2' : '#1a1a1a'),
-  )
   const inks = p.inks.flatMap((c) => {
-    const ok = readableOn(fromHex(c), bg, AA)
-    if (!ok || distanceOk(ok, textColour) < INK_DISTINCT) return []
-    return [`.ink-${c.slice(1)}, .products.menu .price.ink-${c.slice(1)} { color: ${hex(ok)}; }`]
+    const sel = inkSelector(c)
+    const ok = shown(sel)
+    return ok ? [`${sel} { color: ${ok}; }`] : []
   })
   return [
     fontFaces(b.faces),
-    `:root { --bg: ${b.background}; ${palette} --accent: ${accentOf(b, bg)}; font-synthesis: none; }`,
+    `:root { --bg: ${b.background}; ${palette} --accent: ${shown(LINKS) ?? 'var(--fg)'}; font-synthesis: none; }`,
     body ? `body { font-family: ${family(b, body)}; }` : '',
     '.products.menu > li > :not(.name, .prices) { line-height: 1.45; }',
-    'section a, .back a { color: var(--accent); }',
+    `${LINKS} { color: var(--accent); }`,
     ...roles,
     cardPrice,
     ...headings,

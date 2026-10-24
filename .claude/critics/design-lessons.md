@@ -49,3 +49,5 @@ list is in git history.
 ## Reports
 - A measurement report keeps every signal the old logs showed and lists the worst first, each set apart. (measure plan, 2026-10-22)
 - out/rebuilt holds the sealed documents: drop every verify-sealed slug before grepping it, report sealed only as totals. (four sealed menus named, 2026-10-24)
+- A light fill keeps every colour the page draws, each moved on its own; one ink for a whole box is for dark fills only, or the second brand colour disappears (Howies' gold, Scotts' green, step 4a, 2026-10-24).
+- A heading on a box's edge sits on the ground it is printed on: on the fill (a tab) inside, above it on the page; pulled out onto the page ground it must not take the box's colours (Katzinger's SALADS, Exeter's Bar Snacks, 2026-10-24).

@@ -47,6 +47,7 @@ const rectLike = (points: readonly Point[], b: Box): boolean =>
       Math.abs(y - b.y) <= EDGE ||
       Math.abs(y - b.y - b.h) <= EDGE,
   )
+const paper = (fill: string): boolean => contrast(fromHex(fill), [255, 255, 255]) < NEAR_WHITE
 const inside = (a: Box, b: Box): boolean => a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h
 const sized = (b: Box): boolean => b.w >= MIN_W && b.h >= MIN_H
 
@@ -77,7 +78,8 @@ function classify(tag: string, given: Subpath[], scale: number): Vector | null {
   if (stroke && strokeOpaque && !attr(tag, 'stroke-dasharray')) {
     if (drawn.length !== 1 || !rect || !sized(all)) return null
     const width = Number(attr(tag, 'stroke-width') ?? 1) * scale
-    return { kind: 'frame', box: all, color: stroke, width, rounded: curved, double: false }
+    const frame: Vector = { kind: 'frame', box: all, color: stroke, width, rounded: curved, double: false }
+    return fill && fillOpaque && !paper(fill) ? { ...frame, fill } : frame
   }
   if (!fill || !fillOpaque || stroke || !rect || !sized(all)) return null
   const [outer, inner] = drawn.map((s) => boxOf(s.points)).sort((a, b) => b.w * b.h - a.w * a.h)
@@ -87,7 +89,7 @@ function classify(tag: string, given: Subpath[], scale: number): Vector | null {
     return { kind: 'frame', box: outer, color: fill, width, rounded: curved, double: false }
   }
   // A white or near-white fill is paper: a knock-out behind words (Rucola's heading gaps), not a panel.
-  if (drawn.length !== 1 || contrast(fromHex(fill), [255, 255, 255]) < NEAR_WHITE) return null
+  if (drawn.length !== 1 || paper(fill)) return null
   return { kind: 'panel', box: all, color: fill, width: 0, rounded: curved, double: false }
 }
 
@@ -116,7 +118,7 @@ function rulesOf(tag: string, subpaths: Subpath[], m: Matrix): Rule[] {
   const b = boxOf(only.points)
   const thick = Math.min(b.w, b.h)
   if (!rectLike(only.points, b) || thick > THIN || Math.max(b.w, b.h) < MIN_RULE) return []
-  if (contrast(fromHex(fill), [255, 255, 255]) < NEAR_WHITE) return []
+  if (paper(fill)) return []
   return [{ box: centreLine(b), color: fill, width: thick, dash: 'solid', double: false }]
 }
 const centreLine = (b: Box): Box =>
@@ -145,7 +147,8 @@ export function parseVectors(svg: string): {
     const v = classify(tag, subpaths, Math.max(Math.abs(m[0]), Math.abs(m[3])))
     const box = v ? clip(v.box, width, height) : null
     // A panel as large as the page is its paper or its colour: a picture's matter (pdf/art.ts), never a box.
-    const kept = v && box && !(v.kind === 'panel' && box.w * box.h >= width * height * PAPER) ? { ...v, box } : null
+    const page = !!box && box.w * box.h >= width * height * PAPER
+    const kept = v && box && !(v.kind === 'panel' && page) ? { ...(page ? unfilled(v) : v), box } : null
     if (kept) found.push(kept)
     const lines = rulesOf(tag, subpaths, m).filter(onPage)
     rules.push(...lines)
@@ -183,6 +186,12 @@ function mergeRules(rules: readonly Rule[]): Rule[] {
   return out
 }
 
+// A frame without its fill: the page's colour on a page-size frame, or a fill whose words cannot read (boxes.ts).
+export function unfilled(v: Vector): Vector {
+  if (v.fill === undefined) return v
+  return { kind: v.kind, box: v.box, color: v.color, width: v.width, rounded: v.rounded, double: v.double }
+}
+
 // Two frames drawn a few points apart are one double rule.
 function mergeDoubles(vectors: Vector[]): Vector[] {
   const out: Vector[] = []
@@ -202,6 +211,7 @@ function mergeDoubles(vectors: Vector[]): Vector[] {
     }
     twin.double = true
     twin.width += v.width
+    if (v.fill) twin.fill ??= v.fill
     if (v.box.w * v.box.h > twin.box.w * twin.box.h) twin.box = v.box
   }
   return out

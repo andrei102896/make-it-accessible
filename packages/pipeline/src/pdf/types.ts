@@ -39,6 +39,11 @@ const Vector = z
     width: z.number().nonnegative(),
     rounded: z.boolean(),
     double: z.boolean(),
+    // A frame's inside as printed, when the PDF fills it too (Howies' cream cards); a panel's colour is `color`.
+    fill: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/)
+      .optional(),
   })
   .strict()
 // A straight line the PDF draws (pdf/vectors.ts): its box is the centre line (h 0 across, w 0 down); `width` is its

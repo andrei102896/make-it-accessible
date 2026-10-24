@@ -176,6 +176,7 @@ const PRINT = `
 @media print {
   :root { --fg: #000000; --bg: #ffffff; --muted: #333333; --accent: #000000; --band-bg: #ffffff; --band-fg: #000000; }
   body * { color: #000000 !important; }
+  .box { background: none !important; }
   .skip, nav.toc, nav.chips, .back { display: none; }
   li, tr, img { break-inside: avoid; }
   .products.menu { columns: 1; }

@@ -50,3 +50,6 @@ full list is in git history.
 - Poppler hands one RunFont object to every word of a line: a per-word change never mutates it; a measured property gets its own field. Word-level faces cannot show a style change inside a word. (2026-10-23)
 - Deleting a module or a class: grep its exported constants and every measure or reset that selects it (rows.ts `GAP`, `main .fi`). An exclusion borrowed from one view can be wrong in the other (`[data-free]`). (2026-10-23)
 - A model's box around a small target is loose: match candidates by their share inside it, never IoU alone. Size limits on model output go after parsing. (Moosewood logo, brief details)
+- A class name that keys a CSS dedupe map encodes every field its rule reads; a field whose meaning differs by kind (a panel's `color` is its fill, a frame's its rule) is checked at each write site (step 4a, 2026-10-24).
+- Scoped overrides that re-emit only some rules flip ties between equal-specificity rules: re-emit the whole tied group in order; a custom property set to `var(--x)` at `:root` resolves there, so set it again where `--x` is overridden (step 4a, 2026-10-24).
+- A diff entry that errored backs no total for that document: match by content and rerun before claiming (Kenny, Exeter, step 4a, 2026-10-24).

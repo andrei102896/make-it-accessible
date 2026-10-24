@@ -83,3 +83,22 @@ test("rules: Rucola's dotted line, Osteria's double, Kendells' thickness under a
   )
   assert.ok(Math.abs((rules[1]?.box.y ?? 0) - 529.5) < 0.01 && Math.abs((rules[2]?.box.w ?? 0) - 336.7) < 0.01)
 })
+
+test("a stroked rectangle keeps its fill unless it is paper, dashed or the page's own (Howies' cream cards)", () => {
+  const card = (fill: string, extra = '', w = 200) =>
+    `<path fill="${fill}" fill-opacity="1" stroke-width="1" stroke="rgb(91.764706%, 80.784314%, 69.019608%)" stroke-opacity="1"${extra} d="M 100 100 L ${String(100 + w)} 100 L ${String(100 + w)} 160 L 100 160 Z"/>`
+  const fills = (svg: string) => parseVectors(page(svg)).boxes.map((v) => [v.kind, v.color, v.fill])
+  const cream = 'rgb(96.862745%, 92.54902%, 87.45098%)'
+  assert.deepEqual(fills(card(cream)), [['frame', '#eaceb0', '#f7ecdf']])
+  assert.deepEqual(fills(card('rgb(100%, 100%, 100%)')), [['frame', '#eaceb0', undefined]])
+  assert.deepEqual(fills(card(cream, ' stroke-dasharray="2 2"')), [])
+  const whole = `<path fill="${cream}" fill-opacity="1" stroke-width="1" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" d="M 1 1 L 791 1 L 791 1223 L 1 1223 Z"/>`
+  assert.deepEqual(fills(whole), [['frame', '#000000', undefined]])
+})
+
+test('a double rule keeps the fill of the frame that has one', () => {
+  const stroked = (x: number, fill: string) =>
+    `<path fill="${fill}" fill-opacity="1" stroke-width="1" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" d="M ${String(x)} ${String(x)} L ${String(400 - x)} ${String(x)} L ${String(400 - x)} ${String(300 - x)} L ${String(x)} ${String(300 - x)} Z"/>`
+  const [v] = parseVectors(page(stroked(100, 'none') + stroked(104, 'rgb(96.862745%, 92.54902%, 87.45098%)'))).boxes
+  assert.deepEqual([v?.double, v?.fill], [true, '#f7ecdf'])
+})

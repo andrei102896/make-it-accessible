@@ -5,7 +5,7 @@ import { linesCss } from './lines.ts'
 import { renderPage } from './page.ts'
 import { navigation, titleWordsOf } from './nav.ts'
 import { type Strings, UI } from './strings.ts'
-import { brandCss, headingClasses } from './brand.ts'
+import { brandCss, headingClasses, paintedOf } from './brand.ts'
 import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
 import { GUTTER_PX, printCss, printFloor, printWidth, viewSwitch } from './print.ts'
@@ -44,6 +44,9 @@ export function renderDocument(doc: HtmlDocument): string {
   const rules = looks.size ? [] : (brand?.rules ?? [])
   if (titleKey) classes.set(titleKey, `${classes.get(titleKey) ?? ''} masthead-title`.trim())
   const print = printWidth(doc.pages)
+  const masthead = { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }
+  const look = brand ? { ...brand, rules, masthead, columns, pages: doc.pages.map((p) => p.keyPage) } : null
+  const drawn = look && paintedOf(look)
   const inks = new Set(brand?.profile.inks ?? [])
   const rendered = doc.pages.map((p, index) =>
     renderPage(asDrawn(p, inks), {
@@ -113,7 +116,7 @@ export function renderDocument(doc: HtmlDocument): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
-<style>${css(doc.theme ?? null, doc.headings ?? null, brand ? brandCss({ ...brand, rules, masthead: { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }, columns, pages: doc.pages.map((p) => p.keyPage) }) + boxesCss(vectors) + linesCss(looks) : '')}${print === null ? '' : printCss(print)}</style>
+<style>${css(doc.theme ?? null, doc.headings ?? null, look && drawn ? brandCss(look, drawn) + boxesCss(vectors, drawn) + linesCss(looks) : '')}${print === null ? '' : printCss(print)}</style>
 </head>
 <body class="doc-${kind ?? 'auto'}">
 <a class="skip" href="#main">${ui.skip}</a>
