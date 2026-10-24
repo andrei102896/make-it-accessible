@@ -148,3 +148,7 @@
 - Before blaming the GPU for a render difference, read the browser's feature status (CDP SystemInfo.getInfo): Playwright's headless shell already draws canvas in software (SwiftShader) (raster plan, 2026-10-24).
 - A determinism probe hashes every byte, at production size, with enough draws to beat the flip rate: a 1-in-7 byte hash of 6 draws "proved" flags that still give 2 of 8 at 2858 px (2026-10-24).
 - Locate a nondeterministic difference in the raw canvas before describing it from an encoded file: lossy WebP spread 14 changed icon pixels into "0.44 %, text edges" (Howies p1, 2026-10-24).
+- A canvas fix that swaps the main canvas leaves pdf.js's soft-mask scratch canvases as page-size HTMLCanvasElements (detached) (Kenny p7 went from 1-in-16 to a coin flip under OffscreenCanvas, 2026-10-24).
+- Before moving a stage to "fix" nondeterminism, hash that stage's output with a varying input: the backdrop encode was already a pure function of its source (2026-10-24).
+- A library that keeps references to nodes it put in the document breaks quietly when the host clears the container: it keeps writing into the detached node (pdf.js #_defs, Kenny p7, 2026-10-24).
+- A roadmap tick is checked against the open CASES rows of the same documents before it is written (batch 2, 2026-10-24).

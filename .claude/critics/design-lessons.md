@@ -97,3 +97,6 @@
 - Count changes in shown text, not only wrong amounts: Bernie's ".00" prices "read right" yet move from printed to formatted, some to whole (2026-10-24).
 - A rendering flag counts as a fix only if the bytes change: compare flagged and default draws first (software-canvas flags gave identical PNGs, 2026-10-24).
 - A decision taken from a measured grid needs a margin wider than the raster's drift, or a republish changes the reader's colours (Kenny ink 0.981 ↔ 0.980, 2026-10-24).
+- A reference drawn by the same code as the output shares its bugs: the fidelity gate and the review "PDF" both drew Cattlemen's p2 as empty panels (2026-10-24).
+- Clearing the page between pdf.js renders removes its SVG filter defs: later pages lose their luminosity soft masks without an error (Kenny p7/p8, Cattlemen's p2, 2026-10-24).
+- Swapping canvases is not "the same pixels": OffscreenCanvas ignores url() filters and draws hairlines aliased; check soft masks and fine ornaments (Gage's ornament dotted, 2026-10-24).

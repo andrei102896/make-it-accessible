@@ -122,6 +122,16 @@ async function openDocument(): Promise<void> {
   const pdfjs = globalThis.pdfjsLib
   if (!pdfjs) throw new Error('pdf.js did not load')
   pdfjs.GlobalWorkerOptions.workerSrc = '/build/pdf.worker.mjs'
+  // A soft mask whose SVG filter the tab no longer holds draws nothing, silently: fail the draw instead (Poppler draws).
+  const filter = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'filter')
+  Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', {
+    ...filter,
+    set(this: CanvasRenderingContext2D, value: string) {
+      const id = /url\(#([^)]+)\)/.exec(value)?.[1]
+      if (id && !document.getElementById(id)) throw new Error(`pdf.js filter #${id} is not in the tab`)
+      filter?.set?.call(this, value)
+    },
+  })
   const data = new Uint8Array(await (await fetch('/doc.pdf')).arrayBuffer())
   globalThis.reviewDoc = await pdfjs.getDocument({
     data,
@@ -141,7 +151,9 @@ async function drawPage({ n, width }: { n: number; width: number }): Promise<{ w
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(viewport.width)
   canvas.height = Math.round(viewport.height)
-  document.body.replaceChildren(canvas)
+  // Only the last page's canvas goes: pdf.js keeps its SVG filters (soft masks) in the body for the whole document.
+  for (const c of document.querySelectorAll('canvas')) c.remove()
+  document.body.append(canvas)
   const context = canvas.getContext('2d')
   if (!context) throw new Error('no canvas')
   await page.render({ canvasContext: context, viewport }).promise
