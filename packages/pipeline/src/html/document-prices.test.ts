@@ -224,3 +224,30 @@ test('a column head printed above its price is read before it, whatever its x (E
   })
   assert.match(after, /<span class="amount">29\.5<\/span> <span class="qualifier">pp<\/span>/)
 })
+
+test('an add-on and a price per person show as printed: no sign added, no amount (Scotts "+ 4.50", Unruly Pig "49pp")', () => {
+  const runs: Run[] = [
+    { id: '1:0', str: 'Liqueur', box: { x: 10, y: 40, w: 40, h: 13 }, flow: 0, line: 1 },
+    { id: '1:1', str: '+', box: { x: 250, y: 40, w: 5, h: 13 }, flow: 0, line: 1 },
+    { id: '1:2', str: '4.50', box: { x: 257, y: 40, w: 20, h: 13 }, flow: 0, line: 1 },
+    { id: '1:3', str: 'Cutlet', box: { x: 10, y: 60, w: 40, h: 13 }, flow: 0, line: 2 },
+    { id: '1:4', str: '£49pp', box: { x: 250, y: 60, w: 28, h: 13 }, flow: 0, line: 2 },
+    { id: '1:5', str: 'Toast', box: { x: 10, y: 80, w: 40, h: 13 }, flow: 0, line: 3 },
+    { id: '1:6', str: '£5.00', box: { x: 250, y: 80, w: 28, h: 13 }, flow: 0, line: 3 },
+  ]
+  const items = [
+    [0, 1, 2],
+    [3, 4, 4],
+    [5, 6, 6],
+  ].map(([n, from, to]) => ({ name: { src: [[n, n]] }, prices: [{ src: [[from, to]] }] }))
+  const structure = parsePage(JSON.stringify({ lang: 'en', blocks: [{ kind: 'products', items }], dropped: [] }))
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Add-ons',
+    kind: 'menu',
+    pages: [{ ...page, structure, extraction: { ...extraction, runs } }],
+  })
+  assert.match(html, /<span class="price" data-role="current"><span class="amount">\+ 4\.50<\/span><\/span>/)
+  assert.match(html, /<span class="price" data-role="current"><span class="amount">£49pp<\/span><\/span>/)
+  assert.match(html, /data-amount="500"/)
+})

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { currenciesIn, moneyFromParts, pageCurrency, parseMoney, signAround } from './money.ts'
+import { currenciesIn, moneyFromParts, pageCurrency, parseMoney, printedAsIs, signAround } from './money.ts'
 import { canon, norm } from './normalize.ts'
 
 test('norm and canon', () => {
@@ -80,4 +80,9 @@ test('signAround: the sign and only the space between it and the digits', () => 
   assert.deepEqual(signAround('de-DE', 'EUR'), { before: '', after: '\u00a0€' })
   assert.deepEqual(signAround('nl-NL', 'EUR'), { before: '€\u00a0', after: '' })
   assert.deepEqual(signAround('en-US', 'USD'), { before: '$', after: '' })
+})
+
+test('an add-on and a price per person are printed as is; a date, a measure and an offer are not', () => {
+  for (const w of ['+12', '+.75', '+ 4.50', '+£1.50', '49pp', '£25pp', '49 p.p.', '22PP']) assert.ok(printedAsIs(w), w)
+  for (const w of ['10/16/2026', '1/2 lb', '2+1', '+49 89 1234', 'pp']) assert.ok(!printedAsIs(w), w)
 })

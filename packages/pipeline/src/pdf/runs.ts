@@ -1,4 +1,5 @@
 import {
+  marked,
   printedAsIs,
   CENTS_HEIGHT_RATIO,
   currenciesIn,
@@ -105,13 +106,22 @@ const bare = (word: string): string =>
     .replace(/^(?:\p{L}*(?:[.…·_]{2,}|…)|\p{L}+)(?=[€£$]|[1-9])/u, '')
     .replace(/[)*,;]+$/, '')
 
+// A separator fused after the last price word ("$39/", "51~") is no part of it: its unfused siblings are not cited.
+// Last in the order given (reading order for amounts, citation order shown).
+const untrailed = (runs: readonly Run[]): Run[] =>
+  runs
+    .map((r, i) => (i === runs.length - 1 ? { ...r, str: r.str.replace(/[/~]+$/, '') } : r))
+    .filter((r) => r.str.trim())
 // The price as printed, its split digits joined ("21.9" + "5" → "21.95"), in citation order.
-export const printedAmount = (cited: readonly Run[]): string => joinRuns(joinPriceGlyphs(cited, false))
-// The price words a page shows without an amount to format ("MP", "22/32", "18.9"), else null.
-export const asPrinted = (cited: readonly Run[]): string | null => {
-  const words = joinPriceGlyphs(cited)
+export const printedAmount = (cited: readonly Run[]): string => joinRuns(untrailed(joinPriceGlyphs(cited, false)))
+const priceWords = (cited: readonly Run[]): string =>
+  untrailed(joinPriceGlyphs(cited))
     .map((r) => bare(r.str))
+    .filter(Boolean)
     .join(' ')
+// The price words a page shows without an amount to format ("MP", "22/32", "18.9", "+12"), else null.
+export const asPrinted = (cited: readonly Run[]): string | null => {
+  const words = priceWords(cited)
   return printedAsIs(words) ? words : null
 }
 // Leaflet pages print euros with smaller cents beside them; bare digits there read as fused cents ("269" = 2,69).
@@ -125,9 +135,10 @@ export type Amount = { cents: number; currency: Currency | null; fromBareDigits:
 // Its currency is the one the words print, else the page's (`pageCurrency`); two currencies are no amount.
 export function amountOf(cited: readonly Run[], pageCurrency: Currency | null = null): Amount | null {
   const own = currenciesIn(cited.map((r) => r.str).join(' '))
-  if (own.length > 1) return null
+  // An add-on or a price per person is shown as printed: formatting would drop its "+" or "pp" ("+ 4.50", "£49 pp").
+  if (own.length > 1 || marked(priceWords(cited))) return null
   const currency = own[0] ?? pageCurrency
-  const words = joinPriceGlyphs(cited)
+  const words = untrailed(joinPriceGlyphs(cited))
     .flatMap((r) => {
       const str = bare(r.str)
       return SIGN_FIRST.test(str)

@@ -8,10 +8,16 @@ const NUM = String.raw`\d+(?:\.\d{1,2})?`
 const CENTS = String.raw`\d+\.\d{1,2}`
 // A price per unit ("$30/dz", "$48/2 dz") needs a sign or cents: "1/2 lb" is a measure.
 const PER_UNIT = String.raw`(?:[$€£]${NUM}|${CENTS})\/(?:\d+\s?)?[a-z]{1,6}\.?`
+// One amount as printed: a sign or none, digits, cents with or without a leading digit (".75").
+const TOKEN = String.raw`[$€£]?(?:\d+(?:\.\d{1,2})?|\.\d{2})`
+// An add-on ("+12", "+ 4.50") and a price per person ("49pp", "£25pp", "49 p.p.") keep their mark: never formatted.
+const MARKED = String.raw`\+\s?${TOKEN}|${TOKEN}\s?p\.?p\.?`
+const MARKED_WORDS = new RegExp(`^(?:${MARKED})$`, 'i')
+export const marked = (words: string): boolean => MARKED_WORDS.test(words)
 // Printed price words that are no amount to format, shown as printed: market price, a two-size price ("22/32"),
-// one decimal without a currency ("18.9": the fused-cents misread is about commas, see parseMoney).
+// one decimal without a currency ("18.9": the fused-cents misread is about commas, see parseMoney), marked prices.
 const AS_PRINTED = new RegExp(
-  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|${PER_UNIT})$`,
+  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|${PER_UNIT}|${MARKED})$`,
   'i',
 )
 // Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count

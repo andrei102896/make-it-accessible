@@ -133,3 +133,8 @@
 - A rule added during the visual check gets the same whole-set count as the planned one: the "7 for" order hold first held Howies' "(3 x 25ml serves)" (2026-10-24).
 - A hold for word order fits only words whose meaning depends on the order: "N for" binds to its price, a size reads the same either side (2026-10-24).
 - "Not on its line" is two directions: name the one the case needs, or a fix for heads above flips notes below (Eusebi column heads, 2026-10-24).
+- Before a mark becomes a separator, check every place the page prints it: Ridgway's "~" separates prices and frames "~ Regular ~" (2026-10-24).
+- A pattern added to a fallback reached only when the main parser fails covers only the forms that parser rejects: "+ 4.50" and "£49 pp" parse and lose their mark (2026-10-24).
+- Check "X never happens today" on the saved structures, not on the holds list: holds show only failures (2026-10-24).
+- Check each document's set in the sources file before using it as evidence: a judge's "working + verify-learn" list held 4 sealed documents, and the sealed gain was those same 4 (add-on round, 2026-10-24).
+- A file hash going back and forth between the same values across rounds is nondeterminism, not a change: an open case, or every round reports it (Kenny p7, Howies Waterloo dinner p1, 2026-10-22…24).

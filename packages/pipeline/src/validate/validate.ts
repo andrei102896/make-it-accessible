@@ -233,6 +233,12 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
     const binds = /(?:^|\s)(?:for|@|at)$/iu.test(joinRuns(unit).trim())
     if (binds && unit.every((u) => amounts.some((a) => a.line === u.line && u.box.x + u.box.w <= a.box.x)))
       review.push({ path: `${path}.unit`, problem: `"${joinRuns(unit)}" is printed before its price, read after it` })
+    // An add-on ("+3") beside the dish's own price, with no label of its own, would read as a second price of it.
+    item.prices.forEach((p, i) => {
+      const words = joinRuns(at(p.src))
+      if (item.prices.length > 1 && !p.qualifier && /^\+/.test(words.trim()))
+        review.push({ path: `${path}.prices[${i}]`, problem: `an add-on beside the dish's own price: "${words}"` })
+    })
     const words = [
       text(`${path}.name`, item.name),
       ...item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)),

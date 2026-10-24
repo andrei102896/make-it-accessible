@@ -89,3 +89,7 @@
 - To match two readers' word splits, take the items that overlap a run, not only those starting in it: the run's first boundary is otherwise invisible (Bernie's "Baked Clams" item at 72 pt, run "Clams . . . 7" at 100.9 pt, 2026-10-24).
 - A fix built on the second reader's boundaries reaches only what it separates: count what both readers fuse before calling a class closed (Katzinger's "roll....$7.95", 2026-10-24).
 - Freeing a hold publishes the whole row: read every field in order, not only the one held (Bernie's "5 for" heard after its price, 2026-10-24).
+- A mark fused to a price is the same mark as its unfused siblings: render it as they render (dropped when uncited), never as a one-off (Rucola "$39/", 2026-10-24).
+- Before writing "cited as text today", grep the built pages for that class as a price element (+N add-ons: 19 held prices, 2026-10-24).
+- A new printed-as-is pattern covers every variant the set prints, or sibling prices split between freed and held (a sign before "pp", cents with no leading digit, 2026-10-24).
+- out/rebuilt holds the sealed documents too: before grepping it, drop every slug whose group is verify-sealed in validation/private/verify-sources.json, and report sealed only as totals (add-on round, 2026-10-24: four sealed menus were read and named).
