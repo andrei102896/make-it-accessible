@@ -1,159 +1,52 @@
-# Engineering lessons (curated; newest last; merge duplicates)
+# Engineering lessons (curated; newest last within a theme; merge duplicates)
 
-- The scorer reads the DOM with innerText: any text added for screen readers (sr-only duplicates) changes scores; rescore both saved stage-0 runs and require identical output. (VoiceOver price fix, 2026-10-15)
-- Saved runs predate newer fields: every new extraction field is optional or defaulted in zod, and the rescore path must render without it. (hidden text, run colours)
-- max-lines counts test files too, and prettier wraps long lines into several: check line counts after formatting. (document.test.ts at 303, 2026-10-15)
-- Positional CSS (nth-child) breaks when an optional element is missing: select by class. (unpriced set-menu dishes squeezed to one letter per line, Kendells 2026-10-15)
-- VoiceOver in Safari makes every block or inline-block child its own stop; role="text" joins them without changing the layout (probe of 5 variants, axe clean). (2026-10-15)
-- Words in the text layer that draw nothing are never published. (B1b, Carew)
-- Crops by pixel-content rules fail on textures; ownership of the product's own words works. (design rounds 2–4)
-- Browser automation: never click a guessed or comma-joined selector near a send button; list the buttons first. (Proton, 2026-10-15)
-- pdftohtml strips weight and style from fontspec families (Oswald-Regular → Oswald, StardosStencil-Bold → StardosStencil); bold and italic are only <b>/<i> inside <text>. Subset prefixes repeat across fonts (AAAAAA+), so they cannot join to pdffonts. (critic-engineering on the style plan, 2026-10-15)
-- A run's centre can fall inside several pdftohtml lines: join to the smallest containing box, never the first match (Billa 18/143 runs, poppler.ts colors.find). (2026-10-15)
-- innerText applies text-transform: never set capitals with CSS on text the scorer reads; letter-spacing is safe. (2026-10-15)
-- Do not persist what is a pure function of saved files (structure.json + extraction.json): a stored profile goes stale when the code changes. (2026-10-15)
-- A size ratio measured from the PDF needs limits at both ends per role: a 48 pt leaflet price over 8 pt text would render 6.4rem. (critic-engineering, brand v1, 2026-10-15)
-- When the page background becomes measured, recheck every colour checked against a fixed white: accent consumers, print resets of literal colours (Carew: navy accent on a navy page). (2026-10-15)
-- Font names match a vendored family by prefix only when the rest is a weight or style word (roboto must not take robotoslab, robotomono). (2026-10-15)
-- A property set on a broad selector (`section p`) reaches every paragraph, names and prices included: roles that must not inherit it reset it explicitly (font-size-adjust shrank Oswald names). (Kendells, 2026-10-15)
-- A size invariant between roles (heading ≥ 1.1× name) must hold at the clamp minimum too: check it at 320 px, not only at desktop width. (Carew hs-2 under the names, round 2, 2026-10-15)
-- Clipping measured sizes to one cap merges distinct levels: compress the range instead. (Stone House, Bannatyne hs-1…hs-3 at 2.4rem, round 2)
-- A cache keyed only on file existence records what its indices refer to (lines.json rules per signature). (round 2, 2026-10-15)
-- A typographic correction tied to a font property (font-size-adjust) needs that property measured per face: it shrinks tall-eyed faces. (Roboto, round 2)
-- A decoration cut from the render carries alpha and takes its colour from CSS (an alpha mask): an opaque crop shows its paper as a rectangle on any other page colour, and background images are not printed. (ornaments plan, Carew #282848, 2026-10-16)
-- A bounded flood fill rejects when it reaches its limit; returning the partial shape lets a photo pass as an ornament. A frame round words never touches them: test the shape's box, not its pixels. (ornamentBelow, 2026-10-16)
-- Size limits on model output go after parsing, never in the schema: one extra or long item must not throw the whole paid response away. (brief details, 2026-10-16)
-- Tally a finding class across the whole batch before sizing a fix: "one decimal (1)" from one sample page was 43 of 87 across three menus. (US menus, 2026-10-16)
-- The validator and the scorer encode the same product decision (prices.ts judge, metrics mustFlag): a change to when a price needs review changes both, or the gap is recorded where the next key writer reads it. (currency-less prices, 2026-10-16)
-- An "allowed diff" in an acceptance criterion is checked against the baseline data first: when the baseline holds no such finding, the criterion is zero diff. (stage-0 review counts, 2026-10-16)
-- Chrome does not scroll a focused element that is partly in view, and scroll-snap acts only after a scroll: a CSS fix for a half-clipped chip must be probed; a probe point outside the viewport is an artefact, not a finding. (Ferrara chips, 2026-10-16)
-- Cluster a page's columns by the lists' x-ranges, not heading centres: headings are left-aligned with varying widths or centred over several columns. (Sarge's, Mezzaluna, 2026-10-16)
-- A geometry feature on run boxes reaches saved runs too: gate new layout on the field it truly needs and prove it with a no-brand identical-render test. (layout plan, 2026-10-16)
-- Size a font budget from measured files: Google latin variable woff2 is 35–50 KB (Inter 73), and base64 adds a third. (layout plan, 2026-10-16)
-- The brief runs before the brand and feeds it: measurements cannot flow back into the brief without a cycle. (layout plan, 2026-10-16)
-- A section's column is where its heading is printed; its items' flow decides its shape. Clustering sections by their items' x-range merged every column a long list flowed through (Gargiulo's antipasti over three columns, Almond's appetizers over three). (2026-10-16)
-- Edits scripted against source text break after Prettier reformats it: anchor on comment lines or function names, never on a long expression. (layout slice, three aborted scripts, 2026-10-16)
-- A cache of a detector's output is keyed on the detector's version: a changed rule bumps it, not only a new field, or saved runs keep the old finding. (Carmine's stale lines.json, 2026-10-16)
-- A class added to an element already coloured by a higher-specificity rule does nothing: check `.price[data-role]` and `.cols.side … .products.menu` before adding a one-class modifier. (ink and wide classes, 2026-10-16)
-- Text reused outside its element (contents labels, aria-labels) must be the plain string; markup is wrapped only at the render site. (heading inks, 2026-10-16)
-- Image text has no word boxes: a detector that rejects by text-layer boxes needs a shape test too. (Carmine's "Peroni - Pils" ornament, 2026-10-16)
-- A cap raise needs a document that hits the cap: the 5-file/220 KB font budget was reasoned, the batch maxes at 4 files / 116 KB. (slice 6, 2026-10-16)
-- A stand-in's manifest category gates where it embeds: a display face chosen for a body face never fires under `usable()`; check the gate (and which roles the printed family carries) before vendoring. (Moosewood body in Inkwell, 2026-10-16)
-- A per-role text rule can only reach roles whose runs the profile cites: qualifiers are not a role. (Carmine's "b owl", 2026-10-16)
-- A Google variable range can reach 1000: a three-digit regex read "200 1000" as "200 100" and the manifest range ran backwards. (Nunito Sans, 2026-10-16)
-- A bounding box hides a hole: a filled path with two nested rectangular subpaths is a ring (a frame), not a panel; and drawn content can live in `<defs>` (compositing groups for blend modes), so strip definitions by kind, never wholesale. (Sarge's border, 2026-10-16)
-- A measured claim about a page is checked against its render and its text colours before it drives a rule (Sarge's "red page" was a 5 pt ring; 716 black runs). (2026-10-16)
-- A here-doc `cat > file` with nothing to read blocks on stdin: a stray one hung a whole command for two minutes. (2026-10-16)
-- A rule matched to a heading by height alone takes the next column's rule: bound the horizontal gap too (Sarge's UNREAL DELI, Prohibition PK PREMIUM SIDES, 2026-10-16).
-- pdftohtml run boxes include ascent and descent: "through the middle" needs a tight share (≤ 0.2; an over-the-heading rule sat at 0.30). A printed rule can lean: straightness is a share of its length (Rucola's dividers, 1.5 pt over 135). (2026-10-16)
-- A pseudo-element reset only works when its selector outranks the rule it resets: `:is(h3…).hs-N::after` beats `.cls::after`. (lines plan, 2026-10-16)
-- A stroke's thickness under a non-uniform matrix follows the axis across the line, not the larger scale (Kendells 4.8 pt read for a 1.5 pt rule). (2026-10-16)
-- Measure what a junk filter drops across the whole saved set, not only the cases it targets: "heads a section" dropped 13 headings, 5 of them real sections (held-out step 1, 2026-10-16).
-- Grep before claiming "every entry point": the guard goes in the function every caller shares (`extractPage`, not `pageCount`; Hogfish, 2026-10-16).
-- A geometric acceptance window fires on ordinary data too (6% of word gaps sit in the ligature window): the fill set is the real guard. (Gigi, 2026-10-16)
-- pdftocairo draws placed content from `<defs>` (`source-N` groups) through `<use>` with its own transform and clip; walking `<defs>` in place misplaces it (Claudio's art at y 36 instead of 832; false black panels on 6 documents). A browser bounding box ignores clip paths. (2026-10-17)
-- A clipped shape shows its clip only when it is a plain rectangle under a rectangular clip; anything else cut by a clip or a mask has an unknown visible part (Osteria's award badges, Bannatyne's frame lines). (2026-10-17)
-- Remove page-sized fills (bleed, filter canvases) before any proximity grouping: one 950×1469 rect glued 58 parts on Sarge's. (pictures plan, 2026-10-17)
-- A model's box around a small target is loose: match candidates by their share inside it and keep the best-fitting one or union, never IoU alone (Moosewood logo fully inside, IoU 0.26; Carew's four photos vs one). (2026-10-17)
-- A shape whose visible part is unknown still has a known bound; a flag added to drop one artefact must be tested on that artefact's shape (half the filtered drawings were real art). (2026-10-17)
-- pdf.js's converted fonts are not the PDF's fonts: fsType is zeroed or synthesised (vendor "*21*") and the name table rebuilt, so permissions and licence text come only from the raw program (Brandon Grotesque, Avenir Next read "installable", 2026-10-17).
-- A multi-letter ToUnicode ("Th", "er") maps its first letter to the ligature glyph in pdf.js's Unicode cmap: a font's coverage is built from single-codepoint entries only (Cormorant T → Th, SignPainter e → er, 2026-10-17).
-- Custom properties inherit: a placement that omits default values leaks its parent's into a nested placed element; the nested one writes every property, or the parent writes none (per-line spans, 2026-10-17).
-- A self-matching wait loop never ends: `ps | grep "[x]pattern"` also matches the shell running the loop when the pattern names the loop's own arguments (rerender wait, 2026-10-17).
-- Chromium can stall rasterising soft masks and filters at a large scale (BILLA p6: over a minute at 1⅓× and 2×, under a second at 1 px/pt): every browser render has a deadline and a fallback (2026-10-17).
-- pdf.js maps every encoding code of a simple font through `toFontChar`, unused ones to an appended .notdef (the last glyph): coverage comes from code points pdf.js's own cmap lists, not from ToUnicode (Gigi Century Gothic g11 of 12, Stone House Lindsey g26 of 27, 2026-10-17).
-- "Every match satisfies P" is true when nothing matches: a permission join needs at least one match (12 of 177 pdf.js fonts had no raw program by name, 2026-10-17).
-- A typeface class read from a font name misses commercial scripts with no genre word (FeelingPassionate, LindseySignature): gate on a measured property instead (2026-10-17).
-- A text layer can lie over a picture of its words: a word with no glyph drawn where it stands is printed inside an image (Stone House's cover, one raster under invisible text, 2026-10-17).
-- Poppler's word box ends at the last letter's advance without its character spacing (n−1 gaps) and is in MediaBox space; pdf.js puts horizontal scaling (Tz) in `transform[0]`, gives `view` as the CropBox, spaces tracked letters out in its strings ("R I C H"), and lists a non-embedded standard font's widths in an object, not an array. (tracking probe, 2026-10-18)
-- A tall word's box (a script line) also holds the baselines of the lines above it: match a word to the text item that prints it, nearest baseline first (Bannatyne's "Wedding" measured in Crimsons, 2026-10-18).
-- `document.fonts.ready` resolves even when a face fails to load (status `error`): a measurement that depends on a web font checks each face's status. (fit probe, 2026-10-18)
-- A copy-glyph rule needs a quorum of the word's own letters: one grey glyph of the next price inside a word's zone read as its shadow (Lexington's Mozzarella, 2026-10-18).
-- A census read from saved run files sees only what was saved: fields a rerender reads afresh (fonts, colours) are missing there; read the source the build reads. (font census, 2026-10-18)
-- Chrome's OTS rejects a format 4 cmap with a wrong searchRange, a missing 0xFFFF end segment, or a glyph id ≥ maxp's count, and ignores table checksums (2c probe, 2026-10-18).
-- `textContent` and `innerText` both include screen-reader-only text: a check on what a line shows skips `.sr-only` and `[data-free]` (diet legends in placed names, 2c, 2026-10-18).
-- Several codes can share one single-letter ToUnicode with different glyphs (Cormorant's two figure styles, f, t): a Unicode cmap rebuilt from ToUnicode picks by what the page draws (the operator list), never by code order (Stone House, 2026-10-18).
-- Bytes from a PDF are untrusted even inside a font table: every parse of a program the PDF carries is wrapped, and a failure costs that program, never the document (2c review, 2026-10-18).
-- A zone padded to catch a word's shadow also catches its neighbours: ink comes from the word's own glyphs, and a copy is a letter-by-letter offset of them (two letters at least, in an ink that shows), never "a glyph of another colour near it" (Boater's, Moosewood, Ferrara, 2026-10-18).
-- A word's box is not its glyphs: a tall box's lower part holds the next line's letters and spaces, and a mode over a word's glyphs counts its printed copy (ink and copy rows tie; drawing order picks the copy underneath). Anchor a per-word measure on its first letter: the glyph nearest its left edge, drawn last within 0.05 pt (ink over copy). Measured on 27,795 words: "leftmost within 0.5", "exactly nearest" and "in the word's ink" each fail (a stray 0.49 pt off; a copy 0.02 pt nearer; a stray drawn last sets the ink) (#18, 2026-10-18).
-- A convergence check (probe within 0.003 cqw of `--bl`) proves the mechanism, not the measured value: check the anchor against an independent source where the heuristic is weakest (#18, 2026-10-18).
-- Measure a box before moving it instead of subtracting the move afterwards: the reconstruction differs by layout snapping (1/64 px) and flips a threshold compared at equality (Kenny & Ziggy's 0.1998 against 0.2000, #18, 2026-10-18).
-- Before writing a descendant selector for a class, grep every place that emits it: `.ink-X` sits on inline spans (source.ts) and on a placed price itself (page.ts); `${leaf} .ink-X` reaches only the first (inline inks, 2026-10-18).
-- Near the line cap, a new positional parameter on a long signature costs a line per parameter after Prettier: pass the context the caller already holds (`Pick<Context, …>`, placer, 2026-10-18).
-- pdf.js `getTextContent` NFKC-normalises ligatures (U+FB00–04, FB06) unless `disableNormalization`; the operator list keeps them. Before calling text "unknowable from the PDF", read its marked-content /ActualText: pdf.js drops it, Poppler puts it at the page's edge (Apple Pages exports: Gigi, Noah's, 2026-10-18).
-- Changing a run's `str` reaches every matcher pairing runs with another source by text (`itemOf`); a fallback added there must be limited to the runs that need it, then measured on the whole set (an unlimited one moved 298 own faces on 22 documents, 2026-10-18).
+Curated 2026-10-24 from 157 entries: superseded ones (redrawn letters, stand-ins and fit in the printed view, halos,
+glyph cutting) dropped, cross-project ones moved to `~/.claude/skills/project-init/references/common-rules.md`. The
+full list is in git history.
+
+## Reading the PDF
+- Poppler: a word box ends at its last advance without character spacing, in MediaBox space, ascent and descent included; pdftotext splits a printed line per column and can fuse words across a column gap or a leader; pdftohtml keeps weight and style only as nested `<b>`/`<i>` (read with a state, never split at tags), its subset prefixes repeat across fonts, and it always runs with `-i` (12,500 images once left in validation/). (2026-10-15…24)
+- pdf.js: Tz sits in `transform[0]`, `view` is the CropBox, ligatures are NFKC-normalised unless `disableNormalization`, /ActualText is dropped (read it before calling text unknowable: Gigi, Noah's), end-of-line items are empty and zero-wide, a multi-letter ToUnicode maps its first letter, and coverage comes from pdf.js' own cmap, not ToUnicode. Its converted fonts are not the PDF's (fsType, names rebuilt): permissions come from the raw program. (2026-10-17…23)
+- Two readers agree only through geometry: match a word to the item that prints it, nearest baseline first, taking items that overlap the run (not only those starting in it); a leader counts as one unit, the readers count its dots apart. (Bannatyne "Wedding", Bernie's, 2026-10-18…24)
+- pdftocairo draws placed content from `<defs>` through `<use>` with its own transform and clip, so strip definitions by kind, never wholesale; a bbox hides a hole (a ring is a frame, not a panel) and ignores clips; take page-sized fills out before any proximity grouping. (Claudio's, Sarge's, 2026-10-16…17)
+- Bytes from a PDF are untrusted even inside a font table: every parse of a program it carries is wrapped, and a failure costs that program, never the document. (2c review, 2026-10-18)
+- The text layer can lie: words that draw nothing are never published; a word with no glyph where it stands is printed inside an image; a synthetic run with no glyph is marked and excluded at every matcher keyed by run id or glyph box. (Carew, Stone House, icon runs)
+- A per-word measure anchors on the word's first letter (nearest the left edge, drawn last within 0.05 pt); a printed copy or shadow is a letter-by-letter offset of at least two of the word's own glyphs in an ink that shows. (27,795 words measured, 2026-10-18)
 - Read pdfinfo's Creator and Producer before naming a producer in code or docs ("Word export" was Apple Pages, 2026-10-18).
-- A synthetic run with no glyph reaches every matcher keyed by run id or glyph box (undrawn, copiesOf, own faces, fit's coverage check): mark it and exclude it at each (icon runs, 2026-10-18).
-- Append to an index-cited array; never insert and renumber: saved citations and the rerender count check depend on the indices (icon runs, 2026-10-18).
-- A regex built from one sample sentence is run over every body it will see before it ships: optional groups next to literal spaces silently require the space (outreach thing-regex, 24 of 60 missed, 2026-10-18).
-- A gitignored file that is the only copy is rewritten atomically with a backup beside it (targets.csv, 2026-10-18).
-- A fixed-width inline block inside a placed line wraps its own text and grows: hidden words go in an absolutely positioned child, the block keeps only the width and one em of height (icon tags, 2026-10-18).
-- pdftotext splits one printed line per column: words of a line are grouped by vertical overlap, not by its flow and line numbers (Howies' legend, 2026-10-18).
-- On this Mac's Node, process.hrtime counts through sleep (libuv uses mach_continuous_time) and every pending timer fires on waking: a clock difference never detects sleep, kern.waketime does (measure plan, 2026-10-22).
-- A deadline is one path among many that makes a result depend on load: every catch that degrades a result (Text only, a smaller render, a dropped page) is marked, and a marked result is rerun alone before it is read (measure plan, 2026-10-22).
-- A build folder seeded with a copy of the run that already holds the output file is never judged by that file existing: judge only what this run wrote (stale index.html after a refusal, 2026-10-22).
-- A file the build reads beside a run is parsed so that any failure, JSON.parse included, is "absent" plus a visible held line: a throw inside buildHtml aborts every rerender, which catches only Refused (approved.json, 2026-10-22).
-- Never decide whether a finding is an error from its problem text: validate.ts writes the same sentence into errors or review by path; carry the bucket (approved.json, "alt states …", 2026-10-22).
-- A human decision tied to engine output needs a line when it no longer matches: a rule change must never silently take it back (approved.json, 2026-10-22).
-- A guard that treats a failed render as "nothing hidden" covers every judgement made on that render, not only the words it was written for (icon ink test, 2026-10-22).
-- Hiding an input that a naming rule counts renames every other use: filter what gets named, never the evidence that names it (legendOf uses, 2026-10-22).
-- When what a view shows changes, list every measure whose ground or subject it was: the fidelity ground (the sheet minus our text) holds the print once our text is transparent, so every line reads "vanished" (printed-view letters plan, 2026-10-23).
-- Size a raster from the CSS the page ships (main's max-width, printFloor, the zoom range it stays up for), never from a window width (printed-view letters plan, 2026-10-23).
-- Moving a raster from Poppler to pdf.js moves its frame (crop box against media box): reuse the `SAME_FRAME` guard before stretching it under Poppler geometry (printed-view letters, 2026-10-23).
-- A deadline that resolves `null` inside a try skips the catch that marks the fallback: throw on timeout (`encoded()` on the pdf.js tab, 2026-10-23).
-- When the shown render changes, derive every measure from that same render; a second renderer adds an unguarded IO call and a second truth (luminance grid via pdftoppm, 2026-10-23).
-- A per-section hash that includes placement attributes cannot show that the text view is unchanged: compare the stripped DOM or innerText (slice 3 plan, measure-rows pageHashes, 2026-10-23).
-- Removing an input to a computed value moves every rule that reads that value, not only the visible one: stand-in metrics also set `--low`'s large-text target (slice 3 plan, placed.ts sized, 2026-10-23).
-- When a view's text turns transparent, list the rules kept for legibility (minimum weight, tracking gates): they now only move selection boxes (slice 3 plan, the --ls gate, 2026-10-23).
-- Deleting a module: grep its exported constants as well as its functions; a shared threshold (rows.ts `GAP` in segments.ts `apart`) outlives the feature that defined it (slice 3 plan, 2026-10-23).
-- Client rects ignore clipping: a geometry probe over a box must exclude its screen-reader-only descendants, or it measures hidden words (check-page cut, icon labels in 1 px spans, 2026-10-23).
-- A height ratio stands in for "one line more" only on one- or two-line boxes: measure overflow in line heights (check-page cut, 2026-10-23).
-- Folding a `!a && !b` guard into `a !== null && b !== null && a >= b*k` turns 0/0 into true: keep the zero case (capsFacesOf, 2026-10-23).
-- pdftohtml nests its style tags (`<i><b>…</b></i>`, 878 lines) and leaves regular text untagged inside styled lines (181 of 225 mixed lines): read segments with a bold/italic state, never by splitting at each tag (segments plan, 2026-10-23).
-- `pdftohtml -xml -stdout` writes every page image beside the PDF: probes pass `-i` or write to a temporary folder (12,500 images left in validation/, 2026-10-23).
-- A change to role faces shows in the brand CSS and the embedded fonts, not in innerText: diff the `<style>` rules and the `@font-face` list against the font budget (segments plan, 2026-10-23).
-- A TypeScript copy of "which face this element shows" goes stale against the CSS (cards, tables, `.note`, `.qualifier` outrank the roles): give the span its own explicit face instead of a difference from a guessed base (segments review, 2026-10-23).
-- Embedding any file of a family switches the whole family on for every part: extra weights and styles go only to families whose main file is already embedded (leftover font budget, 2026-10-23).
-- Word-level faces cannot show a style change inside a word: check the plan's acceptance examples against the unit the data comes in (Le Dive's quoted cuvées, 2026-10-23).
-- Name a count by the unit it counts: spans of same-style words are not words, words marked only on success are not "words in mixed lines" (round style measures, 2026-10-23).
-- An "unmatched" count is the failures inside the loop that tried, never candidates minus successes (poppler.ts unmatched, 2026-10-23).
-- An exclusion borrowed from one view can be wrong in the other: `[data-free]` is hidden in the printed view and shown in Text only (spans restyled went 38 → 4 on the sealed set, 2026-10-23).
-- A probe with a fixed darkness threshold measures the ground of light-on-dark text: take ink as the box's minority side (Carew's GillSans-Italic on navy read upright, 324 rows, 2026-10-23).
-- When a class leaves a span vocabulary, grep the measures and resets that select it (`main .fi, main .fn` stood for every styled span, 2026-10-23).
-- Moving a style from role CSS to word spans moves the font-file demand too: the embedding tally keys on what the spans ask for (italic plan, 2026-10-23).
-- A tally keyed on family alone credits every part of that family with every run: count each part's own cited words (shownFiles asked Lato 700 italic nothing drew, 2026-10-23).
-- A dedupe test passing the same input twice cannot show an overlap between distinct inputs sharing a key: test two parts that collide (webfonts.test, 2026-10-23).
-- Poppler hands one RunFont object to every word on a line: a per-word change never mutates it; a measured property gets its own field so faceKey-keyed measures stay put (fake-italic plan, 2026-10-23).
-- A step that ran on a few pages and threw on failure becomes an outage when it runs on every page: widen the gate and make its failure degrade together (`withWholeWords`, 2026-10-23).
-- A marker meaning "rerun me under less load" goes only on load-dependent failures: a pdf.js parse error marked `degraded` would drop a document from the measure for good (`withWholeWords`, 2026-10-23).
-- pdf.js text content holds empty, zero-wide end-of-line items with real transforms: a geometric matcher filters them before choosing "nearest" (`slanted`, 2026-10-23).
-- A probe that sizes a rule runs the rule's own predicates: a different filter or regex leaves "N documents change" unproven (fused-word plan, 2026-10-24).
-- Once an optional pdf.js step changes the run count, a slow read must fail the page, never fall back silently: saved answers cite runs by index (`withWholeWords` `Late`, 2026-10-24).
-- A regex shared as a predicate is anchored and has no `g` flag: `.test` on a global regex keeps `lastIndex`, and a substring match calls "Clams . . ." a leader (2026-10-24).
-- A rule added during the visual check gets the same whole-set count as the planned one: the "7 for" order hold first held Howies' "(3 x 25ml serves)" (2026-10-24).
-- A hold for word order fits only words whose meaning depends on the order: "N for" binds to its price, a size reads the same either side (2026-10-24).
-- "Not on its line" is two directions: name the one the case needs, or a fix for heads above flips notes below (Eusebi column heads, 2026-10-24).
-- Before a mark becomes a separator, check every place the page prints it: Ridgway's "~" separates prices and frames "~ Regular ~" (2026-10-24).
-- A pattern added to a fallback reached only when the main parser fails covers only the forms that parser rejects: "+ 4.50" and "£49 pp" parse and lose their mark (2026-10-24).
-- Check "X never happens today" on the saved structures, not on the holds list: holds show only failures (2026-10-24).
-- Check each document's set in the sources file before using it as evidence: a judge's "working + verify-learn" list held 4 sealed documents, and the sealed gain was those same 4 (add-on round, 2026-10-24).
-- A file hash going back and forth between the same values across rounds is nondeterminism, not a change: an open case, or every round reports it (Kenny p7, Howies Waterloo dinner p1, 2026-10-22…24).
-- A "wrong" count from a hand-written check is no baseline: size a rule by diffing old against new outputs (Bernie's 15 by the probe, 47 by the diff, 2026-10-24).
-- A join allowed by a separator on one side needs whole digits on the other, or it chains a second separator ("9.99" + ".50", 2026-10-24).
-- A per-price probe misses list-level effects: one amount can reformat its siblings through shared decisions (withWhole); verify on rendered text (2026-10-24).
-- A join rule written for one market runs on every page that shares the function: check it on the other market's forms (the raised-cents rule joined leaflet "2" + ",69", 2026-10-24).
-- A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).
-- A join rule written for one market runs on every page that shares the function: check it on the other market's forms (the raised-cents rule joined leaflet "2" + ",69", 2026-10-24).
-- A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).
-- Before blaming the GPU for a render difference, read the browser's feature status (CDP SystemInfo.getInfo): Playwright's headless shell already draws canvas in software (SwiftShader) (raster plan, 2026-10-24).
-- A determinism probe hashes every byte, at production size, with enough draws to beat the flip rate: a 1-in-7 byte hash of 6 draws "proved" flags that still give 2 of 8 at 2858 px (2026-10-24).
-- Locate a nondeterministic difference in the raw canvas before describing it from an encoded file: lossy WebP spread 14 changed icon pixels into "0.44 %, text edges" (Howies p1, 2026-10-24).
-- A canvas fix that swaps the main canvas leaves pdf.js's soft-mask scratch canvases as page-size HTMLCanvasElements (detached) (Kenny p7 went from 1-in-16 to a coin flip under OffscreenCanvas, 2026-10-24).
-- Before moving a stage to "fix" nondeterminism, hash that stage's output with a varying input: the backdrop encode was already a pure function of its source (2026-10-24).
-- A library that keeps references to nodes it put in the document breaks quietly when the host clears the container: it keeps writing into the detached node (pdf.js #_defs, Kenny p7, 2026-10-24).
-- A roadmap tick is checked against the open CASES rows of the same documents before it is written (batch 2, 2026-10-24).
-- A "two rounds in a row show 0 changes" check needs round 1 kept: a baseline keyed by tree is overwritten by round 2 before its diff (measure.ts `file(tree)`, 2026-10-24).
-- A tolerance measured against the first draw understates the drift when there are 3 or more variants: take the largest difference over all pairs (recount, 2026-10-24).
-- A fingerprint taken after a downscale cannot see resolution, blur or encode quality: carry the encoded file's pixel size beside it (backdrop cells vs WebP, 2026-10-24).
-- Before widening a parse into a try/catch "reported elsewhere", check the other place validates the same fields: a loose schema without `shadows` turned a loud failure into a silent 0 (measure-rows docRow, 2026-10-24).
-- A second zod schema for a file the pipeline already parses drifts from it: reuse the owner's `parse*` and destructure (measure-backdrop vs `parseGrid`, 2026-10-24).
+
+## Saved runs and citations
+- Saved runs predate newer fields: every new extraction field is optional or defaulted in zod, and the rescore path renders without it.
+- Answers cite runs by index: append to an index-cited array, never insert; once an optional step changes the run count, a slow read fails the page instead of falling back (`withWholeWords` Late, 2026-10-24); changing a run's `str` reaches every text matcher (`itemOf`): limit it and measure the whole set.
+- Never persist a pure function of saved files; a cache records what its indices refer to and is keyed on the detector's version. (lines.json, Carmine's, 2026-10-16)
+- A census read from saved runs sees only what was saved; fields a rerender reads afresh (fonts, colours) come from the source the build reads. (font census, 2026-10-18)
+
+## Validation and prices
+- The scorer reads innerText, which includes screen-reader-only text and applies text-transform: never set capitals with CSS, rescore both stage-0 runs identical, and compare innerText (not placement-bearing hashes) to show the text view unchanged.
+- The validator and the scorer encode one product decision (prices.ts, mustFlag): change both, or record the gap. Never decide error vs review from the problem text: carry the bucket. A human approval tied to engine output gets a line when it no longer matches. (2026-10-16…22)
+- A regex shared as a predicate is anchored, without `g`. A fallback pattern covers only the forms the main parser rejects ("+ 4.50" parsed and lost its mark). A join allowed by a separator needs whole digits on the other side ("9.99" + ".50"). (2026-10-24)
+- A price rule written for one market runs on every page that shares the function: check the other market's forms (leaflet "2" + ",69") and run older "not joined" fixtures through a new check; a per-price probe misses list-level effects (withWhole), so verify on rendered text. (2026-10-24)
+- Order rules: "not on its line" has two directions (head above reads first, note below after); a word-order hold fits only words whose meaning depends on order ("N for", not sizes); before a mark becomes a separator, check every place the page prints it (Ridgway "~"). (2026-10-24)
+
+## Measuring before and after
+- Size a rule by the whole set: tally the class on every document, diff old against new outputs (not a hand-written count), run the rule's own predicates in the probe, check "never happens" on saved structures (holds show only failures), and give a rule added during the visual check the same whole-set count. (2026-10-16…24)
+- Check each document's set in the sources file before using it as evidence, and drop verify-sealed slugs before reading out/rebuilt: a judge's list held 4 sealed documents. (add-on round, 2026-10-24)
+- A roadmap tick is checked against the open CASES rows of the same documents before it is written. (batch 2, 2026-10-24)
+
+## The round and its fallbacks
+- Every catch that degrades a result (a deadline, Text only, a smaller render) prints `DEGRADED` and the result is rerun alone; only load-dependent failures are marked (a parse error would drop a document for good); a deadline resolving null inside a try skips the catch: throw. Sleep is detected by kern.waketime (Node's clocks count through it). (measure, 2026-10-22…23)
+- A build folder seeded from the run is judged only by what this run wrote. A file read beside a run is parsed with its owner's `parse*` (never a second schema), a failure is one visible line, never an abort, and a widened catch is checked against what the other reader validates (loose schema made bad `shadows` a silent 0). (2026-10-22…24)
+- A step that ran on a few pages and threw becomes an outage on every page: widen its gate and make its failure degrade. A guard treating a failed render as "nothing hidden" covers every judgement made on that render. (2026-10-22…23)
+
+## Backdrops and the browser
+- pdf.js keeps references to nodes it put in the tab (SVG filter defs): never clear the container between pages; a missing filter fails the draw. Chromium can stall on soft masks at large scales: every render has a deadline and a fallback. (Kenny p7/p8, Cattlemen's p2, BILLA p6)
+- Moving a raster between Poppler and pdf.js moves its frame (crop vs media box): `SAME_FRAME`. Size a raster from the CSS the page ships, never a window width. When the shown render changes, derive every measure from it and list each measure whose ground it was. (2026-10-23)
+- Nondeterminism: a hash going back and forth is an open case, not a change; probe every byte at production size with enough draws, take tolerances over all pairs, locate the difference in the raw canvas before the encoded file, hash a stage's output before moving it, read SystemInfo before blaming the GPU (headless already draws in software). (2026-10-22…24)
+- A fingerprint taken after a downscale cannot see resolution or encode quality: carry the encoded file's size beside it. A "two rounds show 0 changes" check keeps round 1 (a baseline keyed by tree is overwritten). (2026-10-24)
+
+## Layout and the text view
+- Columns: a section's column is where its heading is printed, its items' flow decides its shape; cluster columns by the lists' x-ranges, not heading centres; a rule matched to a heading is bounded by height and horizontal gap; a stroke's thickness follows the axis across the line. (Sarge's, Gargiulo's, Kendells, 2026-10-16)
+- Sizes measured from the PDF get limits at both ends per role, a compressed range instead of one cap, and every invariant between roles checked at the clamp minimum (320 px). When the page background becomes measured, recheck every colour checked against white. (2026-10-15)
+- Fonts in the text view: embedding any file of a family switches the whole family on; a role-face change shows in the CSS and `@font-face`, not innerText; tally faces per part, not per family; a span gets its own explicit face, never a difference from a guessed base; font names match a vendored family by prefix only before a weight or style word. (2026-10-15…23)
+- Poppler hands one RunFont object to every word of a line: a per-word change never mutates it; a measured property gets its own field. Word-level faces cannot show a style change inside a word. (2026-10-23)
+- Deleting a module or a class: grep its exported constants and every measure or reset that selects it (rows.ts `GAP`, `main .fi`). An exclusion borrowed from one view can be wrong in the other (`[data-free]`). (2026-10-23)
+- A model's box around a small target is loose: match candidates by their share inside it, never IoU alone. Size limits on model output go after parsing. (Moosewood logo, brief details)

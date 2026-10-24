@@ -1,104 +1,51 @@
-# Design lessons (curated; newest last; merge duplicates)
+# Design lessons (curated; newest last within a theme; merge duplicates)
 
-- Owners judge the page by its resemblance to their PDF first: their colours, fonts and hierarchy; a generic template reads as "rough". (Kendells, first real reply, 2026-10-15)
-- Brand colours drawn in small areas (red section titles, icons) are lost by area-based sampling; take colours from the text roles. (Kendells accent came out black)
-- A page that follows the OS dark mode looks nothing like a white PDF on the owner's Mac. (Kendells, 2026-10-15)
-- Every menu shape must render: unpriced dishes, set menus, prices inside notes. (Kendells tea-time menu)
-- Screen readers: a price and its condition must be one phrase; a legend one phrase; code letters read as their words. (VoiceOver pass 2026-10-15)
-- Content only from the PDF: never reword or reorder; no CSS-generated text. Whole-amount display per list is accepted; a currency sign is shown only when the page prints one.
-- Review every page at 1280, 390 and 320 px, light and dark, with axe and the keyboard, side by side with the PDF render.
-- Notes describe only the items they name; pictures repeated in the same place are decorative; crops keep the product and its own words whole. (external review rounds 1–4)
-- Brand fidelity first: a business's page is its brand. Fonts, colours, hierarchy and structure come from the PDF as truthfully as possible; accessibility only corrects (contrast, minimum size, reflow), it never replaces the identity. (Andrei, 2026-10-15)
-- Resemblance comes from structure as much as from fonts: tracked centred headings with their rules, the colour level above them, sections side by side as printed, the PDF's density. (critic-design on the Kendells plan, 2026-10-15)
-- Style headings by their printed signature (family, size, colour), not by the level the model gave them: Kendells' red stencil section titles and black condensed headings share one level. (2026-10-15)
-- Text sizes shrink with clamp() on phones, so the 3:1 large-text exception is unsafe: require 4.5:1 for every text role. (2026-10-15)
-- Measured heading sizes need a phone clamp: a fixed 2.55rem tracked headline split "ÖSTERREICH" mid-word at 320px; headings use clamp() and no letter-spacing unless the face is condensed. (BILLA, 2026-10-15)
-- A brand face's x-height decides its real size: running text in Josefin or Cormorant needs font-size-adjust; names and prices in a tall-eyed face must not get it. (Kendells, Stone House, 2026-10-15)
-- A note that names its own heading ("TEA TIME SET MENU: …") prices every list under that heading, without a box. (Kendells, 2026-10-15)
-- A brand colour that passes only after a large lightness move stops being the brand: use the document's other brand colour when it reads (BILLA yellow → its green, not mustard). (2026-10-15)
-- "No break inside a word" includes hyphens: hyphens:auto on a German page turned a heading fix into "KAU-FEN / FÜH-REND". Headings use hyphens:manual with overflow-wrap:break-word as the only fallback. (BILLA, round 2, 2026-10-15)
-- Check a CSS fix in the computed style, not the source: lining-nums was overridden by a more specific menu-price rule. (Kendells, round 2, 2026-10-15)
-- Look for the design's subtleties, not only its lines: ornaments and flourishes under titles, arrow ends, boxed lines, icons, textured or coloured panels behind headings; name each one the page lacks. (Andrei, Kendells title ornament, 2026-10-15)
-- A case-insensitive text check hides re-cased headings: the page shows the cited words' case when the model's text differs only by case. (Almond "Raw Bar" for RAW BAR, 2026-10-16)
-- US menus print no currency: bare numbers, "MP", "22/32" and one decimal ("18.9") are the menu's own prices, shown as printed, never flagged. (first 20 NY/FL menus, 2026-10-16)
-- A price cited twice for one dish shows twice: the renderer keeps one per cited words, the validator names the duplicate. (Gargiulo's, 2026-10-16)
-- A row of several labelled prices must wrap on a phone: nowrap on the whole price group pushed Carmine's sparkling wines past 390 px; nowrap belongs on each price with its label, and the price column is capped (fit-content(60%)): with `auto` the grid gave five add-on prices the whole row and left "Steak Burger" one letter wide. (Carmine's, Ridgway, 2026-10-16)
-- Price placement is a brand fact: inline after the name (Moosewood, Noah's) or right-aligned (Carmine's) is measured, never templated. (2026-10-16)
-- The header is wherever the title is printed: a wordmark beside the first heading (Moosewood) is still the header, and a later page can carry its own masthead (Prohibition Post). (2026-10-16)
-- Sections side by side are a grid; an article flowing across columns is multicol; one page can need both (Prohibition page 2). (2026-10-16)
-- A title's scale is its own: compressing it with the section headings turns an 81 pt masthead into a section title. (Prohibition Kitchen, 2026-10-16)
-- A header's tagline rule ("a short line at the top") holds for paragraphs only: a short heading under the logo opens the first section, and taking it into the masthead swallowed Carmine's "DEVILED CRABS" box. (2026-10-16)
-- The masthead stands before the section navigation: on paper the name comes first, the chips are ours. (Carmine's, 2026-10-16)
-- A price label's position is printed: "3.5 ea" and "Half Dozen 20" differ; the renderer put every label first, and dropping the separator between prices left "ea 3.5 Half Dozen 20" unreadable. (Noah's raw bar, 2026-10-16)
-- "One dish per line" is a row shape (name, description, price on one line), not a column count: a single 60rem column with the description beneath reads worse than two columns. (Noah's small plates, 2026-10-16)
-- A near-black ink with a little chroma prints black and renders as a tint on screen: role colours under the ink chroma threshold take the text colour. (Carmine's "dull teal", 2026-10-16)
-- An inline colour made readable must never fall through to the document's other brand colour: a red farm name in the band colour reads as a heading. (Almond on a dark page, critic-design, 2026-10-16)
-- A display face admitted at desktop size shrinks under the phone clamp: its clamp minimum is the display threshold, not the heading floor. (Great Vibes at 1.5rem → 18.7px, critic-design 2026-10-16)
-- A stand-in must match the printed face's genre, not only its class: an upright hand-print face and a slanted cursive are both "handwriting" and look nothing alike. (Caveat for Inkwell Sans → Kalam, 2026-10-16)
-- A frame in the PDF may be raster: Almond's boxes are page-sized images with one vector page frame; check the layer a box lives in before planning how to reproduce it. (2026-10-16)
-- On a mid-tone panel neither black nor the printed white reaches 4.5:1 (Sarge's red, 4.25 and 4.09): when the printed ink is already at its end, the fill moves, a little. (2026-10-16)
-- A box's membership is per block, not per section: two boxed items printed in one list need the list split. (Frankie's, critic-design 2026-10-16)
-- A rule crossing a band's columns between its sections is a row break in print: split the band, never rule one block (Rucola pastas|sides, 2026-10-16).
-- A rule right under a heading belongs to the heading and centres it as printed; moving it to the next block changes a look the owner has seen (Kendells, 2026-10-16).
-- A page title above real sections must hand the chips to its children; a section can hold only paragraphs (Gargiulo "Speciale"), so "heads a list" marks covers, never single headings. (held-out step 1, 2026-10-16)
-- Widening what shows "as printed" widens what is accepted as a price: dates and portion sizes ("1/2 lb") need explicit guards, and sizes with no label read as bare numbers. (Gigi, La Segunda, 2026-10-16)
-- Correctness is always the original PDF beside what we reproduced (Andrei, 2026-10-17): every engine change is judged on three-way comparisons (PDF, before, after) of each page it touches.
-- A page-sized drawing swallows everything near it when grouping: take out backgrounds before grouping (Kenny & Ziggy's curtain, 973 parts); small vector shapes with no words over them can be prices drawn as paths, never decoration (La Segunda "1.99/2.49/2.99"). (2026-10-17)
-- A halo is not the brand: on a flat backdrop the ink keeps its hue and moves in lightness; a halo only where the backdrop varies under the word (Mezzaluna's blue prices with a black glow, printed view, 2026-10-17).
-- Placed text that collides is misinformation: overlaps and overflow are gated at build time and the page falls back to the text view (Carmine's 4.49 beside the wrong dish, 2026-10-17).
-- Backdrop cleaning removes the glyphs we place again, never the fills around them: strips and boxes behind text are its own contrast (Boater's cream strips, Gigi's white box, 2026-10-17).
-- A leaf whose words sit apart on the page is placed line by line, never as one box over the space between them (Carmine's "FAMOUS DEVILED CRABS" over "BREAD", 2026-10-17).
-- A PDF's shadow or outline is its own contrast aid: reproduce it (a dark copy of the words, an outline, a shadow kept in the backdrop) before computing a halo (Bannatyne raster shadow, Kenny & Ziggy's #231f20 copies, La Segunda extrusion, 2026-10-17).
-- Halo contrast is judged on the rendered pixels: one wide blur on thin strokes covers about 15–20 % (Crimsons, 2026-10-17).
-- Tracking, weight and class come from the PDF's widths and font descriptor for every font, not only the ones we may embed (Boater's Brandon, Lexington Brush Script, 2026-10-17).
-- A stand-in table only helps the faces it can name: probe the name parser on the real names (`Cn`, `Cd`, `Bk`, `Demi`) and count the letters left without a face before calling a remark answered (Lexington's condensed Franklin, 2026-10-18).
-- A brush or hand-lettered stand-in belongs where text keeps its printed size (the printed view), not where a display face may reach dish names on a phone. (Yellowtail, 2026-10-18)
-- A narrower face uncovers what a wider one hid: compare the PDF beside the page after every face change, at 4× on dense sheets (Lexington's false grey shadow, 2026-10-18).
-- What we cannot draw faithfully stays printed: a signature, a rubber stamp at an angle, a slanted handwritten note read better as the print than in any stand-in; ours is read, not shown (Fig, 2026-10-18).
-- The text layer's colour can sit on the wrong letters: a word's printed colour comes from its drawn glyph, and a span is only a hook (Kenny & Ziggy's CAKES & PIES: orange on C and P, the gold "&" dark; inline inks, 2026-10-18).
-- A line's ink is that of its unmarked words when the marked ones carry their own: a longer coloured part must not recolour the rest (Almond's "Micky's Ramen", Gigi's "(C) (Serves…)", 2026-10-18).
-- Measure a risk that already ships before letting it defer new work (spans inside Almond's descriptions already raise the VoiceOver question, 2026-10-18).
-- A gap in the text layer is seen, not only heard: the backdrop loses the glyph too, so check the printed view as well as the screen reader (Gigi "Pance a", 2026-10-18).
-- A halo judged on a word's whole box borrows its neighbours' pixels: read the ground from the cells under the letters' bodies (box inset by a quarter top and bottom), judge flatness on their means, and treat a hairline or a panel edge inside a cell as no texture (Howies' gold prices, BOOK NOW under its QR, 2026-10-18).
-- An icon printed inside a condition ("( [icon] available)") belongs where it is printed: moved after the name as a tag it changes the claim (Howies, 2026-10-18).
-- The placed view must show every condition line the text view has: an unplaced "( available)" left a gap beside the first dish (Howies, 2026-10-18).
-- A prospect email leads with the owner's gain, never with guilt or statistics about disabled customers, and never repeats what the first email already said (Howies reply, 2026-10-18).
-- What a diner hears is checked against the PDF render, never our printed view: the printed view shows the PDF's own icons while the text announces another (Howies fries "dairy free", 2026-10-22).
-- An icon in the PDF's vectors may draw nothing: ink at its box is tested before it is cited (icon 881, Waterloo dinner, 2026-10-22).
-- Only text that reads as printed, word for word and in order, can be confirmed; reordered or repunctuated text needs an edit (Waterloo group heading, 2026-10-22).
-- A measurement report keeps every signal the old logs showed (missing letters, ragged, fallbacks, per-line misses) and lists the worst first, each set apart (measure plan, 2026-10-22).
-- A word the model cited "by position" may stand for a visible mark we never named: before hiding it, look for the printed mark it replaced (Howies group menus' wheat, 2026-10-22).
-- Pieces merged into one drawing stop matching the legend's size and lose their name: an icon plus its slash or neighbour (Howies group 11 x 22.8 and 23.2 x 15.5 pt, 2026-10-22).
-- A raster's promised scale is not its achieved scale: count the fallback pages before relying on it (Le Dive at 1 px/pt, printed-view letters plan, 2026-10-23).
-- Invisible text is still read under the pointer: misplaced transparent boxes mislead Hover Text and mouse-echo users (printed view as images of text, 2026-10-23).
-- A viewport-width threshold misses users who zoom only text or use a magnifier: write the floor in em (printed view floor, 2026-10-23).
-- A value measured at build is only as stable as the face it was measured in: invisible text still needs a face that ships with the page, or its placement holds only on the build OS (slice 3 plan, 2026-10-23).
-- Once letters are invisible, limits that kept them looking right (minimum fit, spacing cap, never wider) protect nothing: fit each line exactly to its print (slice 3 plan, 2026-10-23).
-- Transparent text can still show: check find highlights and rich paste before calling a text layer "never seen" (slice 3 plan, 2026-10-23).
-- Clipping invisible text must not make a scroll container: find and focus scroll `overflow: hidden` content and leave it shifted under the pointer; use `overflow: clip` (slice 3 boxes, 2026-10-23).
-- A clip on a focusable element's parent clips its focus ring: draw the ring on the clipped box (`:has(:focus-visible)`) (printed links, slice 3, 2026-10-23).
-- A gate deleted for a clip needs a measure in its place: clipping hides overflow without fixing it, so count clipped boxes and clipped prices (slice 3, 2026-10-23).
-- Fixing a style's data can flip a role's dominant face: count each role's faces per page before and after, the minority style is often the one the owner pointed at (Le Dive page 2 italic ingredients, 2026-10-23).
-- One face per role reproduces print only when the style changes at role boundaries; a style change inside a line (a cuvée name in a producer line, a price in a heading) needs a silent span, as colour does (Le Dive, 2026-10-23).
-- A computed `font-style` proves nothing when the family embeds only the other style: CSS falls back to it, so check the face drawn (italic plan, 2026-10-23).
-- A role styled italic with `font-synthesis: none` and no italic file draws upright, silently: Howies' notes were that CASES row (2026-10-23).
-- Taking a style off the roles also strips it from text with no runs (the band title, model-read leaves): list what is not built from segments first (2026-10-23).
-- A font budget is zero-sum: when a new style claims a file, diff the files that leave and the words that lose a real face (Carmine's at 4/4 files, 2026-10-23).
-- A style measured from geometry (a shear over an upright face) is an oblique: synthesis reproduces it, and exceptions written for named styles may not hold for it (fake italic plan, 2026-10-23).
-- Chrome synthesises `font-style: italic`, not an `oblique` angle, over a webfont declared normal: the computed style read oblique while Carmine's Barlow drew upright; look at the drawn face (fake italic, 2026-10-23).
-- To match two readers' word splits, take the items that overlap a run, not only those starting in it: the run's first boundary is otherwise invisible (Bernie's "Baked Clams" item at 72 pt, run "Clams . . . 7" at 100.9 pt, 2026-10-24).
-- A fix built on the second reader's boundaries reaches only what it separates: count what both readers fuse before calling a class closed (Katzinger's "roll....$7.95", 2026-10-24).
-- Freeing a hold publishes the whole row: read every field in order, not only the one held (Bernie's "5 for" heard after its price, 2026-10-24).
-- A mark fused to a price is the same mark as its unfused siblings: render it as they render (dropped when uncited), never as a one-off (Rucola "$39/", 2026-10-24).
-- Before writing "cited as text today", grep the built pages for that class as a price element (+N add-ons: 19 held prices, 2026-10-24).
-- A new printed-as-is pattern covers every variant the set prints, or sibling prices split between freed and held (a sign before "pp", cents with no leading digit, 2026-10-24).
-- out/rebuilt holds the sealed documents too: before grepping it, drop every slug whose group is verify-sealed in validation/private/verify-sources.json, and report sealed only as totals (add-on round, 2026-10-24: four sealed menus were read and named).
-- An amount must account for every digit its cited words print: a dropped ".95" read "$13.95" as 13, and with the sign on the digits it would show "$24.00" as proven (2026-10-24).
-- Count changes in shown text, not only wrong amounts: Bernie's ".00" prices "read right" yet move from printed to formatted, some to whole (2026-10-24).
-- A rendering flag counts as a fix only if the bytes change: compare flagged and default draws first (software-canvas flags gave identical PNGs, 2026-10-24).
-- A decision taken from a measured grid needs a margin wider than the raster's drift, or a republish changes the reader's colours (Kenny ink 0.981 ↔ 0.980, 2026-10-24).
-- A reference drawn by the same code as the output shares its bugs: the fidelity gate and the review "PDF" both drew Cattlemen's p2 as empty panels (2026-10-24).
-- Clearing the page between pdf.js renders removes its SVG filter defs: later pages lose their luminosity soft masks without an error (Kenny p7/p8, Cattlemen's p2, 2026-10-24).
-- Swapping canvases is not "the same pixels": OffscreenCanvas ignores url() filters and draws hairlines aliased; check soft masks and fine ornaments (Gage's ornament dotted, 2026-10-24).
-- Set a drift tolerance at the resolution the drift was measured at: 40 pt blocks would have hidden 17 % of dropped prices that 8 pt cells catch (backdrop comparison, 2026-10-24).
-- A guard against something vanishing from the print cannot lean on checks that read another renderer: printedReads reads Poppler's inks, fidelity draws with the same pdf.js (2026-10-24).
+Curated 2026-10-24 from 102 entries: superseded ones (stand-in faces and fit in the printed view, halos, backdrop
+cleaning) dropped, cross-project ones moved to `~/.claude/skills/project-init/references/common-rules.md`. The full
+list is in git history.
+
+## What the owner judges
+- Owners judge the page by its resemblance to their PDF: colours, fonts, hierarchy, structure and density come from the PDF as truthfully as possible; accessibility only corrects (contrast, size, reflow), never replaces the identity. (Kendells, Andrei, 2026-10-15)
+- Correctness is the original PDF beside our page: every change is judged on PDF, before and after for each page it touches, never from our own render alone. (Andrei, 2026-10-17)
+- Look for the design's subtleties and name each one the page lacks: ornaments under titles, arrow ends, boxed lines, icons, textured or coloured panels. (Kendells title ornament, 2026-10-15)
+- What we cannot draw faithfully stays printed (a signature, a stamp at an angle, a handwritten note): ours is read, not shown. (Fig, 2026-10-18)
+
+## Content as printed
+- Content only from the PDF: never reword or reorder, no CSS-generated text; a currency sign only where the page prints one; whole amounts per list accepted. Only text that reads as printed, word for word and in order, can be confirmed. (2026-10-15…22)
+- The page shows the printed case: a case-insensitive check hides re-cased headings. (Almond "Raw Bar", 2026-10-16)
+- US menus print bare numbers, "MP", "22/32", "18.9": the menu's own prices, shown as printed. Widening "as printed" widens what passes as a price: dates and portion sizes need guards. (2026-10-16)
+- A price label's position is printed ("3.5 ea" vs "Half Dozen 20"); price placement (inline or right-aligned) is measured, never templated; a price cited twice for one dish shows twice. (Noah's, Carmine's, Gargiulo's, 2026-10-16)
+- A mark fused to a price renders as its unfused siblings do; a new printed-as-is pattern covers every variant the set prints, or siblings split between freed and held. (Rucola "$39/", 2026-10-24)
+- An amount accounts for every digit its words print; count changes in shown text, not only wrong amounts (".00" lists turning whole). (Bernie's, 2026-10-24)
+- Freeing a hold publishes the whole row: read every field in order. (Bernie's "5 for", 2026-10-24)
+
+## Structure
+- The header is wherever the title is printed; it stands before our navigation; a title's scale is its own; a page title above real sections hands the chips to its children. (Moosewood, Prohibition, Carmine's, Gargiulo, 2026-10-16)
+- Sections side by side are a grid, an article across columns is multicol, one page can need both; a rule crossing a band between sections is a row break; a rule under a heading belongs to it. (Prohibition, Rucola, Kendells, 2026-10-16)
+- A box's membership is per block, not per section; a frame may be raster (check the layer before planning it); a note naming its own heading prices every list under it. (Frankie's, Almond, Kendells)
+- "One dish per line" is a row shape, not a column count; a row of labelled prices wraps on a phone, nowrap per price with its label, the price column capped. (Noah's, Carmine's, Ridgway, 2026-10-16)
+
+## Colour and contrast
+- Brand colours drawn in small areas come from the text roles, not area sampling; a colour that passes only after a large lightness move stops being the brand (use the other brand colour); near-black with a little chroma is black. (Kendells, BILLA, Carmine's)
+- An inline colour made readable never falls through to the document's other brand colour; a line's ink is that of its unmarked words; the text layer's colour can sit on the wrong letters, so a word's colour comes from its drawn glyph. (Almond, Gigi, Kenny & Ziggy's, 2026-10-16…18)
+- A PDF's shadow or outline is its own contrast aid (WCAG counts an outline as the boundary); a ground is read from the cells under the letters' bodies, never the whole box. (Bannatyne, La Segunda, Howies, 2026-10-17…18)
+- A decision from a measured grid needs a margin wider than the raster's drift (none needed today: drift 0.001); a guard against something vanishing from the print cannot lean on a check that reads another renderer (printedReads reads Poppler's inks). (2026-10-24)
+
+## The printed view
+- The printed view shows the print (pdf.js), our text transparent boxes at the printed lines: transparent text is still read under the pointer (Hover Text) and shows in find highlights and rich paste, so misplaced boxes mislead. (2026-10-23)
+- A raster's promised scale is not its achieved scale: count fallback pages before relying on it; a viewport-width threshold misses text-only zoom: write the floor in em. (Le Dive, 2026-10-23)
+- Clipping invisible text: `overflow: clip`, never `hidden` (find and focus scroll it); a clip on a focusable's parent clips its ring (draw it on the clipped box); a gate deleted for a clip gets a measure (clipped boxes and prices). (slice 3, 2026-10-23)
+- A leaf whose words sit apart is placed line by line; placed text that collides is misinformation, measured and sent to the text view. (Carmine's, 2026-10-17)
+- An icon printed inside a condition belongs where it is printed; an icon in the vectors may draw nothing (test its ink); merged pieces lose their legend name; a word cited "by position" may stand for an unnamed printed mark. (Howies, 2026-10-18…22)
+- What a diner hears is checked against the PDF render, never our printed view; the placed view shows every condition line the text view has. (Howies fries, 2026-10-22)
+- A reference drawn by the same code as the output shares its bugs (fidelity and review shots agreed with Cattlemen's empty panels); pdf.js loses soft masks when its defs are cleared; an OffscreenCanvas ignores url() filters and aliases hairlines. (2026-10-24)
+- Compare backdrops at the resolution the drift was measured at: 40 pt blocks would hide 17 % of dropped prices that 8 pt cells catch. (2026-10-24)
+
+## Text view type
+- A display face's clamp minimum is the display threshold; a stand-in matches the printed face's genre, not only its class; a brand face's x-height decides its size (font-size-adjust per face). (Great Vibes, Kalam, Josefin, 2026-10-15…16)
+- One face per role reproduces print only when style changes at role boundaries: a style change inside a line needs a silent span; fixing style data can flip a role's dominant face (count per page before and after). (Le Dive, 2026-10-23)
+- A computed `font-style` proves nothing: check the face drawn (an italic role with no italic file draws upright; Chrome synthesises italic, not an oblique angle); a font budget is zero-sum, diff the files that leave. (Howies notes, Carmine's, 2026-10-23)
+
+## Reports
+- A measurement report keeps every signal the old logs showed and lists the worst first, each set apart. (measure plan, 2026-10-22)
+- out/rebuilt holds the sealed documents: drop every verify-sealed slug before grepping it, report sealed only as totals. (four sealed menus named, 2026-10-24)
