@@ -86,3 +86,6 @@
 - A font budget is zero-sum: when a new style claims a file, diff the files that leave and the words that lose a real face (Carmine's at 4/4 files, 2026-10-23).
 - A style measured from geometry (a shear over an upright face) is an oblique: synthesis reproduces it, and exceptions written for named styles may not hold for it (fake italic plan, 2026-10-23).
 - Chrome synthesises `font-style: italic`, not an `oblique` angle, over a webfont declared normal: the computed style read oblique while Carmine's Barlow drew upright; look at the drawn face (fake italic, 2026-10-23).
+- To match two readers' word splits, take the items that overlap a run, not only those starting in it: the run's first boundary is otherwise invisible (Bernie's "Baked Clams" item at 72 pt, run "Clams . . . 7" at 100.9 pt, 2026-10-24).
+- A fix built on the second reader's boundaries reaches only what it separates: count what both readers fuse before calling a class closed (Katzinger's "roll....$7.95", 2026-10-24).
+- Freeing a hold publishes the whole row: read every field in order, not only the one held (Bernie's "5 for" heard after its price, 2026-10-24).

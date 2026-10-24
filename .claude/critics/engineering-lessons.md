@@ -127,3 +127,9 @@
 - A step that ran on a few pages and threw on failure becomes an outage when it runs on every page: widen the gate and make its failure degrade together (`withWholeWords`, 2026-10-23).
 - A marker meaning "rerun me under less load" goes only on load-dependent failures: a pdf.js parse error marked `degraded` would drop a document from the measure for good (`withWholeWords`, 2026-10-23).
 - pdf.js text content holds empty, zero-wide end-of-line items with real transforms: a geometric matcher filters them before choosing "nearest" (`slanted`, 2026-10-23).
+- A probe that sizes a rule runs the rule's own predicates: a different filter or regex leaves "N documents change" unproven (fused-word plan, 2026-10-24).
+- Once an optional pdf.js step changes the run count, a slow read must fail the page, never fall back silently: saved answers cite runs by index (`withWholeWords` `Late`, 2026-10-24).
+- A regex shared as a predicate is anchored and has no `g` flag: `.test` on a global regex keeps `lastIndex`, and a substring match calls "Clams . . ." a leader (2026-10-24).
+- A rule added during the visual check gets the same whole-set count as the planned one: the "7 for" order hold first held Howies' "(3 x 25ml serves)" (2026-10-24).
+- A hold for word order fits only words whose meaning depends on the order: "N for" binds to its price, a size reads the same either side (2026-10-24).
+- "Not on its line" is two directions: name the one the case needs, or a fix for heads above flips notes below (Eusebi column heads, 2026-10-24).

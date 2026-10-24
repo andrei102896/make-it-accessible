@@ -188,3 +188,39 @@ test('a price label sits where it is printed, a separator between prices stays o
     /\.doc-menu \.price \.qualifier \{ display: inline; border: 0; padding: 0; color: var\(--muted\); font-weight: 400; font-size: 1rem; \}/,
   )
 })
+
+test('a column head printed above its price is read before it, whatever its x (Eusebi "btl" over "29.5")', () => {
+  const runs: Run[] = [
+    { id: '1:0', str: 'btl', box: { x: 268, y: 20, w: 9, h: 10 }, flow: 0, line: 0 },
+    { id: '1:1', str: 'Grillo', box: { x: 10, y: 40, w: 40, h: 13 }, flow: 0, line: 1 },
+    { id: '1:2', str: '29.5', box: { x: 258.9, y: 40, w: 17.5, h: 13 }, flow: 0, line: 1 },
+  ]
+  const wine = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        {
+          kind: 'products',
+          items: [{ name: { src: [[1, 1]] }, prices: [{ src: [[2, 2]], qualifier: { src: [[0, 0]] } }] }],
+        },
+      ],
+      dropped: [],
+    }),
+  )
+  const html = renderDocument({
+    lang: 'en',
+    title: 'Eusebi',
+    kind: 'menu',
+    pages: [{ ...page, structure: wine, extraction: { ...extraction, runs } }],
+  })
+  assert.match(html, /<span class="qualifier">btl<\/span> <span class="amount">29\.5<\/span>/)
+  // A note printed below and left of its price stays after it.
+  const below = runs.map((r) => (r.id === '1:0' ? { ...r, str: 'pp', box: { ...r.box, x: 250, y: 56 } } : r))
+  const after = renderDocument({
+    lang: 'en',
+    title: 'Eusebi',
+    kind: 'menu',
+    pages: [{ ...page, structure: wine, extraction: { ...extraction, runs: below } }],
+  })
+  assert.match(after, /<span class="amount">29\.5<\/span> <span class="qualifier">pp<\/span>/)
+})

@@ -31,6 +31,9 @@ export function findDuplicates(runs: readonly Run[]): string[] {
   return duplicates
 }
 
+// A leader as a whole: three dot marks or more, spaced or not (Bernie's ". . . .", 2nd Ave's "......").
+export const isLeader = (s: string): boolean => /^\s*(?:[.…·_]\s*){3,}$/u.test(s)
+
 export const touching = (a: Run, b: Run): boolean =>
   a.line === b.line && Math.abs(b.box.x - (a.box.x + a.box.w)) < b.box.h * TOUCHING_GAP
 

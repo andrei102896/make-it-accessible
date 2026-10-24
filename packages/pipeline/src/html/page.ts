@@ -105,10 +105,17 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     // Its words first: placed by its own pieces (a label printed round its amount), it is not placed whole.
     const labelHtml = p.qualifier ? inked(p.qualifier, label, esc, apart ? `${path}.qualifier` : undefined) : esc(label)
     const qualifier = label ? `<span class="qualifier"${own('qualifier')}>${labelHtml}</span>` : ''
-    // The label sits where it is printed: "Bowl 8" before the amount, "3.5 ea" after it.
+    // The label sits where it is printed: "Bowl 8" before the amount, "3.5 ea" after it; on another line, a head
+    // above it first, a note below it after, whatever its x ("250ml 11": Eusebi's heads centred on their column).
     const labelBox = p.qualifier && 'src' in p.qualifier ? unionOf(visibleRuns(p.qualifier)) : null
     const amountBox = unionOf(words)
-    const after = labelBox !== null && amountBox !== null && labelBox.x > amountBox.x
+    const sameLine =
+      labelBox !== null &&
+      amountBox !== null &&
+      labelBox.y < amountBox.y + amountBox.h &&
+      amountBox.y < labelBox.y + labelBox.h
+    const after =
+      labelBox !== null && amountBox !== null && (sameLine ? labelBox.x > amountBox.x : labelBox.y > amountBox.y)
     const sep = SEPARATOR.exec(after ? printedLabel : printed)?.[0] ?? ''
     // An amount its line prints in a style of its own keeps it (Le Dive's italic "Cidre 10", segments.ts).
     const amountHtml = `<span class="${['amount', ...runsClasses(words)].join(' ')}"${own('amount')}>${amountText}</span>`

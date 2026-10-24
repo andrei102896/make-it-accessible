@@ -4,7 +4,7 @@ import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { parsePage, type PageStructure } from '@make-it-accessible/pipeline/model/schema'
 import { readPrinted, type OcrWord } from '@make-it-accessible/pipeline/pdf/ocr'
 import { withIcons, type LegendEntry } from '@make-it-accessible/pipeline/pdf/icons'
-import { parseExtraction, type Extraction } from '@make-it-accessible/pipeline/pdf/types'
+import { parseExtraction, type Extraction, type Run } from '@make-it-accessible/pipeline/pdf/types'
 import { moveIconCites } from './iconcites.ts'
 import { folderStore } from './readings.ts'
 import { extractWhole } from './wholewords.ts'
@@ -32,24 +32,11 @@ export async function refreshedPage(
     })
     return { extraction, structure: parsePage(structureJson), ocr: [] }
   }
-  // The structure cites the text layer's runs by index; icon words come after them and are read afresh.
-  const base = extraction.runs.filter((r) => !r.icon)
-  const freshBase = fresh.runs.filter((r) => !r.icon)
-  if (freshBase.length !== base.length)
-    throw new Error(`${dir}: the PDF gives ${String(freshBase.length)} runs, the saved run has ${String(base.length)}`)
-  extraction.hidden = fresh.hidden
-  extraction.lost = fresh.lost
-  extraction.unmatched = fresh.unmatched
+  const base = freshRuns(dir, extraction, fresh)
   extraction.vectors = fresh.vectors
   extraction.rules = fresh.rules
   extraction.pictures = fresh.pictures
   extraction.icons = fresh.icons
-  base.forEach((r, i) => {
-    const f = freshBase[i]
-    if (f?.color) r.color = f.color
-    if (f?.font) r.font = f.font
-    if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled, slanted: f.slanted })
-  })
   const saved = extraction.runs
   extraction.runs = [...base, ...fresh.runs.filter((r) => r.icon)]
   const structure = parsePage(structureJson)
@@ -60,6 +47,25 @@ export async function refreshedPage(
     return null
   })
   return { extraction, structure: reconciled(structure, extraction), ocr: ocr ?? [] }
+}
+
+// The saved text-layer runs (icon words come after them) with what the PDF gives today: letters, box, face, colour,
+// hidden and lost words. The structure cites them by index, so another number of them throws.
+export function freshRuns(dir: string, saved: Extraction, fresh: Extraction): Run[] {
+  const base = saved.runs.filter((r) => !r.icon)
+  const freshBase = fresh.runs.filter((r) => !r.icon)
+  if (freshBase.length !== base.length)
+    throw new Error(`${dir}: the PDF gives ${String(freshBase.length)} runs, the saved run has ${String(base.length)}`)
+  saved.hidden = fresh.hidden
+  saved.lost = fresh.lost
+  saved.unmatched = fresh.unmatched
+  base.forEach((r, i) => {
+    const f = freshBase[i]
+    if (f?.color) r.color = f.color
+    if (f?.font) r.font = f.font
+    if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled, slanted: f.slanted })
+  })
+  return base
 }
 
 // The PDF page a saved page folder holds (its extraction is written before the model call, so a failed page has it).

@@ -8,6 +8,7 @@ import { fontLibrary } from './brand.ts'
 import { BriefFile } from './look.ts'
 import { ROOT } from './paths.ts'
 import { loadSources } from './sources.ts'
+import { freshRuns } from './refresh.ts'
 import { extractWhole } from './wholewords.ts'
 import {
   columnsPerPage,
@@ -38,15 +39,7 @@ for (const s of sources) {
   const findings = { errors: 0, review: 0 }
   for (const d of (await readdir(s.run)).filter((d) => /^p\d+$/.test(d)).sort()) {
     const extraction = parseExtraction(await readFile(join(s.run, d, 'extraction.json'), 'utf8'))
-    const fresh = await extractWhole(join(ROOT, s.pdf), extraction.pdfPage)
-    extraction.hidden = fresh.hidden
-    extraction.lost = fresh.lost
-    extraction.runs.forEach((r, i) => {
-      const f = fresh.runs[i]
-      if (f?.font) r.font = f.font
-      if (f?.color) r.color = f.color
-      if (f) Object.assign(r, { str: f.str, box: f.box, restored: f.restored, styled: f.styled, slanted: f.slanted })
-    })
+    freshRuns(join(s.run, d), extraction, await extractWhole(join(ROOT, s.pdf), extraction.pdfPage))
     const structure = parsePage(await readFile(join(s.run, d, 'structure.json'), 'utf8'))
     const v = validatePage(structure, extraction)
     findings.errors += v.errors.length

@@ -225,6 +225,14 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
           problem: 'price cites the same words as another price of this item',
         })
     })
+    // A condition bound to the price after it ("7 for $19.95") heard after it says another offer; a size ("750ml
+    // 7.25") reads the same either side.
+    const at = (ranges: readonly Range[]): Run[] => ranges.flatMap(([from, to]) => e.runs.slice(from, to + 1))
+    const unit = item.unit ? at(item.unit.src) : []
+    const amounts = item.prices.flatMap((p) => at(p.src))
+    const binds = /(?:^|\s)(?:for|@|at)$/iu.test(joinRuns(unit).trim())
+    if (binds && unit.every((u) => amounts.some((a) => a.line === u.line && u.box.x + u.box.w <= a.box.x)))
+      review.push({ path: `${path}.unit`, problem: `"${joinRuns(unit)}" is printed before its price, read after it` })
     const words = [
       text(`${path}.name`, item.name),
       ...item.prices.map((p, i) => price(`${path}.prices[${i}]`, p)),
