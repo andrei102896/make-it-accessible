@@ -3,8 +3,11 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { PageScore } from '@make-it-accessible/pipeline/pdf/fidelity-types'
+import { parseGrid, type Grid } from '@make-it-accessible/pipeline/pdf/backdrop'
 import { judgePage } from '@make-it-accessible/pipeline/pdf/fidelity-verdict'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
+import { BACKDROP_FILES } from './backdrop.ts'
+import { backdropParts } from './measure-backdrop.ts'
 import { ROOT } from './paths.ts'
 import { heldErrors } from './preview.ts'
 import { parseReport } from './report.ts'
@@ -131,6 +134,7 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     }
   }
   row.measures.push(...cleanLines(await text(f.fidelity.replace(/\.json$/, '.log')), f.dir))
+  const grids = new Map<string, Grid>()
   for (const d of (await readdir(f.dir)).filter((x) => /^p\d+$/.test(x)).sort()) {
     // Words styled by their line's piece, and lines in mixed styles whose words did not match (pdf/face.ts).
     const read = await text(join(f.dir, d, 'extraction.json'))
@@ -144,10 +148,15 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
     if (e?.unmatched) row.measures.push(`${d} lines in mixed styles unmatched: ${String(e.unmatched)}`)
     add('words styled by their piece', styled)
     add('mixed-style lines unmatched', e?.unmatched ?? 0)
-    const grid = await text(join(f.dir, d, 'backdrop.json'))
-    const shadows = grid
-      ? Object.keys(z.object({ shadows: z.record(z.string(), z.unknown()) }).parse(JSON.parse(grid)).shadows).length
-      : 0
+    const raw = await text(join(f.dir, d, 'backdrop.json'))
+    let grid: Grid | null = null
+    try {
+      grid = raw ? parseGrid(raw) : null
+    } catch {
+      row.problems.push(`${d} backdrop.json unreadable`)
+    }
+    if (grid) grids.set(d, grid)
+    const shadows = Object.keys(grid?.shadows ?? {}).length
     if (shadows) row.cosmetic.push(`${d} shadows: ${String(shadows)}`)
     add('shadows', shadows)
   }
@@ -165,23 +174,35 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
       add(`content ${r.defect} injected`, r.injected)
     }
   }
-  row.pages.push(...(await pageHashes(f.dir)))
+  row.pages.push(...(await pageHashes(f.dir, grids)))
   return { row, totals }
 }
 
-// Each page's own share of the page (its section of index.html and its folder's files) and the fonts beside it.
-async function pageHashes(dir: string): Promise<string[]> {
+// Each page's own share of the page (its section of index.html and its folder's files) and the fonts beside it; a
+// backdrop's pixels on a line of their own, compared within the drift (measure-backdrop.ts).
+async function pageHashes(dir: string, grids: ReadonlyMap<string, Grid>): Promise<string[]> {
   const html = await readFile(join(dir, 'index.html'), 'utf8').catch(() => '')
   const starts = [...html.matchAll(/<section[^>]*\bdata-page="(\d+)"/g)]
   const out = starts.map((m, i) => `p${m[1] ?? ''} section ${sha(html.slice(m.index, starts[i + 1]?.index))}`)
   out.push(`head ${sha(html.slice(0, starts[0]?.index ?? html.length))}`)
+  const webps: readonly string[] = Object.values(BACKDROP_FILES)
+  const webp = (d: string, f: string): Promise<Buffer | null> => readFile(join(dir, d, f)).catch(() => null)
   for (const d of (await readdir(dir, { withFileTypes: true }))
     .filter((e) => e.isDirectory())
     .map((e) => e.name)
     .sort()) {
-    const files = (await readdir(join(dir, d))).filter((x) => x !== 'fidelity.json').sort()
+    const files = (await readdir(join(dir, d))).filter((x) => x !== 'fidelity.json' && !webps.includes(x)).sort()
+    const grid = grids.get(d)
     const h = createHash('sha256')
-    for (const x of files) h.update(x).update(await readFile(join(dir, d, x)))
+    for (const x of files) {
+      if (x !== 'backdrop.json' || !grid) {
+        h.update(x).update(await readFile(join(dir, d, x)))
+        continue
+      }
+      const { rest, line } = backdropParts(d, grid, await webp(d, BACKDROP_FILES.x2), await webp(d, BACKDROP_FILES.x1))
+      h.update(x).update(rest)
+      out.push(line)
+    }
     out.push(`${d} files ${h.digest('hex').slice(0, 12)}`)
   }
   return out

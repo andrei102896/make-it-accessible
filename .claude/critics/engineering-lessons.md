@@ -152,3 +152,8 @@
 - Before moving a stage to "fix" nondeterminism, hash that stage's output with a varying input: the backdrop encode was already a pure function of its source (2026-10-24).
 - A library that keeps references to nodes it put in the document breaks quietly when the host clears the container: it keeps writing into the detached node (pdf.js #_defs, Kenny p7, 2026-10-24).
 - A roadmap tick is checked against the open CASES rows of the same documents before it is written (batch 2, 2026-10-24).
+- A "two rounds in a row show 0 changes" check needs round 1 kept: a baseline keyed by tree is overwritten by round 2 before its diff (measure.ts `file(tree)`, 2026-10-24).
+- A tolerance measured against the first draw understates the drift when there are 3 or more variants: take the largest difference over all pairs (recount, 2026-10-24).
+- A fingerprint taken after a downscale cannot see resolution, blur or encode quality: carry the encoded file's pixel size beside it (backdrop cells vs WebP, 2026-10-24).
+- Before widening a parse into a try/catch "reported elsewhere", check the other place validates the same fields: a loose schema without `shadows` turned a loud failure into a silent 0 (measure-rows docRow, 2026-10-24).
+- A second zod schema for a file the pipeline already parses drifts from it: reuse the owner's `parse*` and destructure (measure-backdrop vs `parseGrid`, 2026-10-24).

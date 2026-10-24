@@ -3,6 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { BACKDROP_FILES } from './backdrop.ts'
+import { emptyGrid } from './measure-grid-fixture.ts'
 import { docRow } from './measure-rows.ts'
 
 test("a document's printed lines under contrast count its masthead too; its cut and overlapping boxes are totalled", async () => {
@@ -62,6 +64,38 @@ test("a document's words styled by their piece, mixed-style lines left unmatched
       [2, 2, 4, 9],
     )
     assert.ok(row.measures.includes('p01 lines in mixed styles unmatched: 2'))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test("a page's backdrop: its WebP bytes and pixels out of the files hash; an unreadable backdrop.json is one problem", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mia-rows-'))
+  try {
+    await writeFile(join(dir, 'held.json'), '[]')
+    await mkdir(join(dir, 'p01'))
+    const files = {
+      dir,
+      rebuild: join(dir, 'none'),
+      fidelity: join(dir, 'none'),
+      content: join(dir, 'none'),
+      check: join(dir, 'none'),
+    }
+    const pages = async (webp: string, mean: string): Promise<string[]> => {
+      await writeFile(join(dir, 'p01', BACKDROP_FILES.x2), webp)
+      await writeFile(join(dir, 'p01', 'backdrop.json'), JSON.stringify({ ...emptyGrid(1), mean: [mean] }))
+      return (await docRow(files, [])).row.pages
+    }
+    const [a, b] = [await pages('one', '#ffffff'), await pages('two', '#fefefe')]
+    assert.equal(
+      a.find((l) => l.startsWith('p01 files')),
+      b.find((l) => l.startsWith('p01 files')),
+    )
+    assert.ok(a.some((l) => l.startsWith('p01 backdrop 1x1 none none ')))
+    await writeFile(join(dir, 'p01', 'backdrop.json'), JSON.stringify({ ...emptyGrid(1), shadows: 5 }))
+    const { row } = await docRow(files, [])
+    assert.deepEqual(row.problems, ['p01 backdrop.json unreadable'])
+    assert.ok(!row.pages.some((l) => l.includes('backdrop ')))
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

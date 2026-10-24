@@ -100,3 +100,5 @@
 - A reference drawn by the same code as the output shares its bugs: the fidelity gate and the review "PDF" both drew Cattlemen's p2 as empty panels (2026-10-24).
 - Clearing the page between pdf.js renders removes its SVG filter defs: later pages lose their luminosity soft masks without an error (Kenny p7/p8, Cattlemen's p2, 2026-10-24).
 - Swapping canvases is not "the same pixels": OffscreenCanvas ignores url() filters and draws hairlines aliased; check soft masks and fine ornaments (Gage's ornament dotted, 2026-10-24).
+- Set a drift tolerance at the resolution the drift was measured at: 40 pt blocks would have hidden 17 % of dropped prices that 8 pt cells catch (backdrop comparison, 2026-10-24).
+- A guard against something vanishing from the print cannot lean on checks that read another renderer: printedReads reads Poppler's inks, fidelity draws with the same pdf.js (2026-10-24).

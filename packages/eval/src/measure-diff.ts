@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { backdropsCompared } from './measure-backdrop.ts'
 import { addTotals, CATEGORIES, DocRow, emptyRow, sha, type Totals } from './measure-rows.ts'
 
 // A round's results and how they differ from another round's, set by set (verify-learn first: rules are judged on
@@ -92,7 +93,8 @@ export function diff(now: Baseline, was: Baseline | null): { shown: string[]; fu
       const lines: string[] = []
       let docs = 0
       for (const slug of [...slugs].sort()) {
-        const [x, y] = [set.docs[slug]?.row[c] ?? [], before.docs[slug]?.row[c] ?? []]
+        const [mine, theirs] = [set.docs[slug]?.row[c] ?? [], before.docs[slug]?.row[c] ?? []]
+        const [x, y] = c === 'pages' ? backdropsCompared(mine, theirs) : [mine, theirs]
         const added = x.filter((l) => !y.includes(l))
         const gone = y.filter((l) => !x.includes(l))
         if (!added.length && !gone.length) continue
