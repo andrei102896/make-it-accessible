@@ -145,3 +145,6 @@
 - A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).
 - A join rule written for one market runs on every page that shares the function: check it on the other market's forms (the raised-cents rule joined leaflet "2" + ",69", 2026-10-24).
 - A new check over all cited words reaches cases older tests mark "not joined": run those fixtures through it ("1.99" + footnote "2" now held, 2026-10-24).
+- Before blaming the GPU for a render difference, read the browser's feature status (CDP SystemInfo.getInfo): Playwright's headless shell already draws canvas in software (SwiftShader) (raster plan, 2026-10-24).
+- A determinism probe hashes every byte, at production size, with enough draws to beat the flip rate: a 1-in-7 byte hash of 6 draws "proved" flags that still give 2 of 8 at 2858 px (2026-10-24).
+- Locate a nondeterministic difference in the raw canvas before describing it from an encoded file: lossy WebP spread 14 changed icon pixels into "0.44 %, text edges" (Howies p1, 2026-10-24).

@@ -95,3 +95,5 @@
 - out/rebuilt holds the sealed documents too: before grepping it, drop every slug whose group is verify-sealed in validation/private/verify-sources.json, and report sealed only as totals (add-on round, 2026-10-24: four sealed menus were read and named).
 - An amount must account for every digit its cited words print: a dropped ".95" read "$13.95" as 13, and with the sign on the digits it would show "$24.00" as proven (2026-10-24).
 - Count changes in shown text, not only wrong amounts: Bernie's ".00" prices "read right" yet move from printed to formatted, some to whole (2026-10-24).
+- A rendering flag counts as a fix only if the bytes change: compare flagged and default draws first (software-canvas flags gave identical PNGs, 2026-10-24).
+- A decision taken from a measured grid needs a margin wider than the raster's drift, or a republish changes the reader's colours (Kenny ink 0.981 ↔ 0.980, 2026-10-24).
