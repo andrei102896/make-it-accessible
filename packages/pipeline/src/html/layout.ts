@@ -273,10 +273,15 @@ export function bandsOf(
 }
 
 export function layoutOf(page: Page, first: boolean, body: number, title: string, logo = false): Layout {
-  const segments = segmentsOf(page, first, body, title, logo)
+  const found = segmentsOf(page, first, body, title, logo)
   const shapes = shapesOf(page)
+  const boxes = boxesOf(page, found.header, found.tail)
+  // Small print printed in a box with content is part of that box (Howies' BOOK NOW in its navy band): it and every
+  // block before it are content, so the tail stays the page's last blocks.
+  const joined = boxes.boxes.flatMap((b) => (b.blocks.some((i) => !found.tail.has(i)) ? b.blocks : []))
+  const last = Math.max(-1, ...joined.filter((i) => found.tail.has(i)))
+  const segments = { ...found, tail: new Set([...found.tail].filter((i) => i > last)) }
   const bands = splitBands(page, bandsOf(page, segments.header, segments.tail, shapes))
-  const boxes = boxesOf(page, new Set([...segments.header, ...segments.tail]))
   return { ...segments, bands, shapes, boxes, align: alignmentsOf(page), lines: linesOf(page, bands, boxes) }
 }
 

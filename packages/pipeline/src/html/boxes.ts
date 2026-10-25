@@ -6,7 +6,7 @@ import { fromHex } from './color.ts'
 import { unionOf } from './profile.ts'
 import { citedRuns } from './source.ts'
 import type { Drawn } from './brand.ts'
-import { darkGround, inkMoves, inkOn, lightMoves, onFill, paintOf, type Paint } from './ground.ts'
+import { darkGround, focusOn, inkMoves, inkOn, lightMoves, onFill, paintOf, type Paint } from './ground.ts'
 
 // The PDF's frames and panels (pdf/vectors.ts) as boxes round the blocks printed inside them. A frame holding most
 // of the page's content is the page's own frame (Almond, Rucola, Noah's drinks): a border round the page section.
@@ -78,8 +78,9 @@ const onTopEdge = (v: Box, b: Box): boolean => {
 const onEdge = (v: Vector, b: Box): boolean =>
   onTopEdge(v.box, b) && (groundOf(v) === null || centre(b)[1] >= v.box.y - ON_FILL)
 
-// The page's boxes: each content block (header and tail left out) belongs to the smallest box holding it.
-export function boxesOf(page: Page, skip: ReadonlySet<number>): Boxes {
+// The page's boxes: each block (`skip` left out: the header) belongs to the smallest box holding it; the page frame
+// is the one holding most of the content, `small` (the small print) not counted.
+export function boxesOf(page: Page, skip: ReadonlySet<number>, small: ReadonlySet<number> = new Set()): Boxes {
   const vectors = [...(page.extraction.vectors ?? [])].sort((a, b) => area(a.box) - area(b.box))
   if (!vectors.length) return NO_BOXES
   const e = page.extraction
@@ -87,11 +88,12 @@ export function boxesOf(page: Page, skip: ReadonlySet<number>): Boxes {
     const box = skip.has(i) ? null : blockBox(b, e)
     return box ? [{ i, b, box }] : []
   })
+  const counted = content.filter((c) => !small.has(c.i))
   const pageFrame =
     [...vectors]
       .reverse()
       .find(
-        (v) => v.kind === 'frame' && content.filter((c) => holds(v.box, c.box)).length >= content.length * PAGE_HOLDS,
+        (v) => v.kind === 'frame' && counted.filter((c) => holds(v.box, c.box)).length >= counted.length * PAGE_HOLDS,
       ) ?? null
   const members = new Map<Vector, number[]>()
   for (const c of content) {
@@ -208,23 +210,28 @@ export function boxesCss(boxes: readonly Look[], drawn: Drawn): string {
     if (ground === null) return [`.${cls} { ${rule} }`]
     // A fill whose words cannot be made readable stays a frame in its colour.
     if (!ink && darkGround(fromHex(ground))) return [`.${cls} { border: 2px solid ${ground}; }`]
+    // Its own ground for a notch cut into a box inside it, and a focus ring at 3:1 on it.
+    const own = `--bg: ${ground}; --focus: ${focusOn(fromHex(ground))};`
     if (ink) {
       const paint = { fill: ground, ink, kept }
       return [
-        `.${cls} { background: ${ground}; ${rule} ${inkOn(ink, ground)} }`,
+        `.${cls} { background: ${ground}; ${own} ${rule} ${inkOn(ink, ground)} }`,
         ...inkMoves(drawn, paint, ink, `.${cls}`),
       ]
     }
     return [
-      `.${cls} { background: ${ground}; ${rule}${onFill(drawn, fromHex(ground))} }`,
+      `.${cls} { background: ${ground}; ${own} ${rule}${onFill(drawn, fromHex(ground))} }`,
       ...lightMoves(drawn, fromHex(ground), `.${cls}`),
     ]
   })
   return [
     '.box { padding: .75rem clamp(.5rem, 3vw, 1.25rem); margin: 0 0 1.25rem; } .box > :first-child { margin-top: 0; }',
+    '.box > :last-child { margin-bottom: 0; }',
     'section.box { padding-block: 1rem; } .box > p { max-width: 65ch; }',
     '.box.notched > :first-child { width: fit-content; max-width: 100%; margin: calc(-.75rem - .7em) 0 .5rem; padding: 0 .5em; background: var(--bg); }',
     '.box.notched.centred > :first-child { margin-inline: auto; }',
     ...looks,
+    // Small print stays muted in its box (a box restates the text colour; `--muted` is set per fill).
+    '.small-print .box { color: var(--muted); }',
   ].join('\n')
 }

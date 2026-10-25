@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { parsePage } from '../model/schema.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import { fitScale } from '../pdf/raster.ts'
-import { assemble, bandsOf, segmentsOf } from './layout.ts'
+import { assemble, bandsOf, layoutOf, segmentsOf } from './layout.ts'
 import { NO_LINES } from './lines.ts'
 
 // A 600 x 800 pt page; words at (x, y) with a font size; 6 pt per character wide.
@@ -230,4 +230,75 @@ test('a narrow column beside lists that flow across the rest of the page is a si
   // narrow dressings note): no band forms around it.
   const wide = new Map([[1, { wide: true, runOn: true }]])
   assert.deepEqual(bandsOf({ structure: s, extraction: e }, new Set(), new Set(), wide), [])
+})
+
+// A navy band at the foot: its heading, hours and BOOK NOW printed on it; a VAT line below it, on the page.
+const band = (vatOnBand: boolean) => {
+  const e = page([
+    ['OPENING', 40, 650, 16],
+    ['Daily', 40, 700, 10],
+    ['BOOK', 40, 760, 7],
+    ['VAT', 40, 790, 7],
+  ])
+  const panel = { kind: 'panel' as const, color: '#073b5a', width: 0, rounded: false, double: false }
+  const h = vatOnBand ? 160 : 140
+  return {
+    extraction: { ...e, vectors: [{ ...panel, box: { x: 20, y: 640, w: 560, h } }] },
+    structure: parsePage(
+      JSON.stringify({
+        lang: 'en',
+        blocks: [
+          { kind: 'heading', level: 2, text: { src: [[0, 0]] } },
+          ...[1, 2, 3].map((i) => ({ kind: 'paragraph', text: { src: [[i, i]] } })),
+        ],
+        dropped: [],
+      }),
+    ),
+  }
+}
+
+test('small print printed in a box with content joins it; small print after it, off the box, stays the tail', () => {
+  const layout = layoutOf(band(false), false, 10, 'Howies')
+  assert.deepEqual([...layout.tail], [3])
+  assert.deepEqual(
+    layout.boxes.boxes.map((b) => b.blocks),
+    [[0, 1, 2]],
+  )
+  // All of it on the band: still one box, nothing left as small print.
+  assert.deepEqual([...layoutOf(band(true), false, 10, 'Howies').tail], [])
+})
+
+test('a box holding small print only is wrapped inside the footer, muted', () => {
+  const e = page([
+    ['Pasta', 40, 300, 10],
+    ['Legend:', 40, 780, 7],
+  ])
+  const legend = {
+    kind: 'panel' as const,
+    color: '#000000',
+    width: 0,
+    rounded: false,
+    double: false,
+    box: { x: 20, y: 770, w: 400, h: 25 },
+  }
+  const structure = parsePage(
+    JSON.stringify({
+      lang: 'en',
+      blocks: [
+        { kind: 'paragraph', text: { src: [[0, 0]] } },
+        { kind: 'paragraph', text: { src: [[1, 1]] } },
+      ],
+      dropped: [],
+    }),
+  )
+  const layout = layoutOf({ structure, extraction: { ...e, vectors: [legend] } }, false, 10, 'Millie')
+  assert.deepEqual([...layout.tail], [1])
+  const out = assemble(
+    [
+      { at: 0, html: '<p>Pasta</p>' },
+      { at: 1, html: '<p>Legend:</p>' },
+    ],
+    layout,
+  )
+  assert.match(out.at(-1) ?? '', /^<footer class="small-print">\n<div class="box panel-000000/)
 })
