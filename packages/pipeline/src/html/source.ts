@@ -70,11 +70,13 @@ export function visibleText(
     if (prev && prev.line !== r.line && /\p{L}-$/u.test(prev.str) && /^\p{Lu}/u.test(r.str)) chunks.push([])
     chunks.at(-1)?.push(r)
   })
-  // A currency sign set tight against a word ("for£3.50") gets the space a reader expects.
+  // A currency sign set tight against a word ("for£3.50") gets the space a reader expects; a private-use glyph names
+  // no character (Sarge's hyphens as U+F6BA) and would show as a box.
   const printed = chunks
     .map((c) => joinRuns(c))
     .join('')
     .replace(/(\p{L})([£$€])/gu, '$1 $2')
+    .replace(/\p{Co}/gu, '')
   // The model's text stands in for a broken text layer ("Truf e", or small-caps glyphs read as "MEatball app"),
   // never for a printed case the layer reports whole ("RAW BAR").
   const recased =

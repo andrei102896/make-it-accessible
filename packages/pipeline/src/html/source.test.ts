@@ -240,3 +240,10 @@ test('a line is cut before an icon the backdrop keeps: its words before it fit t
   const pieces = lineParts({ src: [[0, 3]] }, far, 'oaties ( NGCI available)') ?? []
   assert.equal(pieces.filter((p) => 'runs' in p)[0]?.text, 'oaties (')
 })
+
+test("a private-use glyph shows nothing: the model's reading stands in where it gave one (Sarge's SNAP-O-RAZZO)", () => {
+  const runs: Run[] = [{ id: '1:0', str: 'SNAPORAZZO', box: { x: 0, y: 0, w: 60, h: 10 }, flow: 0, line: 0 }]
+  const e: Extraction = { pdfPage: 1, width: 600, height: 800, runs, images: [], duplicates: [], hidden: [] }
+  assert.equal(visibleText({ src: [[0, 0]] }, e), 'SNAPORAZZO')
+  assert.equal(visibleText({ src: [[0, 0]], text: 'SNAP-O-RAZZO' }, e), 'SNAP-O-RAZZO')
+})
