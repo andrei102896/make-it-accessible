@@ -92,3 +92,13 @@ export async function heldErrors(docDir: string): Promise<string[]> {
     ? parsed.data.map((f) => `p${String(f.pdfPage)} ${f.path}: ${f.problem}`)
     : ['held.json unreadable: rebuild it']
 }
+
+// A held document whose every finding names the words the page shows there (a doubt, words read from a picture): one
+// its owner can clear by confirming them beside the PDF. An error or a page-level finding names none and blocks.
+export async function ownerClearable(docDir: string): Promise<boolean> {
+  const raw = await readFile(join(docDir, HELD_FILE), 'utf8').catch(() => null)
+  const parsed = z
+    .array(z.object({ words: z.string().nullable().optional() }))
+    .safeParse(raw === null ? null : JSON.parse(raw))
+  return parsed.success && parsed.data.length > 0 && parsed.data.every((f) => typeof f.words === 'string')
+}
