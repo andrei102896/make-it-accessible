@@ -6,6 +6,7 @@ import type { Block, ImageValue, Item, PageStructure, PriceValue, TextValue } fr
 import { pageCurrency, SIZED } from '../text/money.ts'
 import { canon } from '../text/normalize.ts'
 import { consistencyFindings } from './consistency.ts'
+import { doubleWords, type Citation } from './doubles.ts'
 import { iconMarks } from './iconmarks.ts'
 import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, sizesPrinted, wordsOfPicture } from './proof.ts'
 
@@ -82,6 +83,7 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
   const review: Finding[] = []
   const generated: Finding[] = []
   const citations = new Map<number, number>()
+  const cited: Citation[] = []
   const seenTexts: string[] = []
   const figureAlts: { path: string; img: ImageValue }[] = []
   const hidden = new Set(e.hidden)
@@ -114,7 +116,9 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
         // A hidden word inside a cited range is not published (the renderer skips it too).
         if (hidden.has(run.id)) return
         out.push(run)
-        if (count) citations.set(from + offset, (citations.get(from + offset) ?? 0) + 1)
+        if (!count) return
+        citations.set(from + offset, (citations.get(from + offset) ?? 0) + 1)
+        if (path !== 'dropped') cited.push({ run: from + offset, path })
       })
     }
     return out
@@ -255,6 +259,7 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
   }
 
   page.blocks.forEach((b, i) => block(`blocks[${i}]`, b, true))
+  errors.push(...doubleWords(cited, e.runs))
   runsOf('dropped', page.dropped)
   const pageWords = [joinRuns(e.runs.filter((r) => !hidden.has(r.id))), ...seenTexts].join(' ')
   figureAlts.forEach((f) => {
