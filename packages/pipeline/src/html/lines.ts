@@ -47,13 +47,17 @@ function placedOf(page: Page): Placed[] {
   })
 }
 
-// The page's rules, less those on a frame's edge (a frame drawn as separate strokes).
+// The page's rules, less those along a frame's edge (a frame drawn as separate strokes).
 function rulesOf(e: Extraction): Rule[] {
   const frames = (e.vectors ?? []).filter((v) => v.kind === 'frame').map((v) => v.box)
   const onEdge = (r: Rule, f: Box): boolean =>
     level(r)
-      ? [f.y, f.y + f.h].some((y) => Math.abs(r.box.y - y) <= ON_FRAME)
-      : [f.x, f.x + f.w].some((x) => Math.abs(r.box.x - x) <= ON_FRAME)
+      ? r.box.x < f.x + f.w &&
+        r.box.x + r.box.w > f.x &&
+        [f.y, f.y + f.h].some((y) => Math.abs(r.box.y - y) <= ON_FRAME)
+      : r.box.y < f.y + f.h &&
+        r.box.y + r.box.h > f.y &&
+        [f.x, f.x + f.w].some((x) => Math.abs(r.box.x - x) <= ON_FRAME)
   return (e.rules ?? []).filter((r) => !frames.some((f) => onEdge(r, f)))
 }
 

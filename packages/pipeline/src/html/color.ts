@@ -12,6 +12,10 @@ export function contrast(a: Rgb, b: Rgb): number {
   return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05)
 }
 
+export const average = (cs: readonly Rgb[]): Rgb => {
+  const of = (k: 0 | 1 | 2): number => cs.reduce((s, c) => s + c[k], 0) / Math.max(1, cs.length)
+  return [of(0), of(1), of(2)]
+}
 export const hex = (c: Rgb): string => `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`
 export function fromHex(h: string): Rgb {
   const n = Number.parseInt(h.slice(1), 16)

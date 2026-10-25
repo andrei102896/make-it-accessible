@@ -11,6 +11,7 @@ import { ROLES } from './profile.ts'
 import { boxesCss } from './boxes.ts'
 import { GUTTER_PX, printCss, printFloor, printWidth, viewSwitch } from './print.ts'
 import { asDrawn } from './printink.ts'
+import { asSeen } from './seen.ts'
 import { css } from './style.ts'
 
 export type { HtmlDocument, HtmlPage } from './types.ts'
@@ -29,7 +30,11 @@ export function renderDocument(doc: HtmlDocument): string {
   // Header and tail segments exist only with a brand: a page without one renders as before.
   const brand = doc.brand
   const logo = brand ? (doc.logo ?? null) : null
-  const segments = doc.pages.map((p, i) =>
+  const inks = new Set(brand?.profile.inks ?? [])
+  // Each word in the ink it is drawn in (the text layer can colour it otherwise: Ruth's yellow drawn, black in it), and
+  // each box as printed (seen.ts): the boxes and their colours are laid out from both.
+  const shown = doc.pages.map((p) => asSeen(asDrawn(p, inks)))
+  const segments = shown.map((p, i) =>
     brand ? layoutOf(p, i === 0, brand.profile.body, doc.title, i === 0 && logo !== null) : NO_LAYOUT,
   )
   const columns = Math.max(0, ...segments.flatMap((l) => l.bands.map((b) => b.columns.length)))
@@ -38,7 +43,7 @@ export function renderDocument(doc: HtmlDocument): string {
   const smallCaps = new Set(ROLES.filter((r) => brand?.profile.roles[r]?.smallCaps))
   const vectors = segments.flatMap((l) => [
     ...l.boxes.boxes,
-    ...(l.boxes.pageFrame ? [{ vector: l.boxes.pageFrame, ink: null }] : []),
+    ...(l.boxes.pageFrame ? [{ vector: l.boxes.pageFrame, ink: null, kept: [] }] : []),
   ])
   // The rules the vector layer places replace the ones measured from the render, so a line is never drawn twice.
   const looks = new Map(segments.flatMap((l) => [...l.lines.looks]))
@@ -48,9 +53,6 @@ export function renderDocument(doc: HtmlDocument): string {
   const masthead = { key: titleKey, logoShare: segments[0]?.logoShare ?? logo?.share ?? null }
   const look = brand ? { ...brand, rules, masthead, columns, pages: doc.pages.map((p) => p.keyPage) } : null
   const drawn = look && paintedOf(look)
-  const inks = new Set(brand?.profile.inks ?? [])
-  // Each word in the ink it is drawn in: the text layer can colour it otherwise (Ruth's yellow drawn, black in it).
-  const shown = doc.pages.map((p) => asDrawn(p, inks))
   const grounds = shown.map(groundOf)
   const rendered = shown.map((p, index) =>
     renderPage(p, {

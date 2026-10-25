@@ -22,7 +22,7 @@ type Box = { x: number; y: number; w: number; h: number }
 const AA = 4.5
 // A background this close to white is a plain page: no band.
 const PLAIN = 1.25
-const SAMPLE_DPI = 72
+export const SAMPLE_DPI = 72
 const MIN_SHARE = 0.03
 const MAX_SWATCHES = 5
 const WHITE: Rgb = [255, 255, 255]
@@ -30,7 +30,7 @@ const BLACK: Rgb = [0, 0, 0]
 
 // Colours quantised to 16 levels per channel, most frequent first, each the mean of its own pixels (the print's
 // colour, not the bucket's centre: Carew's #212c46 was #282848).
-function ranked(samples: readonly Rgb[]): { c: Rgb; share: number }[] {
+export function ranked(samples: readonly Rgb[]): { c: Rgb; share: number }[] {
   const buckets = new Map<string, { n: number; sum: Rgb }>()
   for (const c of samples) {
     const k = bucket(c)
@@ -42,27 +42,24 @@ function ranked(samples: readonly Rgb[]): { c: Rgb; share: number }[] {
     .map(({ n, sum }) => ({ c: [sum[0] / n, sum[1] / n, sum[2] / n], share: n / samples.length }))
 }
 // The ground behind a page's words: the commonest colour in the ring round them (sample), with its share of it.
-export async function pageGround(
-  pdf: string,
-  pdfPage: number,
-  runs: readonly Run[],
-): Promise<{ c: Rgb; share: number } | null> {
-  const { img, boxes } = await pagePixels(pdf, pdfPage, runs)
-  return ranked(sample(img, boxes).ring)[0] ?? null
-}
+export const pageGround = (img: Pixels, boxes: readonly Box[]): { c: Rgb; share: number } | null =>
+  ranked(sample(img, boxes).ring)[0] ?? null
 
 // Colours are read only at the text: ink inside the word boxes, background in a ring around them, so photos
-// (often most of a page) never decide the theme. `boxes` are in the image's pixels.
-export function sample(img: Pixels, boxes: readonly Box[]): { ring: Rgb[]; inside: Rgb[] } {
+// (often most of a page) never decide the theme. `boxes` are in the image's pixels; `within`: the ring is kept there.
+export function sample(img: Pixels, boxes: readonly Box[], within: Box | null = null): { ring: Rgb[]; inside: Rgb[] } {
   const ring: Rgb[] = []
   const inside: Rgb[] = []
   const clamp = (v: number, max: number): number => Math.min(max - 1, Math.max(0, Math.round(v)))
+  const kept = (x: number, y: number): boolean =>
+    !within || (x >= within.x && x < within.x + within.w && y >= within.y && y < within.y + within.h)
   for (const b of boxes) {
     const pad = Math.max(1, b.h * 0.25)
-    for (let x = b.x - pad; x <= b.x + b.w + pad; x++) {
-      ring.push(img.at(clamp(x, img.width), clamp(b.y - pad, img.height)))
-      ring.push(img.at(clamp(x, img.width), clamp(b.y + b.h + pad, img.height)))
-    }
+    for (let x = b.x - pad; x <= b.x + b.w + pad; x++)
+      for (const y of [b.y - pad, b.y + b.h + pad]) {
+        const [cx, cy] = [clamp(x, img.width), clamp(y, img.height)]
+        if (kept(cx, cy)) ring.push(img.at(cx, cy))
+      }
     for (let y = b.y; y <= b.y + b.h; y++)
       for (let x = b.x; x <= b.x + b.w; x++) inside.push(img.at(clamp(x, img.width), clamp(y, img.height)))
   }

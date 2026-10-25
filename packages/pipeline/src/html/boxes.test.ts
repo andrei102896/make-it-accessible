@@ -88,7 +88,7 @@ test('each block belongs to the smallest box holding it; a heading on the top ed
   assert.equal(boxes[2]?.ink, '#ffffff')
   assert.match(
     boxesCss(boxes, PAGE),
-    /section \.box\.panel-191716-ffffff\.panel-191716-ffffff \* \{ color: #ffffff; \}/,
+    /\.panel-191716-ffffff \{ background: #191716; [^}]*--fg: #ffffff; color: #ffffff;/,
   )
   assert.match(boxesCss(boxes, PAGE), /\.frame-aa1e2e-3 \{ border: 3px solid #aa1e2e; \}/)
 })
@@ -111,6 +111,7 @@ test('boxes wrap inside a column, round a whole band, or not at all when they st
     notched: false,
     centred: false,
     ink: null,
+    kept: [],
   })
   const band = {
     columns: [
@@ -135,7 +136,7 @@ test('boxes wrap inside a column, round a whole band, or not at all when they st
 
 test("a light panel moves the page's secondary grey until it reads on the fill (Kenny & Ziggy's salmon)", () => {
   const salmon: Vector = { ...frame(0, 0, 100, 100), kind: 'panel', color: '#ebb6a5', width: 0 }
-  const css = boxesCss([{ vector: salmon, ink: null }], PAGE)
+  const css = boxesCss([{ vector: salmon, ink: null, kept: [] }], PAGE)
   const muted = /--muted: (#[0-9a-f]{6});/.exec(css)?.[1]
   if (!muted) throw new Error('no muted grey on the panel')
   assert.ok(contrast(fromHex(muted), fromHex('#ebb6a5')) >= 4.5)
@@ -156,8 +157,8 @@ test("a filled frame keeps its fill and its printed rule; its colours move each 
   }
   const css = boxesCss(
     [
-      { vector: card, ink: null },
-      { vector: strip, ink: null },
+      { vector: card, ink: null, kept: [] },
+      { vector: strip, ink: null, kept: [] },
     ],
     drawn,
   )
@@ -198,7 +199,12 @@ test("a frame's fill moves without touching its rule; a heading printed on a fil
 
 test('a dark document on a light fill moves its light text there', () => {
   const panel: Vector = { ...frame(0, 0, 100, 100), kind: 'panel', color: '#f7ecdf', width: 0 }
-  const css = boxesCss([{ vector: panel, ink: null }], { text: '#f2f2f2', muted: '#c4c4c4', accent: null, painted: [] })
+  const css = boxesCss([{ vector: panel, ink: null, kept: [] }], {
+    text: '#f2f2f2',
+    muted: '#c4c4c4',
+    accent: null,
+    painted: [],
+  })
   const fg = /--fg: (#[0-9a-f]{6}); color: \1;/.exec(css)?.[1]
   if (!fg) throw new Error(css)
   assert.ok(contrast(fromHex(fg), fromHex('#f7ecdf')) >= 4.5)

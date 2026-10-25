@@ -1,6 +1,6 @@
 import { sameInk, type Grid } from '../pdf/backdrop.ts'
 import type { Box } from '../pdf/types.ts'
-import { contrast, fromHex, luminance, type Rgb } from './color.ts'
+import { average, contrast, fromHex, luminance, type Rgb } from './color.ts'
 import type { HtmlPage } from './types.ts'
 
 // The letters' bodies sit in the middle of a word's box: a cell counts when at least half of it lies within the
@@ -69,10 +69,6 @@ export function asDrawn(page: HtmlPage, inks: ReadonlySet<string>): HtmlPage {
   return { ...page, extraction: { ...page.extraction, runs } }
 }
 
-const average = (cs: readonly Rgb[]): Rgb => {
-  const of = (k: 0 | 1 | 2): number => cs.reduce((s, c) => s + c[k], 0) / Math.max(1, cs.length)
-  return [of(0), of(1), of(2)]
-}
 const blend = (c: Rgb, under: Rgb, alpha: number): Rgb => [
   c[0] * alpha + under[0] * (1 - alpha),
   c[1] * alpha + under[1] * (1 - alpha),

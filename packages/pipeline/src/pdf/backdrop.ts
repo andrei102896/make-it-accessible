@@ -12,7 +12,7 @@ import type { Box } from './types.ts'
 // The light range is kept per cell of this many points.
 export const CELL = 8
 // backdrop.json's shape; a build writes it afresh before reading it, so an older file is never read.
-export const BACKDROP_VERSION = 11
+export const BACKDROP_VERSION = 12
 // A copy of the words further off than this share of their height is no shadow of theirs; nearer than MIN_OFFSET pt
 // it is the same ink drawn twice.
 const SHADOW_REACH = 0.5
@@ -40,6 +40,7 @@ const EDGE = 0.5
 
 const Hex = z.string().regex(/^#[0-9a-f]{6}$/)
 const Shadow = z.object({ color: Hex, dx: z.number(), dy: z.number() }).strict()
+const Look = z.enum(['fill', 'edge', 'rule', 'none'])
 const Stroke = z.object({ color: Hex, width: z.number().positive() }).strict()
 // pNN/backdrop.json: per cell (row by row) the darkest and lightest relative luminance and the mean colour; per
 // placed word its drawn ink and opacity, its printed shadow, and whether it is drawn at all (printedOf).
@@ -66,6 +67,14 @@ const Grid = z
     capsFaces: z.array(z.string()),
     // The ground behind most of the page's words when it is not plain paper (eval/backdrop.ts), else null.
     ground: Hex.nullable(),
+    // Each fill as the print shows it, by its index among the page's `vectors` (html/seen.ts); null: not measured.
+    fills: z
+      .object({
+        vectors: z.number().int().nonnegative(),
+        looks: z.array(z.object({ index: z.number().int().nonnegative(), look: Look, colour: Hex }).strict()),
+      })
+      .strict()
+      .nullable(),
   })
   .strict()
 export type Grid = z.infer<typeof Grid>

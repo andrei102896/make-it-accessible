@@ -22,6 +22,7 @@ const blank: Grid = {
   ends: {},
   capsFaces: [],
   ground: null,
+  fills: null,
 }
 
 test("each word takes its drawn colour, named by the brand ink it matches: the text layer's colour on the wrong letters moves (Kenny & Ziggy's CAKES & PIES)", () => {

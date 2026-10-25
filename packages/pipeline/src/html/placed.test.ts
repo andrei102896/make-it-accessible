@@ -59,6 +59,7 @@ const white: Grid = {
   ends: {},
   capsFaces: [],
   ground: null,
+  fills: null,
 }
 
 test('each leaf is a box at its printed place and size, its ink only counted; text read from a picture has no spot', () => {

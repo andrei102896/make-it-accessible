@@ -151,3 +151,19 @@ test('a rule above a row rules the first block of each column; one with nothing 
     ],
   )
 })
+
+test("a frame's edge takes only the rules along it, not one at its height in another column", () => {
+  const vectors = [
+    ...(extraction.vectors ?? []),
+    {
+      kind: 'frame' as const,
+      box: { x: 560, y: 106, w: 30, h: 40 },
+      color: '#231f20',
+      width: 1,
+      rounded: false,
+      double: false,
+    },
+  ]
+  const lines = linesOf({ structure, extraction: { ...extraction, vectors } }, [], NO_BOXES)
+  assert.equal(lines.blocks.get(0), 'ruled rule-through rule-left rule-right ln-dotted-231f20-1')
+})

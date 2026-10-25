@@ -3,7 +3,14 @@ import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import { placedRuns } from '@make-it-accessible/pipeline/html/source'
 import { backdropScale, printWidth } from '@make-it-accessible/pipeline/html/print'
-import { BACKDROP_VERSION, tiltedOf, CELL, luminanceGrid, printedOf } from '@make-it-accessible/pipeline/pdf/backdrop'
+import {
+  BACKDROP_VERSION,
+  tiltedOf,
+  CELL,
+  luminanceGrid,
+  printedOf,
+  type Grid,
+} from '@make-it-accessible/pipeline/pdf/backdrop'
 import { MAX_BUFFER, pageSvg, popplerBytes } from '@make-it-accessible/pipeline/pdf/poppler'
 import { flaggedPaths } from '@make-it-accessible/pipeline/validate/validate'
 import type { PageResult } from './process.ts'
@@ -13,7 +20,8 @@ import { pdfFacts, SAME_FRAME } from './pdfjs.ts'
 import { CAPTURE_PX, openPdf, type PdfTab } from './pdfshot.ts'
 import { degraded } from '@make-it-accessible/pipeline/degraded'
 import { hex, paper, type Rgb } from '@make-it-accessible/pipeline/html/color'
-import { pageGround } from '@make-it-accessible/pipeline/html/theme'
+import { pageGround, pagePixels } from '@make-it-accessible/pipeline/html/theme'
+import { fillsOf } from '@make-it-accessible/pipeline/html/seen'
 import { visible } from './look.ts'
 
 // WebP at this quality draws Ferrara's 8 pt red italic as the lossless render does, at a seventh of its size.
@@ -101,7 +109,7 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
           ...printedOf(page, words),
           kept: [...tilted],
           capsFaces,
-          ground: await groundOf(pdf, r),
+          ...(await seenOf(pdf, r)),
         }),
       )
     }
@@ -113,16 +121,21 @@ export async function writeBackdrops(pdf: string, results: readonly PageResult[]
 }
 
 // A page's own ground: the colour behind at least PAGE_GROUND of the ring round its words, measured as the document's
-// background is (theme.ts, Poppler). Shares cluster at .45–.55 and the next is .76: the bar sits in that gap.
+// background is (theme.ts, Poppler). Shares cluster at .45–.55 and the next is .76: the bar sits in that gap. Its fills
+// as printed from the same render (html/seen.ts); none measured when Poppler fails.
 const PAGE_GROUND = 2 / 3
-async function groundOf(pdf: string, r: PageResult): Promise<string | null> {
-  const runs = visible(r)
-  if (!runs.length) return null
-  const g = await pageGround(pdf, r.pdfPage, runs).catch((error: unknown) => {
-    degraded(`${r.dir}: no ground measured (${error instanceof Error ? error.message : String(error)})`)
-    return null
-  })
-  return groundHex(g)
+async function seenOf(pdf: string, r: PageResult): Promise<Pick<Grid, 'ground' | 'fills'>> {
+  const vectors = r.extraction.vectors ?? []
+  try {
+    const { img, boxes } = await pagePixels(pdf, r.pdfPage, visible(r))
+    return {
+      ground: boxes.length ? groundHex(pageGround(img, boxes)) : null,
+      fills: { vectors: vectors.length, looks: fillsOf(img, vectors, boxes) },
+    }
+  } catch (error) {
+    degraded(`${r.dir}: no ground or fills measured (${error instanceof Error ? error.message : String(error)})`)
+    return { ground: null, fills: null }
+  }
 }
 export const groundHex = (g: { c: Rgb; share: number } | null): string | null =>
   g && g.share >= PAGE_GROUND && !paper(g.c) ? hex(g.c) : null

@@ -6,13 +6,21 @@ import { fromHex } from './color.ts'
 import { unionOf } from './profile.ts'
 import { citedRuns } from './source.ts'
 import type { Drawn } from './brand.ts'
-import { darkGround, lightMoves, onFill, paintOf, type Paint } from './ground.ts'
+import { darkGround, inkMoves, inkOn, lightMoves, onFill, paintOf, type Paint } from './ground.ts'
 
 // The PDF's frames and panels (pdf/vectors.ts) as boxes round the blocks printed inside them. A frame holding most
 // of the page's content is the page's own frame (Almond, Rucola, Noah's drinks): a border round the page section.
 // `ink`: on a dark fill, the colour its words are printed in, made readable; the fill as shown is a panel's `color`
 // or a frame's `fill` (moved a little when the printed ink cannot move: Sarge's white on red).
-export type PageBox = { vector: Vector; blocks: number[]; notched: boolean; centred: boolean; ink: string | null }
+export type PageBox = {
+  vector: Vector
+  blocks: number[]
+  notched: boolean
+  centred: boolean
+  ink: string | null
+  kept: string[]
+}
+type Look = Pick<PageBox, 'vector' | 'ink' | 'kept'>
 export type Boxes = { pageFrame: Vector | null; boxes: PageBox[] }
 export const NO_BOXES: Boxes = { pageFrame: null, boxes: [] }
 
@@ -106,6 +114,7 @@ export function boxesOf(page: Page, skip: ReadonlySet<number>): Boxes {
       notched,
       centred: offset < CENTRED,
       ink: paint?.ink ?? null,
+      kept: paint?.kept ?? [],
     }
   })
   return { pageFrame: pageFrame && unfilled(pageFrame), boxes }
@@ -121,9 +130,10 @@ function painted(v: Vector, paint: Paint | null | undefined): Vector {
 }
 
 // The class naming a box's look, shared by every box drawn alike.
-export function vectorClass(v: Vector, ink: string | null = null): string {
-  if (v.kind === 'panel') return `panel-${v.color.slice(1)}${ink ? `-${ink.slice(1)}` : ''}`
-  const fill = v.fill ? `-${v.fill.slice(1)}${ink ? `-${ink.slice(1)}` : ''}` : ''
+export function vectorClass(v: Vector, ink: string | null = null, kept: readonly string[] = []): string {
+  const inks = [ink, ...kept].flatMap((c) => (c ? [`-${c.slice(1)}`] : [])).join('')
+  if (v.kind === 'panel') return `panel-${v.color.slice(1)}${inks}`
+  const fill = v.fill ? `-${v.fill.slice(1)}${inks}` : ''
   return `frame-${v.color.slice(1)}-${String(borderPx(v))}${v.double ? 'd' : ''}${v.rounded ? 'r' : ''}${fill}`
 }
 // A printed rule in CSS pixels (1 pt = 4/3 px), kept between 1 and 6; a double rule needs three to show both lines.
@@ -157,7 +167,7 @@ export function wrapBoxes(
     const present = box.blocks.filter(has)
     const head = present[0]
     if (head === undefined) continue
-    const cls = `box ${vectorClass(box.vector, box.ink)}${box.notched ? ' notched' : ''}${box.centred ? ' centred' : ''}`
+    const cls = `box ${vectorClass(box.vector, box.ink, box.kept)}${box.notched ? ' notched' : ''}${box.centred ? ' centred' : ''}`
     const band = bandOf.get(head)
     if (band !== undefined) {
       const all = (bands[band]?.columns ?? []).flat().filter(has)
@@ -185,11 +195,11 @@ export function wrapBoxes(
 
 // The look of every box on the document: printed colour and rule (decorative borders keep the brand's colour),
 // fills with their words readable on them (a transparent rule on a panel, which forced colours turn into a line).
-export function boxesCss(boxes: readonly { vector: Vector; ink: string | null }[], drawn: Drawn): string {
-  const seen = new Map<string, { vector: Vector; ink: string | null }>()
-  for (const b of boxes) seen.set(vectorClass(b.vector, b.ink), b)
+export function boxesCss(boxes: readonly Look[], drawn: Drawn): string {
+  const seen = new Map<string, Look>()
+  for (const b of boxes) seen.set(vectorClass(b.vector, b.ink, b.kept), b)
   if (!seen.size) return ''
-  const looks = [...seen].flatMap(([cls, { vector: v, ink }]) => {
+  const looks = [...seen].flatMap(([cls, { vector: v, ink, kept }]) => {
     const ground = groundOf(v)
     const rule =
       v.kind === 'frame'
@@ -198,8 +208,13 @@ export function boxesCss(boxes: readonly { vector: Vector; ink: string | null }[
     if (ground === null) return [`.${cls} { ${rule} }`]
     // A fill whose words cannot be made readable stays a frame in its colour.
     if (!ink && darkGround(fromHex(ground))) return [`.${cls} { border: 2px solid ${ground}; }`]
-    // Words on a dark fill take its ink over every role colour (the doubled class outranks the role selectors).
-    if (ink) return [`.${cls} { background: ${ground}; ${rule} }`, `section .box.${cls}.${cls} * { color: ${ink}; }`]
+    if (ink) {
+      const paint = { fill: ground, ink, kept }
+      return [
+        `.${cls} { background: ${ground}; ${rule} ${inkOn(ink, ground)} }`,
+        ...inkMoves(drawn, paint, ink, `.${cls}`),
+      ]
+    }
     return [
       `.${cls} { background: ${ground}; ${rule}${onFill(drawn, fromHex(ground))} }`,
       ...lightMoves(drawn, fromHex(ground), `.${cls}`),

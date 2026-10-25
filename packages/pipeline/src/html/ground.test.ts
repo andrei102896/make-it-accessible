@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Run } from '../pdf/types.ts'
 import type { Drawn } from './brand.ts'
-import { contrast, fromHex, paper, sameGround } from './color.ts'
-import { focusOn, lightMoves, pagesCss } from './ground.ts'
+import { contrast, fromHex, lightnessOk, paper, sameGround } from './color.ts'
+import { focusOn, inkMoves, inkOn, lightMoves, pagesCss, paintOf } from './ground.ts'
 import { FOCUS } from './style.ts'
 
 const run = (color: string, str = 'word'): Run => ({
@@ -56,12 +56,13 @@ test('on a light ground a colour keeps its print where it reads, else moves; the
   assert.equal(focusOn(fromHex('#ffffff')), FOCUS)
 })
 
-test('on a dark page a colour printed light enough keeps its print; the rest take the page ink', () => {
+test('on a dark page a colour printed light enough and drawn there keeps its print; the rest take the page ink', () => {
   const both: Drawn = {
     ...drawn,
     painted: [...drawn.painted, { selector: '.products.menu .name', printed: '#f0e68c', shown: '#7a6f10' }],
   }
-  const css = pagesCss([page(1, '#113d2a', '#f8dd07'), page(2, null)], '#ffffff', both)
+  const gold = { ...page(1, '#113d2a', '#f8dd07'), runs: [run('#f8dd07', 'Burgers and fries'), run('#f0e68c')] }
+  const css = pagesCss([gold, page(2, null)], '#ffffff', both)
   assert.match(css, /td\.num:where\(section\[data-page="1"\] \*\) \{ color: #f8dd07; \}/)
   assert.match(css, /\.products\.menu \.name:where\(section\[data-page="1"\] \*\) \{ color: #f0e68c; \}/)
 })
@@ -82,4 +83,31 @@ test('a light page ground restates the text and moves each colour on it', () => 
     /section\[data-page="1"\] \{ background: #d6c3a5; --bg: #d6c3a5; --focus: #1d4ed8; --fg: #1a1a1a; color: #1a1a1a;/,
   )
   assert.match(css, /td\.num:where\(section\[data-page="1"\] \*\) \{ color: #[0-9a-f]{6}; \}/)
+})
+
+test('words printed lighter than their fill keep their colour when the fill moves .08 or less to carry them', () => {
+  const lightness = (a: string, b: string): number => Math.abs(lightnessOk(fromHex(a)) - lightnessOk(fromHex(b)))
+  // The Exeter Arms' white on orange: the orange darkens a little.
+  const exeter = paintOf('#e94e1b', [run('#ffffff')])
+  assert.equal(exeter?.ink, '#ffffff')
+  assert.ok(lightness(exeter.fill, '#e94e1b') <= 0.08 && contrast(fromHex(exeter.fill), [255, 255, 255]) >= 4.5)
+  // Gigi's olive would move .11: it keeps its print, the words read dark on it.
+  assert.deepEqual(paintOf('#aa9749', [run('#ffffff')]), { fill: '#aa9749', ink: null, kept: [] })
+  // Black on a mid grey: the grey lightens a little.
+  const grey = paintOf('#6e6e6e', [run('#000000')])
+  assert.equal(grey?.ink, '#000000')
+  assert.ok(lightness(grey.fill, '#6e6e6e') <= 0.08 && contrast(fromHex(grey.fill), [0, 0, 0]) >= 4.5)
+  // Dark ink takes no dark palette; a light one does.
+  assert.ok(
+    !inkOn('#000000', grey.fill).includes('color-scheme') && inkOn('#ffffff', '#231f20').includes('color-scheme: dark'),
+  )
+})
+
+test("on a fill with its own ink a colour drawn there that reads keeps its print (Kenny & Ziggy's orange names)", () => {
+  const names: Drawn = { ...drawn, painted: [{ selector: '.name', printed: '#f9a72d', shown: '#8a5a00' }] }
+  const paint = paintOf('#231f20', [run('#ffffff', 'Shakshuka eggs'), run('#f9a72d', 'Name')])
+  assert.deepEqual(paint, { fill: '#231f20', ink: '#ffffff', kept: ['#f9a72d'] })
+  assert.deepEqual(inkMoves(names, paint, '#ffffff', '.x'), ['.name:where(.x *) { color: #f9a72d; }'])
+  // Printed in the role's colour elsewhere, white here: the ink (La Segunda's phone numbers).
+  assert.deepEqual(inkMoves(names, { ...paint, kept: [] }, '#ffffff', '.x'), ['.name:where(.x *) { color: #ffffff; }'])
 })

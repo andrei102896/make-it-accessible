@@ -1,6 +1,7 @@
+import { sameInk } from '../pdf/backdrop.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Drawn, Painted } from './brand.ts'
-import { contrast, fromHex, hex, readableOn, sameGround, type Rgb } from './color.ts'
+import { contrast, fromHex, hex, lightnessOk, luminance, readableOn, sameGround, type Rgb } from './color.ts'
 import { FOCUS } from './style.ts'
 
 // The page's colours on a ground of their own: a box's fill (boxes.ts) or a page's ground (backdrop.json `ground`),
@@ -15,18 +16,32 @@ export const DARK = { fg: '#f2f2f2', muted: '#c4c4c4', line: '#4a4a4a', panel: '
 export const darkGround = (c: Rgb): boolean => contrast(c, PAGE_TEXT) < AA
 
 // On a dark ground (Osteria's red, Sarge's black and red) the words take their commonest printed colour at 4.5:1, the
-// ground darkening when it cannot move (white); null: neither reads. A light ground has no ink (lightMoves).
-export type Paint = { fill: string; ink: string | null }
+// ground darkening when it cannot move (white); null: neither reads. A light ground has no ink (lightMoves). Words
+// printed lighter than a light ground (Exeter's white on orange), or darker than a dark one, keep their colour when the
+// ground moves by MAX_FILL_MOVE or less to carry them; else the ground keeps its print (Gigi's olive: .11). `kept`: the
+// other colours its words are drawn in that read on it (inkMoves).
+const MAX_FILL_MOVE = 0.08
+export type Paint = { fill: string; ink: string | null; kept: string[] }
 export function paintOf(ground: string, runs: readonly Run[]): Paint | null {
   const fill = fromHex(ground)
-  if (!darkGround(fill)) return { fill: ground, ink: null }
+  const dark = darkGround(fill)
   const tally = new Map<string, number>()
   for (const r of runs) if (r.color) tally.set(r.color, (tally.get(r.color) ?? 0) + r.str.length)
-  const printed = fromHex([...tally].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '#ffffff')
+  const top = [...tally].sort((a, b) => b[1] - a[1])[0]?.[0]
+  const printed = fromHex(top ?? (dark ? '#ffffff' : '#000000'))
+  const inked = (to: Rgb, ink: Rgb): Paint => {
+    const kept = [...tally.keys()].filter((c) => !sameInk(c, hex(ink)) && contrast(fromHex(c), to) >= AA)
+    return { fill: hex(to), ink: hex(ink), kept: kept.sort() }
+  }
+  if (luminance(printed) > luminance(fill) !== dark) {
+    const carried = readableOn(fill, printed, AA)
+    if (carried && Math.abs(lightnessOk(carried) - lightnessOk(fill)) <= MAX_FILL_MOVE) return inked(carried, printed)
+  }
+  if (!dark) return { fill: ground, ink: null, kept: [] }
   const ink = readableOn(printed, fill, AA)
-  if (ink) return { fill: ground, ink: hex(ink) }
+  if (ink) return inked(fill, ink)
   const moved = readableOn(fill, printed, AA)
-  return moved ? { fill: hex(moved), ink: hex(printed) } : null
+  return moved ? inked(moved, printed) : null
 }
 
 // A painted colour on a light ground: its printed colour where that reads, else moved by lightness, else the colour
@@ -56,6 +71,21 @@ function movedOn(drawn: Drawn, scope: string, colourOf: (p: Painted) => string):
 }
 export const lightMoves = (drawn: Drawn, fill: Rgb, scope: string): string[] =>
   movedOn(drawn, scope, (p) => onLight(p, fill))
+// A ground carrying its own ink (paintOf): every role in it, the dark palette's lines under a light ink; a colour printed that reads on
+// the ground and is drawn there keeps its print (Kenny & Ziggy's orange names on black), the rest take the ink (La
+// Segunda's phone numbers stay white on red, its yellow links printed elsewhere).
+export const inkOn = (ink: string, fill: string): string => {
+  const roles = `--fg: ${ink}; color: ${ink}; --muted: ${ink}; --accent: ${ink};`
+  return luminance(fromHex(ink)) > luminance(fromHex(fill))
+    ? `${roles} --line: ${DARK.line}; --panel: ${DARK.panel}; color-scheme: dark;`
+    : roles
+}
+export const inkMoves = (drawn: Drawn, paint: Paint, ink: string, scope: string): string[] =>
+  movedOn(drawn, scope, (c) =>
+    contrast(fromHex(c.printed), fromHex(paint.fill)) >= AA && paint.kept.some((k) => sameInk(k, c.printed))
+      ? c.printed
+      : ink,
+  )
 
 // A focus ring at 3:1 on its ground: the light or the dark palette's, else white or black (Stonehouse's #a55b42
 // fails both palettes).
@@ -100,10 +130,7 @@ export function pagesCss(pages: readonly PageGround[], background: string, drawn
     const { ink } = paint
     if (ink === null)
       return [`${scope} { ${ground}${onFill(drawn, fill)} }`, ...look, ...lightMoves(drawn, fill, scope)]
-    const dark = `--fg: ${ink}; color: ${ink}; --muted: ${ink}; --accent: ${ink}; --line: ${DARK.line}; --panel: ${DARK.panel}; color-scheme: dark;`
-    // A colour printed light enough keeps its print; the rest take the page's ink.
-    const onDark = (c: Painted): string => (contrast(fromHex(c.printed), fill) >= AA ? c.printed : ink)
-    return [`${scope} { ${ground} ${dark} }`, ...look, ...movedOn(drawn, scope, onDark)]
+    return [`${scope} { ${ground} ${inkOn(ink, paint.fill)} }`, ...look, ...inkMoves(drawn, paint, ink, scope)]
   })
   return rules.length ? `@media screen {\n${rules.join('\n')}\n}` : ''
 }
