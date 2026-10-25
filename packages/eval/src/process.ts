@@ -18,6 +18,7 @@ import { renderPixels } from '@make-it-accessible/pipeline/pdf/poppler'
 import { fitScale, renderCrop, renderPage } from '@make-it-accessible/pipeline/pdf/raster'
 import type { Box, Extraction } from '@make-it-accessible/pipeline/pdf/types'
 import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
+import { draftReview } from './draftreview.ts'
 import { flaggedPaths, validatePage, type Validation } from '@make-it-accessible/pipeline/validate/validate'
 import { wordsOfPicture } from '@make-it-accessible/pipeline/validate/proof'
 import { BACKDROP_FILES, clearBackdrop, writeBackdrops } from './backdrop.ts'
@@ -29,8 +30,6 @@ import { withIcons, type LegendEntry } from '@make-it-accessible/pipeline/pdf/ic
 import { extractWhole } from './wholewords.ts'
 import { folderStore } from './readings.ts'
 import { degraded } from '@make-it-accessible/pipeline/degraded'
-
-const MAX_UNCOVERED = 0.1
 
 export type PageResult = {
   keyPage: number
@@ -82,12 +81,7 @@ export async function processPage(
   try {
     result = scan
       ? await structureScan(extraction, size, image, options)
-      : await structurePage(extraction, size, image, options, (draft) => {
-          const { uncovered } = validatePage(draft, extraction)
-          if (uncovered.length <= extraction.runs.length * MAX_UNCOVERED) return null
-          const ids = uncovered.slice(0, 40).map((id) => id.split(':')[1])
-          return `${String(uncovered.length)} of ${String(extraction.runs.length)} inventory words are neither used nor dropped, e.g. ids ${ids.join(', ')}. Cover the whole page.`
-        })
+      : await structurePage(extraction, size, image, options, (draft) => draftReview(draft, extraction, read ?? []))
   } catch (error) {
     await writeFile(join(dir, 'failure.txt'), error instanceof Error ? (error.stack ?? error.message) : String(error))
     console.info(`${label}: FAILED ${error instanceof Error ? error.message.slice(0, 200) : String(error)}`)
@@ -102,9 +96,9 @@ export async function processPage(
   await writeFile(join(dir, 'structure.json'), json(result.page))
   await writeFile(join(dir, 'validation.json'), json(validation))
   const calls = result.calls.map((c) => ({ usage: c.usage, ms: c.ms }))
-  await writeFile(join(dir, 'cost.json'), json({ ...options, size, calls, usd, ms }))
+  await writeFile(join(dir, 'cost.json'), json({ ...options, size, calls, usd, ms, kept: result.kept ?? null }))
   console.info(
-    `${label}: errors=${String(validation.errors.length)} review=${String(validation.review.length)} generated=${String(validation.generated.length)} uncovered=${String(validation.uncovered.length)} retries=${String(result.calls.length - 1)} $${usd.toFixed(4)} ${(ms / 1000).toFixed(1)}s`,
+    `${label}: errors=${String(validation.errors.length)} review=${String(validation.review.length)} generated=${String(validation.generated.length)} uncovered=${String(validation.uncovered.length)} retries=${String(result.calls.length - 1)}${result.kept ? ` kept=${result.kept}` : ''} $${usd.toFixed(4)} ${(ms / 1000).toFixed(1)}s`,
   )
   return { keyPage, pdfPage, dir, structure, extraction, validation, usd }
 }

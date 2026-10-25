@@ -3,31 +3,51 @@ import { callModel, type ModelCall, type ModelOptions } from './client.ts'
 import { inventory } from './prompt.ts'
 import { parsePage, type PageStructure } from './schema.ts'
 
-export type StructureResult = { page: PageStructure; calls: ModelCall[] }
+export type StructureResult = { page: PageStructure; calls: ModelCall[]; kept?: 'first' | 'retry' }
+// Why an answer is asked again (null: accepted), and its weight: counts compared in order, the lower answer kept.
+export type Review = { reason: string | null; weight: readonly number[] }
 
-// `review` returns a reason to retry once (e.g. a large part of the page left out), or null to accept.
+// A retry is kept only when it weighs less on one count and more on none (it cannot trade an error for lost words).
+export const better = (retry: readonly number[], first: readonly number[]): boolean =>
+  retry.every((n, i) => n <= (first[i] ?? 0)) && retry.some((n, i) => n < (first[i] ?? 0))
+
+// `review` returns why the answer is asked once more (it sees its own answer and the findings), or null to accept.
 export async function structurePage(
   e: Extraction,
   size: PixelSize,
   imagePath: string,
   options: ModelOptions,
-  review: (page: PageStructure) => string | null,
+  review: (page: PageStructure) => Review,
+  call: typeof callModel = callModel,
 ): Promise<StructureResult> {
   const userText = inventory(e, size)
-  const first = await callModel(imagePath, userText, options)
-  let reason: string
+  const first = await call(imagePath, userText, options)
+  let page: PageStructure | null = null
+  let found: Review
   try {
-    const page = parsePage(first.raw)
-    const problem = review(page)
-    if (problem === null) return { page, calls: [first] }
-    reason = problem
+    page = parsePage(first.raw)
+    found = review(page)
+    if (found.reason === null) return { page, calls: [first] }
   } catch (error) {
-    reason = error instanceof Error ? error.message.slice(0, 2000) : String(error)
+    found = { reason: error instanceof Error ? error.message.slice(0, 2000) : String(error), weight: [] }
   }
-  const retry = await callModel(
+  const previous = page ? `\n\nYour previous answer:\n${JSON.stringify(page)}` : ''
+  const retry = await call(
     imagePath,
-    `${userText}\n\nYour previous answer was rejected: ${reason}\nReturn the corrected, complete JSON object only.`,
+    `${userText}${previous}\n\nChecked against the print: ${found.reason}\nReturn the corrected, complete JSON object only.`,
     options,
   )
-  return { page: parsePage(retry.raw), calls: [first, retry] }
+  const calls = [first, retry]
+  let again: PageStructure
+  try {
+    again = parsePage(retry.raw)
+  } catch (error) {
+    // A retry that does not parse keeps a first that did; neither parsing throws.
+    if (page) return { page, calls, kept: 'first' }
+    throw error
+  }
+  if (!page) return { page: again, calls, kept: 'retry' }
+  return better(review(again).weight, found.weight)
+    ? { page: again, calls, kept: 'retry' }
+    : { page, calls, kept: 'first' }
 }

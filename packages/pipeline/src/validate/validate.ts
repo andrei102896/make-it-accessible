@@ -12,7 +12,8 @@ import { digitsIn, pageCites, printedHead, readTwice, separatorOnly, sizesPrinte
 
 const MAX_ALT_LENGTH = 250
 
-export type Finding = { path: string; problem: string }
+// `fixable: false`: no reading of the model's can clear it (a price whose digits the PDF draws as shapes).
+export type Finding = { path: string; problem: string; fixable?: false }
 export type Validation = {
   errors: Finding[]
   review: Finding[]
@@ -153,7 +154,11 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
     const words = cited.map((r) => r.str).join(' ')
     // A price whose digits are partly drawn as shapes ("3" + a drawn ".99", La Segunda) reads as another amount.
     if (cited.some((r) => lost.has(r.id)))
-      errors.push({ path, problem: `letters the PDF draws but names nowhere are missing from "${words}"` })
+      errors.push({
+        path,
+        problem: `letters the PDF draws but names nowhere are missing from "${words}"`,
+        fixable: false,
+      })
     // On a scan the two readers' amounts must agree (model/align.ts); neither is believed over the other.
     if (p.text !== undefined && reading(p.text) !== reading(words))
       errors.push({ path, problem: `the page image reads "${p.text}" where OCR reads "${words}"` })
@@ -168,7 +173,7 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
       else if (SIZED.test(printed) && !p.qualifier && !sizesPrinted(printed, cited, onPage, cites))
         review.push({ path, problem: `prices of several sizes with no size label: "${words}"` })
     } else if (amount.currency === null) {
-      if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page` })
+      if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page`, fixable: false })
     } else if (amount.fromBareDigits && fused) review.push({ path, problem: `price read from bare digits "${words}"` })
     const q = p.qualifier
     if (q && 'seen' in q && printedHead(cited, q.seen, onPage, cites)) {
