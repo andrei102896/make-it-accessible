@@ -103,10 +103,11 @@ export function centPartner(euros: Run, runs: readonly Run[]): Run | undefined {
   return candidates.sort((a, b) => distance(a) - distance(b))[0]
 }
 
-// A price word without what is not its amount: invisible format characters, brackets, and leader dots or a word the
-// text layer fused before it ("roll....$7.95", "Egg…12", "sauce17.49"); a leading zero stays (no amount starts so).
+// A price word without what is not its amount: spaces, invisible format characters, brackets, leader dots or a word
+// fused before it (" 29.5", "roll....$7.95", "Egg…12", "sauce17.49"); a leading zero stays (no amount starts so).
 const bare = (word: string): string =>
   word
+    .trim()
     .replace(/\p{Cf}/gu, '')
     .replace(/^\(+/, '')
     .replace(/^(?:\p{L}*(?:[.…·_]{2,}|…)|\p{L}+)(?=[€£$]|[1-9])/u, '')

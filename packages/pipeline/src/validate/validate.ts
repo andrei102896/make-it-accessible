@@ -36,7 +36,8 @@ type Range = [number, number]
 
 // A text citing only words that draw nothing: one finding per text, at the first such place.
 const NOTHING = 'cites words that draw nothing on the page'
-const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*]/g, '')
+// A private-use glyph names no character (Sarge's hyphens drawn as U+F6BA): compared like the hyphens it may be.
+const loose = (s: string): string => canon(s).replace(/[-\u2010\u2011()[\]*\p{Co}]/gu, '')
 // Leader dots join a name to its price, fused into its word by pdftotext ("Dip . . . . ."): no letters. Three or more
 // spaced, or four together: a description's own "..." stays.
 const LEADER = /(?:\.\s+){2,}\.|\.{4,}/gu

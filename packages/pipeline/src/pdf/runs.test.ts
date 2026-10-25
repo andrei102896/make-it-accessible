@@ -119,6 +119,8 @@ test('printed amounts keep the citation order and join split digits; as-printed 
   assert.equal(asPrinted([run(0, 'MP', 0, 0, 10, 10)]), 'MP')
   assert.equal(asPrinted([run(0, '22/32', 0, 0, 25, 10)]), '22/32')
   assert.equal(asPrinted([run(0, '18.9', 0, 0, 20, 10)]), '18.9')
+  // A tab read into the word (Eusebi's " 29.5" bottle price).
+  assert.equal(asPrinted([run(0, ' 29.5', 0, 0, 100, 10)]), '29.5')
   assert.equal(asPrinted([run(0, '-37%', 0, 0, 20, 10)]), null)
   assert.equal(asPrinted([run(0, '26,9', 0, 0, 20, 10)]), null)
 })

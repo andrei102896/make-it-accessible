@@ -284,3 +284,23 @@ test('a name read without the comma that ends its words is the same reading; ano
   assert.deepEqual(check('PERONI AZZURRO'), [])
   assert.deepEqual(check('PERONI ROSSO'), ['"PERONI ROSSO" does not match the cited words "PERONI AZZURRO,"'])
 })
+
+test("a private-use glyph is read like the hyphen it draws; the letters around it must still match (Sarge's)", () => {
+  const e = page([
+    ['SNAP\uf6baO\uf6baRAZZO', 0],
+    ['DOG', 80],
+    ['7.50', 200],
+  ])
+  const check = (text: string) =>
+    validatePage(
+      parsePage(
+        JSON.stringify({
+          lang: 'en',
+          blocks: [{ kind: 'products', items: [{ name: { src: [[0, 1]], text }, prices: [{ src: [[2, 2]] }] }] }],
+        }),
+      ),
+      e,
+    ).errors.length
+  assert.equal(check('SNAP-O-RAZZO DOG'), 0)
+  assert.equal(check('SNAP-O-RAZZI DOG'), 1)
+})
