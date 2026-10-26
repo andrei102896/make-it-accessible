@@ -67,7 +67,7 @@ Every destination (a product price, a table cell, a page price) takes the same c
 - **Multibuy:** "2 for £5" is the amount £5, role `current`, condition "2 for".
 - **Percentages:** "-30%" is not a price. A badge goes in the product's `mustContain` when it is text, or in the page's `mustContain` with `seen` when it is only in the image.
 
-**`currency`** is what the occurrence prints. When the price itself prints none, the claim states the document currency only if the page states it ("Alle Preise in CHF", "Prices in £"). Otherwise it stays `null`, and the output must then flag it.
+**`currency`** is what the occurrence prints. When the price itself prints none, the claim states the document currency only if the page states it ("Alle Preise in CHF", "Prices in £"). Otherwise it stays `null`, and the output must then flag it. (Scored keys only, the stage-0 leaflets; since 2026-10-26 a menu printing no currency anywhere shows its whole prices as printed without a flag, DESIGN "Prices as printed": no keyed page combines raised cents with no currency, the stage-0 rescore unchanged.)
 
 ## Reading order, headings, printed pages
 - **Reading order.** One anchor per block (heading, product, paragraph, table).

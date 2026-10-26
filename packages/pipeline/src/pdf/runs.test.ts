@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { formatMoney } from '../text/money.ts'
-import { amountOf, asPrinted, printedAmount, printsFusedCents } from './runs.ts'
+import { amountOf, asPrinted, printedAmount, printsFusedCents, raisedCents } from './runs.ts'
 import type { Run } from './types.ts'
 
 const run = (id: number, str: string, x: number, y: number, w: number, h: number): Run => ({
@@ -164,4 +164,15 @@ test('small raised cents that print their separator join whole digits before the
     currency: 'EUR',
     fromBareDigits: false,
   })
+})
+
+test("raised cents printed with no separator are a pair, touching or not (Millie's 13⁵⁰), never one number", () => {
+  for (const x of [110, 112]) {
+    const pair = raisedCents([run(0, '13', 100, 100, 10, 14), run(1, '50', x, 100, 9, 8)])
+    assert.deepEqual(
+      pair?.map((r) => r.str),
+      ['13', '50'],
+    )
+  }
+  assert.equal(raisedCents([run(0, '13', 100, 100, 10, 14), run(1, '50', 112, 100, 10, 14)]), null)
 })

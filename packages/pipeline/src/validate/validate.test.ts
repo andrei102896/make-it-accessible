@@ -61,43 +61,6 @@ test('a US menu with bare prices, a market price, a two-size price and one decim
   assert.deepEqual(v.review, [])
 })
 
-test('a leaflet with fused cents still needs a currency and keeps bare digits in review', () => {
-  // "2" with small "69" beside it is a euro/cent pair: the page prints fused cents.
-  const e = page([
-    ['Milch', 0],
-    ['2', 100, 30],
-    ['69', 110, 18],
-    ['Brot', 0],
-    ['399', 100, 30],
-  ])
-  const v = validatePage(
-    menu([
-      { name: 0, prices: [[1, 2]] },
-      { name: 3, prices: [[4, 4]] },
-    ]),
-    e,
-  )
-  assert.equal(v.errors.filter((f) => f.problem.startsWith('no currency')).length, 2)
-  const withEuro = page([
-    ['Milch', 0],
-    ['2', 100, 30],
-    ['69', 110, 18],
-    ['€', 0],
-    ['Brot', 0],
-    ['€', 50],
-    ['399', 100, 30],
-  ])
-  const w = validatePage(
-    menu([
-      { name: 0, prices: [[1, 2]] },
-      { name: 4, prices: [[6, 6]] },
-    ]),
-    withEuro,
-  )
-  assert.deepEqual(w.errors, [])
-  assert.equal(w.review.filter((f) => f.problem.startsWith('price read from bare digits')).length, 1)
-})
-
 test('words that are no price are still an error, and a price cited twice for one dish is an error', () => {
   const e = page([
     ['Steak', 0],

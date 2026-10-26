@@ -103,6 +103,12 @@ export function centPartner(euros: Run, runs: readonly Run[]): Run | undefined {
   return candidates.sort((a, b) => distance(a) - distance(b))[0]
 }
 
+// A whole and its raised cents printed with no separator ("13" + small "50"), else null.
+export function raisedCents(words: readonly Run[]): [Run, Run] | null {
+  const [units, cents] = words
+  return words.length === 2 && units && cents && centPartner(units, [cents]) === cents ? [units, cents] : null
+}
+
 // A price word without what is not its amount: spaces, invisible format characters, brackets, leader dots or a word
 // fused before it (" 29.5", "roll....$7.95", "Egg…12", "sauce17.49"); a leading zero stays (no amount starts so).
 const bare = (word: string): string =>

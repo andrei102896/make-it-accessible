@@ -1,4 +1,4 @@
-import { amountOf, joinRuns, printedAmount, printsFusedCents } from '../pdf/runs.ts'
+import { amountOf, joinRuns, printedAmount, printsFusedCents, raisedCents } from '../pdf/runs.ts'
 import { fitScale } from '../pdf/raster.ts'
 import type { Run } from '../pdf/types.ts'
 import type { Block, ImageValue, Item, PriceValue, TextValue } from '../model/schema.ts'
@@ -94,7 +94,10 @@ export function renderPage(page: HtmlPage, ctx: Context): Rendered {
     const sign = amount && proven && !amount.fromBareDigits && DIGITS.test(digits) ? signAround(lang, proven) : null
     // The printed view draws the print's words only: the added sign is read, never drawn (print.ts).
     const signed = (s: string): string => (s ? `<span class="sign">${esc(s)}</span>` : '')
-    const amountText = sign ? signed(sign.before) + esc(digits) + signed(sign.after) : esc(shown)
+    // Raised cents printed with no separator ("13⁵⁰") get one for reading, as the sign is: "13.50", not "13 50".
+    const raised = proven ? null : raisedCents(words)
+    const plain = raised ? raised.map((r) => esc(r.str)).join(signed('.')) : esc(shown)
+    const amountText = sign ? signed(sign.before) + esc(digits) + signed(sign.after) : plain
     const printedLabel = p.qualifier ? raw(p.qualifier) : ''
     const label = p.qualifier ? printedLabel.replace(SEPARATOR, '') : p.role === 'previous' ? ui.previous : ''
     const apart = pl.apart(path)

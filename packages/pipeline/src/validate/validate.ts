@@ -91,7 +91,7 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
   const lost = new Set(e.lost ?? [])
   const onPage = e.runs.filter((r) => !hidden.has(r.id))
   const currency = pageCurrency(joinRuns(onPage))
-  // Only a leaflet with fused cents needs a currency and a check on bare digits; elsewhere "19" is shown as printed.
+  // Only a page with raised cents needs a check on bare digits; elsewhere "19" is shown as printed.
   const fused = printsFusedCents(onPage)
   const cites = pageCites(page, e)
   const toPt = e.width / fitScale(e.width, e.height).width
@@ -172,9 +172,10 @@ export function validatePage(page: PageStructure, e: Extraction, ocr: readonly O
       // Sizes with no label read as numbers only ("3.99/4.99/5.99" whose SMALL/MEDIUM/LARGE is artwork).
       else if (SIZED.test(printed) && !p.qualifier && !sizesPrinted(printed, cited, onPage, cites))
         review.push({ path, problem: `prices of several sizes with no size label: "${words}"` })
-    } else if (amount.currency === null) {
-      if (fused) errors.push({ path, problem: `no currency printed for "${words}" or on the page`, fixable: false })
-    } else if (amount.fromBareDigits && fused) review.push({ path, problem: `price read from bare digits "${words}"` })
+    } else if (amount.fromBareDigits && fused && (amount.currency !== null || digits >= 100))
+      // On a page with raised cents bare digits may be fused cents ("269" = 2.69): a person looks. With no currency
+      // anywhere a whole price under 100 is shown as printed (Millie's "17" beside "13⁵⁰"), as on any US menu.
+      review.push({ path, problem: `price read from bare digits "${words}"` })
     const q = p.qualifier
     if (q && 'seen' in q && printedHead(cited, q.seen, onPage, cites)) {
       generated.push({ path: `${path}.qualifier`, problem: `label printed as its column head: "${q.seen}"` })

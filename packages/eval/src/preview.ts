@@ -109,7 +109,9 @@ const BLOCKS: [RegExp, string][] = [
   [/printed once and shown twice/, 'a word shown twice'],
   [/does not match the cited words/, 'text not the cited words'],
   [/neither used nor dropped/, 'words left unused'],
-  [/not an amount|leaves out digits|no currency|cites the same words/, 'a price'],
+  [/not an amount/, 'a price: words not an amount'],
+  [/leaves out digits/, 'a price: digits left out'],
+  [/cites the same words/, 'a price: one amount cited twice'],
   [/letters the PDF draws/, 'letters drawn as shapes'],
   [/range \[/, 'a range outside the page'],
 ]
