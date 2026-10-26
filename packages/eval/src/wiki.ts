@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { profileOf } from '@make-it-accessible/pipeline/html/profile'
+import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { parsePage } from '@make-it-accessible/pipeline/model/schema'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
@@ -40,7 +41,7 @@ for (const s of sources) {
   for (const d of (await readdir(s.run)).filter((d) => /^p\d+$/.test(d)).sort()) {
     const extraction = parseExtraction(await readFile(join(s.run, d, 'extraction.json'), 'utf8'))
     freshRuns(join(s.run, d), extraction, await extractWhole(join(ROOT, s.pdf), extraction.pdfPage))
-    const structure = parsePage(await readFile(join(s.run, d, 'structure.json'), 'utf8'))
+    const structure = reconciled(parsePage(await readFile(join(s.run, d, 'structure.json'), 'utf8')), extraction)
     const v = validatePage(structure, extraction)
     findings.errors += v.errors.length
     findings.review += v.review.length

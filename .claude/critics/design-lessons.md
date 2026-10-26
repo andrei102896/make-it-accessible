@@ -54,3 +54,5 @@ list is in git history.
 - A histogram bucket's centre is not the print: share and colour come from the real pixels (Carew #212c46 painted #282848); a ground every page shares is the document's (per-page colour stripes one navy menu), and a ground in a panel's colour is the panels' (Gigi, step 4b, 2026-10-24).
 - Pick the focus colour per ground for its own 3:1: a mid-tone ground fails both palettes' rings (Stonehouse #a45a41: 1.31 and 2.48, 2026-10-24).
 - A shared-text exemption is scoped by where the shared word is printed (one block; on all or none of the sharers' lines), never by field kind alone; a finding for an approver names the dishes and quotes what we show (Scotts' olives with the fries' price; "blocks[18]…", double-cite rule, 2026-10-25).
+- A new price mark needs a sign or cents like its siblings: a bare number with a mark ("21+", "Serves 4+") is an age, count or size (Voci "$1200+", 2026-10-26).
+- Prices whose only meaning is punctuation ("+", "/") are checked by ear: where punctuation is not spoken, "from" and "for" disappear (Voci, Holiday Market, 2026-10-26).

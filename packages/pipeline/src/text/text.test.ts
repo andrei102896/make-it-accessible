@@ -86,3 +86,9 @@ test('an add-on and a price per person are printed as is; a date, a measure and 
   for (const w of ['+12', '+.75', '+ 4.50', '+£1.50', '49pp', '£25pp', '49 p.p.', '22PP']) assert.ok(printedAsIs(w), w)
   for (const w of ['10/16/2026', '1/2 lb', '2+1', '+49 89 1234', 'pp']) assert.ok(!printedAsIs(w), w)
 })
+
+test('a "from" price, a multi-buy, a price each and repeated sizes with cents are printed as is', () => {
+  for (const w of ['$1200+', '£45+', '9.50+', '2/$5', '3/$9.99', '$2ea', '3.50ea', '£12/125ml', '5.95/7.95/7.95'])
+    assert.ok(printedAsIs(w), w)
+  for (const w of ['18+', '2+', '5/5', '$12/12', '$12/2', '10/10/2026', '2ea']) assert.ok(!printedAsIs(w), w)
+})

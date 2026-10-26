@@ -1,7 +1,8 @@
 import { z } from 'zod'
+import { amountOf, asPrinted, joinRuns } from '../pdf/runs.ts'
 import type { Extraction } from '../pdf/types.ts'
 import { modelTextAccepted } from '../validate/validate.ts'
-import type { PageStructure } from './schema.ts'
+import type { Block, PageStructure, PriceValue } from './schema.ts'
 
 const Ranges = z.array(z.tuple([z.number(), z.number()]))
 
@@ -10,6 +11,7 @@ const Ranges = z.array(z.tuple([z.number(), z.number()]))
 // "s") takes the next run of its line when nothing else cites it and the readings then agree.
 export function reconciled(page: PageStructure, e: Extraction): PageStructure {
   const out = structuredClone(page)
+  unlabelled(out.blocks, e)
   const hidden = new Set(e.hidden)
   const cited = new Set<number>()
   const texts: { node: { src: unknown }; text: string }[] = []
@@ -44,4 +46,29 @@ export function reconciled(page: PageStructure, e: Extraction): PageStructure {
     cited.add(last[1] + 1)
   }
   return out
+}
+
+// A label citing only its price's words, inside the price shown as printed ("£12/125ml," labelled "125ml"), repeats
+// them; a formatted amount shows less than it cites, so its label stays ("Bowl" of "Bowl 8").
+function unlabelled(blocks: readonly Block[], e: Extraction): void {
+  for (const b of blocks) {
+    if (b.kind === 'products')
+      for (const item of b.items) {
+        for (const p of item.prices) dropRepeat(p, e)
+        unlabelled(item.details, e)
+      }
+    if (b.kind === 'table') for (const p of b.rows.flat().flatMap((c) => c.prices ?? [])) dropRepeat(p, e)
+  }
+}
+function dropRepeat(p: PriceValue, e: Extraction): void {
+  const q = p.qualifier
+  if (!q || !('src' in q)) return
+  const ids = (src: readonly (readonly [number, number])[]): number[] =>
+    src.flatMap(([from, to]) => Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => from + i))
+  const own = new Set(ids(p.src))
+  if (!ids(q.src).every((i) => own.has(i))) return
+  const runs = [...own].flatMap((i) => e.runs[i] ?? [])
+  const printed = amountOf(runs) === null ? asPrinted(runs) : null
+  const label = (q.text ?? joinRuns(ids(q.src).flatMap((i) => e.runs[i] ?? []))).trim().toLowerCase()
+  if (label && printed?.toLowerCase().includes(label)) delete p.qualifier
 }

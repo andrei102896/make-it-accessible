@@ -1,5 +1,6 @@
 import { cp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { reconciled } from '@make-it-accessible/pipeline/model/reconcile'
 import { parsePage } from '@make-it-accessible/pipeline/model/schema'
 import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { validatePage } from '@make-it-accessible/pipeline/validate/validate'
@@ -26,8 +27,8 @@ export async function rescore(run: string): Promise<string> {
       const dir = pageDir(docDir, page.keyPage)
       const structureFile = await readFile(join(dir, 'structure.json'), 'utf8').catch(() => null)
       if (structureFile === null) continue
-      const structure = parsePage(structureFile)
       const extraction = parseExtraction(await readFile(join(dir, 'extraction.json'), 'utf8'))
+      const structure = reconciled(parsePage(structureFile), extraction)
       const validation = validatePage(structure, extraction)
       await writeFile(join(dir, 'validation.json'), JSON.stringify(validation, null, 2))
       results.push({ keyPage: page.keyPage, pdfPage: page.pdfPage, dir, structure, extraction, validation, usd: 0 })

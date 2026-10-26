@@ -6,22 +6,24 @@ const AMOUNT = /^([1-9]\d{0,2}(?:[.,]\d{3})+|\d*)(?:[.,](\d{2}|\d|-))?$/
 export const PENCE = /^\d{1,3}p$/
 const NUM = String.raw`\d+(?:\.\d{1,2})?`
 const CENTS = String.raw`\d+\.\d{1,2}`
-// A price per unit ("$30/dz", "$48/2 dz") needs a sign or cents: "1/2 lb" is a measure.
-const PER_UNIT = String.raw`(?:[$€£]${NUM}|${CENTS})\/(?:\d+\s?)?[a-z]{1,6}\.?`
+// A price per unit ("$30/dz", "$48/2 dz", "$2ea") needs a sign or cents: "1/2 lb" is a measure.
+const PRICED = String.raw`(?:[$€£]${NUM}|${CENTS})`
+const PER_UNIT = String.raw`${PRICED}(?:\/(?:\d+\s?)?[a-z]{1,6}\.?|ea\.?)`
 // One amount as printed: a sign or none, digits, cents with or without a leading digit (".75").
 const TOKEN = String.raw`[$€£]?(?:\d+(?:\.\d{1,2})?|\.\d{2})`
-// An add-on ("+12", "+ 4.50") and a price per person ("49pp", "£25pp", "49 p.p.") keep their mark: never formatted.
-const MARKED = String.raw`\+\s?${TOKEN}|${TOKEN}\s?p\.?p\.?`
+// An add-on ("+12", "+ 4.50"), a price per person ("49pp", "49 p.p.") and a "from" price with a sign or cents ("$1200+";
+// "18+" is an age) keep their mark: never formatted.
+const MARKED = String.raw`\+\s?${TOKEN}|${TOKEN}\s?p\.?p\.?|${PRICED}\s?\+`
 const MARKED_WORDS = new RegExp(`^(?:${MARKED})$`, 'i')
 export const marked = (words: string): boolean => MARKED_WORDS.test(words)
-// Printed price words that are no amount to format, shown as printed: market price, a two-size price ("22/32"),
-// one decimal without a currency ("18.9": the fused-cents misread is about commas, see parseMoney), marked prices.
+// Shown as printed, never formatted: market price, two sizes ("22/32"), one decimal and no sign ("18.9", see
+// parseMoney), a multi-buy with a sign ("2/$5"), a price per unit and marked prices.
 const AS_PRINTED = new RegExp(
-  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|${PER_UNIT}|${MARKED})$`,
+  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|\d{1,2}\/[$€£]${NUM}|${PER_UNIT}|${MARKED})$`,
   'i',
 )
 // Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count
-// cut short ("$12/2") is no price. A size not served is a dash ("£10/-/54").
+// cut short ("$12/2") is no price. A size not served is a dash ("£10/-/54"); all with cents may repeat ("5.95/7.95/7.95").
 const NOT_SERVED = '[-\u2013\u2014]'
 const DASH = new RegExp(`^${NOT_SERVED}$`)
 const DIGITS_ONLY = new RegExp(String.raw`^[$€£]?(?:[\d./]|${NOT_SERVED})+$`)
@@ -30,12 +32,13 @@ export const SIZED = new RegExp(
 )
 const rising = (words: string): boolean => {
   if (!DIGITS_ONLY.test(words)) return true
-  const amounts = words
+  const parts = words
     .replace(/^[$€£]/, '')
     .split('/')
     .filter((a) => !DASH.test(a))
-    .map(Number)
-  return amounts.every((a, i) => i === 0 || a > (amounts[i - 1] ?? 0))
+  const repeats = parts.every((a) => /\.\d{2}$/.test(a))
+  const amounts = parts.map(Number)
+  return amounts.every((a, i) => i === 0 || a > (amounts[i - 1] ?? 0) || (repeats && a === amounts[i - 1]))
 }
 export const printedAsIs = (words: string): boolean => (AS_PRINTED.test(words) || SIZED.test(words)) && rising(words)
 export const CENTS_HEIGHT_RATIO = 0.8

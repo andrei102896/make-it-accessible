@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { visibleText } from '../html/source.ts'
 import type { Extraction, Run } from '../pdf/types.ts'
 import { reconciled } from './reconcile.ts'
-import type { PageStructure, TextValue } from './schema.ts'
+import type { PageStructure, PriceValue, TextValue } from './schema.ts'
 
 // Howies' Waterloo drinks cover: a letter-spaced layer ("PL ACE", "DRINK S"), the model's range one run short.
 const words = ['WATERLOO', 'PL', 'ACE', 'DRINK', 'S', 'MENU', 'Slainte!']
@@ -39,4 +39,35 @@ test('never a run another text cites, one on the next line, or one the readings 
   assert.deepEqual('src' in nextLine ? nextLine.src : null, [[3, 5]])
   const whole = heading(reconciled(page({ src: [[0, 2]], text: 'WATERLOO PLACE' }), e))
   assert.deepEqual('src' in whole ? whole.src : null, [[0, 2]])
+})
+
+// Star Inn's glass prices: the model labels "£12/125ml," with its own "125ml"; "Bowl 8" shows "$8", so "Bowl" stays.
+const priced = (strs: string[], price: PriceValue): PriceValue | undefined => {
+  const at = strs.map((str, i): Run => ({
+    id: `1:${String(i)}`,
+    str,
+    box: { x: i * 40, y: 0, w: 36, h: 18 },
+    flow: 0,
+    line: 0,
+  }))
+  const p: PageStructure = {
+    lang: 'en',
+    dropped: [],
+    blocks: [{ kind: 'products', items: [{ name: { src: [[0, 0]] }, prices: [price], details: [] }] }],
+  }
+  const b = reconciled(p, { ...e, runs: at }).blocks[0]
+  return b?.kind === 'products' ? b.items[0]?.prices[0] : undefined
+}
+
+test('a label repeating words inside its price shown as printed is dropped; one a formatted amount needs is kept', () => {
+  const glass = priced(['White Onion', '£12/125ml,'], {
+    src: [[1, 1]],
+    role: 'current',
+    qualifier: { src: [[1, 1]], text: '125ml' },
+  })
+  assert.equal(glass?.qualifier, undefined)
+  const bowl = priced(['Soup', 'Bowl', '8'], { src: [[1, 2]], role: 'current', qualifier: { src: [[1, 1]] } })
+  assert.deepEqual(bowl?.qualifier, { src: [[1, 1]] })
+  const other = priced(['Wine', '125ml', '£12/125ml'], { src: [[2, 2]], role: 'current', qualifier: { src: [[1, 1]] } })
+  assert.deepEqual(other?.qualifier, { src: [[1, 1]] })
 })

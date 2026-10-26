@@ -176,3 +176,9 @@ test("raised cents printed with no separator are a pair, touching or not (Millie
   }
   assert.equal(raisedCents([run(0, '13', 100, 100, 10, 14), run(1, '50', 112, 100, 10, 14)]), null)
 })
+
+test('a colon after a price shown as printed is dropped; "12:" is still no amount', () => {
+  assert.equal(asPrinted([run(0, '£20.60/100ml:', 0, 0, 60, 10)]), '£20.60/100ml')
+  assert.equal(amountOf([run(0, '12:', 0, 0, 20, 10)]), null)
+  assert.equal(asPrinted([run(0, '12:', 0, 0, 20, 10)]), null)
+})

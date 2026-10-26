@@ -133,8 +133,9 @@ const priceWords = (cited: readonly Run[]): string =>
     .filter(Boolean)
     .join(' ')
 // The price words a page shows without an amount to format ("MP", "22/32", "18.9", "+12"), else null.
+// A colon after it ("£20.60/100ml:") is dropped only here: "12:" is never read as an amount.
 export const asPrinted = (cited: readonly Run[]): string | null => {
-  const words = priceWords(cited)
+  const words = priceWords(cited).replace(/:$/, '')
   return printedAsIs(words) ? words : null
 }
 // Leaflet pages print euros with smaller cents beside them; bare digits there read as fused cents ("269" = 2,69).
