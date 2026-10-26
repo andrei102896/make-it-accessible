@@ -16,10 +16,10 @@ const TOKEN = String.raw`[$€£]?(?:\d+(?:\.\d{1,2})?|\.\d{2})`
 const MARKED = String.raw`\+\s?${TOKEN}|${TOKEN}\s?p\.?p\.?|${PRICED}\s?\+`
 const MARKED_WORDS = new RegExp(`^(?:${MARKED})$`, 'i')
 export const marked = (words: string): boolean => MARKED_WORDS.test(words)
-// Shown as printed, never formatted: market price, two sizes ("22/32"), one decimal and no sign ("18.9", see
+// Shown as printed, never formatted: market price, "FREE", two sizes ("22/32"), one decimal and no sign ("18.9", see
 // parseMoney), a multi-buy with a sign ("2/$5"), a price per unit and marked prices.
 const AS_PRINTED = new RegExp(
-  String.raw`^(?:m\.?p\.?|mkt\.?|market price|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|\d{1,2}\/[$€£]${NUM}|${PER_UNIT}|${MARKED})$`,
+  String.raw`^(?:m\.?p\.?|mkt\.?|market price|free|a\.?q\.?|${NUM}\/${NUM}|\d+\.\d|\d{1,2}\/[$€£]${NUM}|${PER_UNIT}|${MARKED})$`,
   'i',
 )
 // Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count
