@@ -102,3 +102,25 @@ export async function ownerClearable(docDir: string): Promise<boolean> {
     .safeParse(raw === null ? null : JSON.parse(raw))
   return parsed.success && parsed.data.length > 0 && parsed.data.every((f) => typeof f.words === 'string')
 }
+
+// What blocks a held document, by kind (for the round's totals only): its findings an owner cannot clear.
+const BLOCKS: [RegExp, string][] = [
+  [/page image reads/, 'scan: two readings disagree'],
+  [/printed once and shown twice/, 'a word shown twice'],
+  [/does not match the cited words/, 'text not the cited words'],
+  [/neither used nor dropped/, 'words left unused'],
+  [/not an amount|leaves out digits|no currency|cites the same words/, 'a price'],
+  [/letters the PDF draws/, 'letters drawn as shapes'],
+  [/range \[/, 'a range outside the page'],
+]
+export async function blockingKinds(docDir: string): Promise<string[]> {
+  const raw = await readFile(join(docDir, HELD_FILE), 'utf8').catch(() => null)
+  const parsed = z
+    .array(z.object({ problem: z.string(), words: z.string().nullable().optional() }))
+    .safeParse(raw === null ? null : JSON.parse(raw))
+  if (!parsed.success) return []
+  const kinds = parsed.data
+    .filter((f) => typeof f.words !== 'string')
+    .map((f) => BLOCKS.find(([re]) => re.test(f.problem))?.[1] ?? 'other')
+  return [...new Set(kinds)]
+}

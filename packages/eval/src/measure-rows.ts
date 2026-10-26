@@ -9,7 +9,7 @@ import { parseExtraction } from '@make-it-accessible/pipeline/pdf/types'
 import { BACKDROP_FILES } from './backdrop.ts'
 import { backdropParts } from './measure-backdrop.ts'
 import { ROOT } from './paths.ts'
-import { heldErrors, ownerClearable } from './preview.ts'
+import { blockingKinds, heldErrors, ownerClearable } from './preview.ts'
 import { parseReport } from './report.ts'
 
 // What one document of the round shows, as lines per category, in the order a reviewer reads them: what fell back or
@@ -85,6 +85,7 @@ export async function docRow(f: DocFiles, notes: readonly string[]): Promise<{ r
   add('held documents', held.length ? 1 : 0)
   // Held only on what its owner can confirm beside the PDF (the owner check): publishable once confirmed.
   add('held documents an owner can clear', (await ownerClearable(f.dir)) ? 1 : 0)
+  for (const k of await blockingKinds(f.dir)) add(`held documents blocked by: ${k}`)
   const report = await readFile(join(f.dir, 'report.json'), 'utf8').then(parseReport, () => null)
   for (const p of report?.pages ?? []) {
     row.view.push(`p${String(p.page)} ${p.view}${p.why ? `: ${p.why}` : ''}`)
