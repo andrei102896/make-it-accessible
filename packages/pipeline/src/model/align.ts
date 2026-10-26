@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { Box, Run } from '../pdf/types.ts'
 import { canon } from '../text/normalize.ts'
 
@@ -15,7 +16,8 @@ const tokens = (s: string): string[] => s.split(/\s+/).map(token).filter(Boolean
 const spells = (s: string): boolean => /[\p{L}\p{N}]/u.test(s)
 const isRaw = (v: unknown): v is Raw => typeof v === 'object' && v !== null && !Array.isArray(v)
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v.map((x: unknown) => x) : [])
-const withoutSeen = (v: Raw): Raw => Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'seen'))
+const without = (v: Raw, ...keys: string[]): Raw =>
+  Object.fromEntries(Object.entries(v).filter(([k]) => !keys.includes(k)))
 const seenOf = (v: unknown): string | null => (isRaw(v) && typeof v.seen === 'string' ? v.seen : null)
 
 function union(runs: readonly Run[], from: number, to: number): Box {
@@ -62,13 +64,33 @@ function similarity(a: string, b: string): number {
 }
 // A differing reading is OCR's at the same place only when it shares most of its letters (else nothing is near).
 const SAME_PLACE = 0.5
+// The model's box around a dish (image pixels), a hint only: four finite numbers with a width and a height.
+const At = z.tuple([z.number(), z.number(), z.number(), z.number()]).refine(([, , w, h]) => w > 0 && h > 0)
+// A span is in an area when most of its box is.
+const inside = (b: Box, area: Box): boolean => {
+  const w = Math.min(b.x + b.w, area.x + area.w) - Math.max(b.x, area.x)
+  const h = Math.min(b.y + b.h, area.y + area.h) - Math.max(b.y, area.y)
+  return w > 0 && h > 0 && (w * h) / Math.max(b.w * b.h, 1e-9) >= 0.5
+}
 
-export function alignScan(raw: unknown, runs: readonly Run[]): Raw {
+// `toPt`: page points per image pixel, for the model's dish areas.
+export function alignScan(raw: unknown, runs: readonly Run[], toPt = 1): Raw {
   const blocks = blocksOf(runs)
+  const heights = runs.map((r) => r.box.h).sort((a, b) => a - b)
+  const line = heights[Math.floor(heights.length / 2)] ?? 0
+  // A dish's area in page points, widened by one printed line (a share of its height would reach its neighbours).
+  const areaOf = (at: unknown): Box | null => {
+    const p = At.safeParse(at)
+    if (!p.success) return null
+    const [x, y, w, h] = p.data
+    return { x: x * toPt - line, y: y * toPt - line, w: w * toPt + 2 * line, h: h * toPt + 2 * line }
+  }
   const used = new Set<number>()
   let anchor: Box | null = null
 
-  const place = (seen: string, near: Box | null): Span | null => {
+  // In a dish's area, its words are looked for there before anywhere else, a close reading before an exact one
+  // elsewhere: a misread then stays held (Durant's 68 cited 82 on another line, held by nothing).
+  const place = (seen: string, near: Box | null, area: Box | null = null): Span | null => {
     const want = tokens(seen)
     if (!want.length) return null
     const found: Span[] = []
@@ -90,7 +112,12 @@ export function alignScan(raw: unknown, runs: readonly Run[]): Raw {
       const ref = near ?? anchor
       return ref ? [...pool].sort((a, b) => distance(a.box, ref) - distance(b.box, ref))[0] : pool[0]
     }
-    const best = pick(found) ?? pick(close)
+    const tiers = area
+      ? [found, close]
+          .flatMap((l) => [l.filter((sp) => inside(sp.box, area))])
+          .concat([found, close].map((l) => l.filter((sp) => !inside(sp.box, area))))
+      : [found, close]
+    const best = tiers.reduce<Span | undefined>((got, l) => got ?? pick(l), undefined)
     if (!best) return null
     // Marks that spell nothing beside it on its line ("$", leader dots) belong to it.
     let { from, to } = best
@@ -105,38 +132,51 @@ export function alignScan(raw: unknown, runs: readonly Run[]): Raw {
     return { ...best, from, to }
   }
 
-  const text = (v: unknown, near: Box | null = null): unknown => {
+  const text = (v: unknown, near: Box | null = null, area: Box | null = null, out?: (sp: Span) => void): unknown => {
     const seen = seenOf(v)
     if (seen === null) return v
-    const sp = place(seen, near)
+    const sp = place(seen, near, area)
+    if (sp) out?.(sp)
     return sp ? { src: [[sp.from, sp.to]], ...(sp.exact ? {} : { text: seen }) } : v
   }
 
   const item = (v: Raw): Raw => {
     const name = seenOf(v.name) ?? ''
     const prices = Array.isArray(v.prices) ? v.prices : []
-    const at = place(name, null)
+    const named = place(name, null)
     // A dish whose name OCR does not read anywhere is kept as read from the image (held), never dropped.
-    if (!at) {
+    if (!named) {
       const read = [name, ...prices.map(seenOf)].filter(Boolean).join(' ')
       return { kind: 'paragraph', text: { seen: read }, uncertain: 'the name is not in the OCR reading' }
     }
     const doubts: string[] = []
-    const out: Raw = { ...v, name: { src: [[at.from, at.to]], ...(at.exact ? {} : { text: name }) } }
+    // The model's area counts only where OCR's reading of the name lies in it; it can add holds, never clear one.
+    const given = areaOf(v.at)
+    const area = given && inside(named.box, given) ? given : null
+    if (given && !area) doubts.push('the area given for this dish does not hold its name')
+    const outside = (what: string) => (sp: Span) => {
+      if (area && !inside(sp.box, area)) doubts.push(`${what} is printed outside where the dish is`)
+    }
+    const out: Raw = {
+      ...without(v, 'at'),
+      name: { src: [[named.from, named.to]], ...(named.exact ? {} : { text: name }) },
+    }
     out.prices = prices.flatMap((p: unknown) => {
       const seen = seenOf(p)
       if (!isRaw(p) || seen === null) return [p]
-      const sp = place(seen, at.box)
+      const sp = place(seen, named.box, area)
       if (!sp) {
         doubts.push(`price "${seen}" is not in the OCR reading`)
         return []
       }
-      const rest = withoutSeen(p)
-      const qualifier = rest.qualifier === undefined ? {} : { qualifier: text(rest.qualifier, at.box) }
+      outside(`price "${seen}"`)(sp)
+      const rest = without(p, 'seen')
+      const qualifier =
+        rest.qualifier === undefined ? {} : { qualifier: text(rest.qualifier, named.box, area, outside('its label')) }
       return [{ ...rest, ...qualifier, src: [[sp.from, sp.to]], ...(sp.exact ? {} : { text: seen }) }]
     })
-    if (v.unit !== undefined) out.unit = text(v.unit, at.box)
-    if (Array.isArray(v.details)) out.details = v.details.flatMap((d) => block(d, at.box))
+    if (v.unit !== undefined) out.unit = text(v.unit, named.box, area, outside('its unit'))
+    if (Array.isArray(v.details)) out.details = v.details.flatMap((d) => block(d, named.box))
     if (doubts.length) out.uncertain = [v.uncertain, ...doubts].filter(Boolean).join('; ')
     return out
   }
@@ -150,7 +190,7 @@ export function alignScan(raw: unknown, runs: readonly Run[]): Raw {
         const seen = seenOf(p)
         const sp = seen === null ? null : place(seen, anchor)
         if (!isRaw(p) || !sp || seen === null) return p
-        return { ...withoutSeen(p), src: [[sp.from, sp.to]], ...(sp.exact ? {} : { text: seen }) }
+        return { ...without(p, 'seen'), src: [[sp.from, sp.to]], ...(sp.exact ? {} : { text: seen }) }
       })
     return out
   }

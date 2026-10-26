@@ -21,7 +21,7 @@ Blocks:
 - {"kind":"table","caption"?:T,"rows":[[Cell, ...], ...]}: only for real data tables with header cells. Cell = {"text"?:T, "prices"?:[Price], "header"?:"col"|"row"}.
 - {"kind":"products","items":[Item, ...]}: every dish or offer, one block per visual group.
 - {"kind":"figure","image":Image}: a meaningful picture, or a decorative one with "alt": null.
-Item = {"name":T, "prices":[Price, ...], "unit"?:T, "details":[Block, ...], "image"?:Image, "uncertain"?:"why"}. Descriptions, add-ons, dietary marks and notes of a dish go in its "details".
+Item = {"name":T, "prices":[Price, ...], "unit"?:T, "details":[Block, ...], "image"?:Image, "at":[x,y,w,h], "uncertain"?:"why"}. Descriptions, add-ons, dietary marks and notes of a dish go in its "details". "at" is the box in image pixels around the dish's printed words: its name, prices and description.
 Price = {"seen": the amount exactly as printed, "role"?: "current" (default)|"previous"|"unit"|"discount", "qualifier"?: T}. One amount per Price; a size or condition printed with it ("Bowl", "Half", "add") is its qualifier.
 Image = {"box": [x,y,w,h] of the visible picture in image pixels, "alt": text or null}. Alt text never states a price or a number that is not printed.
 
@@ -37,7 +37,11 @@ export async function structureScan(
 ): Promise<StructureResult> {
   const userText = `Image size: ${String(size.width)}x${String(size.height)} px.`
   const read = (raw: string) =>
-    parsePage(JSON.stringify(alignScan(JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g, '')), e.runs)))
+    parsePage(
+      JSON.stringify(
+        alignScan(JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g, '')), e.runs, e.width / size.width),
+      ),
+    )
   const first = await callModel(imagePath, userText, options, SCAN_PROMPT)
   try {
     return { page: read(first.raw), calls: [first] }

@@ -56,3 +56,7 @@ list is in git history.
 - A shared-text exemption is scoped by where the shared word is printed (one block; on all or none of the sharers' lines), never by field kind alone; a finding for an approver names the dishes and quotes what we show (Scotts' olives with the fries' price; "blocks[18]…", double-cite rule, 2026-10-25).
 - A new price mark needs a sign or cents like its siblings: a bare number with a mark ("21+", "Serves 4+") is an age, count or size (Voci "$1200+", 2026-10-26).
 - Prices whose only meaning is punctuation ("+", "/") are checked by ear: where punctuation is not spoken, "from" and "for" disappear (Voci, Holiday Market, 2026-10-26).
+- A disagreement between two readers has three causes (reader A, reader B, the placement between them): sort them against the PDF before re-asking either (Durant's: model right on 8 of 9 prices, misplaced on neighbours' 82, 67, 59; 2026-10-26).
+- Re-asking one reader until it agrees with the other turns the second reader into a selector: a value that changes on retry is a doubt, never a proof (scan re-ask plan, 2026-10-26).
+- A hint from the reader being checked may rank or hold, never pass: trust the model's area only where an independent reading (OCR's name) falls inside it (scan areas, 2026-10-26).
+- Widen a search area by a printed line, never by a share of its own size: a tall dish's area then covers its neighbours (scan areas, 2026-10-26).

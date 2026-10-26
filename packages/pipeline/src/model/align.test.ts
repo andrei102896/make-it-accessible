@@ -75,3 +75,36 @@ test('a price the two readers read differently cites OCR with the model reading;
     uncertain: 'the name is not in the OCR reading',
   })
 })
+
+// Durant's shape: "88" printed on the dish's line, "82" on the next; image pixels are twice page points.
+const lines = ocr([
+  ['Petite', 10, 10, 1, 0],
+  ['Filet', 45, 10, 1, 0],
+  ['88', 200, 10, 1, 0],
+  ['Filet', 10, 30, 1, 1],
+  ['Mignon', 45, 30, 1, 1],
+  ['82', 200, 30, 1, 1],
+])
+const LINE_0 = [20, 20, 460, 20]
+const LINE_1 = [20, 60, 460, 20]
+const prices = (items: Record<string, unknown>[], runs = lines) => {
+  const page = parsePage(JSON.stringify(alignScan({ lang: 'en', blocks: [{ kind: 'products', items }] }, runs, 0.5)))
+  const b = page.blocks[0]
+  return b?.kind === 'products' ? b.items.map((i) => [i.prices[0]?.src, i.prices[0]?.text, i.uncertain]) : []
+}
+
+test("in the dish's area a misread price cites its own line's reading and is held, never an exact one elsewhere", () => {
+  assert.deepEqual(prices([{ ...dish('Petite Filet', '82'), at: LINE_0 }]), [[[[2, 2]], '82', undefined]])
+  assert.deepEqual(prices([dish('Petite Filet', '82')]), [[[[5, 5]], undefined, undefined]])
+})
+
+test('an area that misses the name is ignored and doubted; a price outside its area is doubted; a bad area is none', () => {
+  assert.deepEqual(prices([{ ...dish('Petite Filet', '82'), at: LINE_1 }]), [
+    [[[5, 5]], undefined, 'the area given for this dish does not hold its name'],
+  ])
+  const other = lines.map((r) => (r.str === '88' ? { ...r, str: '15' } : r))
+  assert.deepEqual(prices([{ ...dish('Petite Filet', '82'), at: LINE_0 }], other), [
+    [[[5, 5]], undefined, 'price "82" is printed outside where the dish is'],
+  ])
+  assert.deepEqual(prices([{ ...dish('Petite Filet', '82'), at: [1, 2, 'x'] }]), prices([dish('Petite Filet', '82')]))
+})

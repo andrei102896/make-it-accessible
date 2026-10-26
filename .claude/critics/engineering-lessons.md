@@ -60,3 +60,7 @@ full list is in git history.
 - Changing a shared list (vectors removed or converted) reaches every filter keyed on it: check each for a missing cross-axis bound (`rulesOf` dropped any rule at a frame's height across the whole page, step 4c-1, 2026-10-25).
 - A rule over citations decides `dropped` (injected drops write into it) and is sized on the round's own validator; a review is approvable only if `wordsAt` resolves it (no `blocks[n]` in its text), and a new finding reaches rendering and the injection pool, so "rescore/injections same" is measured, never assumed (double-cite rule, 2026-10-25).
 - Dropping a label or other field is safe only where the field it merges into is shown as printed: a formatted amount discards the non-digit words it cites ("Bowl 8" price citing "Bowl"; 2026-10-26, Star Inn "125ml").
+- Before re-asking a model about disagreements, replay the deterministic matcher on its saved answers: on Durant's the "model errors" were `alignScan` reusing used spans and accepting any span ≥ 0.5 similar (2026-10-26).
+- A "0 findings" baseline needs its content checked before it counts as a regression: Durant's and Café l'Europe were untranscribed pages (2026-10-26).
+- A ranking hint from the reader being checked must outrank exactness: an exact match elsewhere wins silently, a close one where the item is printed is held (scan areas, 2026-10-26).
+- A test of a unit conversion uses a scale ≠ 1, or px and pt mixed up pass (scan areas, 2026-10-26).
