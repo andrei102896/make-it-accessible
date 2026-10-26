@@ -30,7 +30,8 @@ function shown(page: PageStructure): { items: number; prices: number; labels: nu
 // holds an error its reading can clear, a doubt, or a word it left unused (text read from the image it cannot). Its
 // weight, lower being better: what holds the page, words unused and dropped, and the dishes, prices, labels it shows.
 export function draftReview(draft: PageStructure, e: Extraction, read: readonly OcrWord[]): Review {
-  const v = validatePage(reconciled(draft, e), e, read)
+  const page = reconciled(draft, e)
+  const v = validatePage(page, e, read)
   const fixable = [...v.errors.filter((f) => f.fixable !== false), ...v.review]
   const dropped = draft.dropped.reduce((n, [from, to]) => n + Math.max(0, to - from + 1), 0)
   const ids = v.uncovered.slice(0, 40).map((id) => id.split(':')[1])
@@ -48,7 +49,7 @@ export function draftReview(draft: PageStructure, e: Extraction, read: readonly 
   ]
     .filter(Boolean)
     .join('\n')
-  const { items, prices, labels } = shown(draft)
+  const { items, prices, labels } = shown(page)
   const weight = [unverified(v).length, v.uncovered.length, dropped, -items, -prices, -labels]
   return { reason: fixable.length || v.uncovered.length ? reason : null, weight }
 }

@@ -97,10 +97,20 @@ function flattenProductGroups(value: unknown): unknown {
   return node
 }
 
-export function parsePage(raw: string): PageStructure {
-  const json = raw
+const unfenced = (raw: string): string =>
+  raw
     .trim()
     .replace(/^```(?:json)?\s*/, '')
     .replace(/\s*```$/, '')
-  return PageStructure.parse(flattenProductGroups(JSON.parse(json)))
+// An answer that corrects itself ("Wait — … Here is the corrected, complete object") means the last object it gives.
+export function parsePage(raw: string): PageStructure {
+  let value: unknown
+  try {
+    value = JSON.parse(unfenced(raw))
+  } catch (error) {
+    const at = raw.lastIndexOf('\n{')
+    if (at < 0) throw error
+    value = JSON.parse(unfenced(raw.slice(at)))
+  }
+  return PageStructure.parse(flattenProductGroups(value))
 }

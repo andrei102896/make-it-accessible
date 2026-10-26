@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Extraction } from '../pdf/types.ts'
 import type { ModelCall } from './client.ts'
-import type { PageStructure } from './schema.ts'
+import { parsePage, type PageStructure } from './schema.ts'
 import { better, structurePage, type Review } from './structure.ts'
 
 const e: Extraction = {
@@ -59,4 +59,12 @@ test('a retry no better, or one losing content, or not parsing keeps the first a
   }
   assert.equal(better([0, 0], [1, -1]), false)
   assert.equal(better([0, -1], [1, -1]), true)
+})
+
+test('an answer that corrects itself is read as its last object; one with no object after the prose still throws', () => {
+  const broken = '{"lang":"en","blocks":[{"kind":"paragraph","text":{"src":[[0,0]]}}]]}'
+  const fixed = '{"lang":"en","blocks":[{"kind":"paragraph","text":{"src":[[0,1]]}}],"dropped":[]}'
+  const page = parsePage(`${broken}\n\nWait — that is invalid. Here is the corrected, complete object:\n\n${fixed}`)
+  assert.deepEqual(page.blocks[0], { kind: 'paragraph', text: { src: [[0, 1]] } })
+  assert.throws(() => parsePage(`${broken}\n\nWait — that is invalid.`))
 })
