@@ -24,16 +24,17 @@ const AS_PRINTED = new RegExp(
 )
 // Sizes in one word ("$65/80/90", "3.99/4.99/5.99") need a sign or cents and rise: a date ("10/16/2026") or a count
 // cut short ("$12/2") is no price. A size not served is a dash ("£10/-/54"); all with cents may repeat ("5.95/7.95/7.95").
+// Each size may repeat the first one's sign ("£3.95 / £4.75").
 const NOT_SERVED = '[-\u2013\u2014]'
 const DASH = new RegExp(`^${NOT_SERVED}$`)
-const DIGITS_ONLY = new RegExp(String.raw`^[$€£]?(?:[\d./]|${NOT_SERVED})+$`)
+const DIGITS_ONLY = new RegExp(String.raw`^(?:[\d./]|${NOT_SERVED})+$`)
 export const SIZED = new RegExp(
-  String.raw`^(?:[$€£]${NUM}(?:\/(?:${NUM}|${NOT_SERVED}))+|${CENTS}(?:\/(?:${CENTS}|${NOT_SERVED}))+)$`,
+  String.raw`^(?:([$€£])${NUM}(?:\s?\/\s?(?:\1?${NUM}|${NOT_SERVED}))+|${CENTS}(?:\/(?:${CENTS}|${NOT_SERVED}))+)$`,
 )
 const rising = (words: string): boolean => {
-  if (!DIGITS_ONLY.test(words)) return true
-  const parts = words
-    .replace(/^[$€£]/, '')
+  const bare = SIZED.test(words) ? words.replace(/[$€£\s]/g, '') : words.replace(/^[$€£]/, '')
+  if (!DIGITS_ONLY.test(bare)) return true
+  const parts = bare
     .split('/')
     .filter((a) => !DASH.test(a))
   const repeats = parts.every((a) => /\.\d{2}$/.test(a))

@@ -100,8 +100,12 @@ test('a "from" price, a multi-buy, a price each and repeated sizes with cents ar
     '3.50ea',
     '£12/125ml',
     '5.95/7.95/7.95',
+    '£3.95/£4.75',
+    '£3.95 / £4.75',
+    '£5/£7',
+    '5/$3',
   ])
     assert.ok(printedAsIs(w), w)
-  for (const w of ['18+', '2+', 'free bun', '5/5', '$12/12', '$12/2', '10/10/2026', '2ea'])
+  for (const w of ['18+', '2+', 'free bun', '5/5', '$12/12', '$12/$12', '$12/£14', '£7/£5', '$12/2', '10/10/2026', '2ea'])
     assert.ok(!printedAsIs(w), w)
 })
