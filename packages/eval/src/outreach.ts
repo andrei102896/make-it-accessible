@@ -85,7 +85,7 @@ const LINES: Record<'agency' | 'business', Record<1 | 2, (thing: string) => stri
   },
   business: {
     1: (thing) =>
-      `One thing I left out: the page keeps the look of your ${thing} (your fonts, colours and layout), so guests see your menu rather than a generic list, and it opens straight away on a phone. If you'd like to see yours, a "yes" is enough and I'll send the link within two days.`,
+      `One thing I left out: the page keeps the look of your ${thing} (your fonts, colours and layout), so ${/menu/i.test(thing) ? 'guests' : 'customers'} see your own ${thing} rather than a generic list, and it opens straight away on a phone. If you'd like to see yours, a "yes" is enough and I'll send the link within two days.`,
     2: () =>
       "Last note from me. If this isn't on the list right now, no problem at all. If that changes, reply and I'll convert the current one.",
   },

@@ -57,6 +57,12 @@ test('a follow-up greets and signs as the first email did, names its document, a
   assert.doesNotMatch(fu.text, /bumping/i)
   const shared = first('Hi team,\n\nI had a look at the evening menu you share across your five restaurants. It')
   assert.match(followUp(target('Dylan'), shared, 1).text, /look of your evening menu/)
+  const vet = followUp(
+    target('Vetcare'),
+    first('Hi Vetcare team,\n\nI had a look at the price list on your website, and more.'),
+    1,
+  )
+  assert.match(vet.text, /so customers see your own price list rather than a generic list/)
   const us = first(
     'Hi Ruth,\n\nI had a look at the menu on your website.\n\nMake It Accessible · x\nOradea, Romania\nReply STOP.',
   )
