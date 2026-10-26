@@ -55,11 +55,19 @@ function unlabelled(blocks: readonly Block[], e: Extraction): void {
     if (b.kind === 'products')
       for (const item of b.items) {
         for (const p of item.prices) dropRepeat(p, e)
+        item.prices = once(item.prices)
         unlabelled(item.details, e)
       }
-    if (b.kind === 'table') for (const p of b.rows.flat().flatMap((c) => c.prices ?? [])) dropRepeat(p, e)
+    if (b.kind === 'table')
+      for (const cell of b.rows.flat()) {
+        for (const p of cell.prices ?? []) dropRepeat(p, e)
+        if (cell.prices) cell.prices = once(cell.prices)
+      }
   }
 }
+// The same price given twice, words, role and label alike (Snow City "6" ×2), is one; any difference stays an error.
+const once = (prices: PriceValue[]): PriceValue[] =>
+  prices.filter((p, i) => prices.findIndex((q) => JSON.stringify(q) === JSON.stringify(p)) === i)
 function dropRepeat(p: PriceValue, e: Extraction): void {
   const q = p.qualifier
   if (!q || !('src' in q)) return

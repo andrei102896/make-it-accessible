@@ -71,3 +71,22 @@ test('a label repeating words inside its price shown as printed is dropped; one 
   const other = priced(['Wine', '125ml', '£12/125ml'], { src: [[2, 2]], role: 'current', qualifier: { src: [[1, 1]] } })
   assert.deepEqual(other?.qualifier, { src: [[1, 1]] })
 })
+
+test('a price given twice alike is one; two citing the same words with different labels both stay', () => {
+  const twice = (second: PriceValue): PriceValue[] => {
+    const p: PageStructure = {
+      lang: 'en',
+      dropped: [],
+      blocks: [
+        {
+          kind: 'products',
+          items: [{ name: { src: [[0, 0]] }, prices: [{ src: [[1, 1]], role: 'current' }, second], details: [] }],
+        },
+      ],
+    }
+    const b = reconciled(p, e).blocks[0]
+    return b?.kind === 'products' ? (b.items[0]?.prices ?? []) : []
+  }
+  assert.equal(twice({ src: [[1, 1]], role: 'current' }).length, 1)
+  assert.equal(twice({ src: [[1, 1]], role: 'current', qualifier: { src: [[2, 2]] } }).length, 2)
+})
