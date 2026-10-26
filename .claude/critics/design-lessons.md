@@ -16,8 +16,7 @@ list is in git history.
 - US menus print bare numbers, "MP", "22/32", "18.9": the menu's own prices, shown as printed. Widening "as printed" widens what passes as a price: dates and portion sizes need guards. (2026-10-16)
 - A price label's position is printed ("3.5 ea" vs "Half Dozen 20"); price placement (inline or right-aligned) is measured, never templated; a price cited twice for one dish shows twice. (Noah's, Carmine's, Gargiulo's, 2026-10-16)
 - A mark fused to a price renders as its unfused siblings do; a new printed-as-is pattern covers every variant the set prints, or siblings split between freed and held. (Rucola "$39/", 2026-10-24)
-- An amount accounts for every digit its words print; count changes in shown text, not only wrong amounts (".00" lists turning whole). (Bernie's, 2026-10-24)
-- Freeing a hold publishes the whole row: read every field in order. (Bernie's "5 for", 2026-10-24)
+- An amount accounts for every digit its words print; count changes in shown text, not only wrong amounts (".00" lists turning whole); freeing a hold publishes the whole row: read every field in order. (Bernie's "5 for", 2026-10-24)
 
 ## Structure
 - The header is wherever the title is printed; it stands before our navigation; a title's scale is its own; a page title above real sections hands the chips to its children. (Moosewood, Prohibition, Carmine's, Gargiulo, 2026-10-16)
@@ -49,14 +48,10 @@ list is in git history.
 ## Reports
 - A measurement report keeps every signal the old logs showed and lists the worst first, each set apart. (measure plan, 2026-10-22)
 - out/rebuilt holds the sealed documents: drop every verify-sealed slug before grepping it, report sealed only as totals. (four sealed menus named, 2026-10-24)
-- A light fill keeps every colour the page draws, each moved on its own; one ink for a whole box is for dark fills only, or the second brand colour disappears (Howies' gold, Scotts' green, step 4a, 2026-10-24).
+- A light fill keeps every colour the page draws, each moved on its own (one ink for a whole box only on dark fills: Howies' gold, Scotts' green); share and colour come from real pixels, not a histogram bucket's centre (Carew); a ground every page shares is the document's, one in a panel's colour the panels' (Gigi, step 4a–4b, 2026-10-24).
 - A heading on a box's edge sits on the ground it is printed on: on the fill (a tab) inside, above it on the page; pulled out onto the page ground it must not take the box's colours (Katzinger's SALADS, Exeter's Bar Snacks, 2026-10-24).
-- A histogram bucket's centre is not the print: share and colour come from the real pixels (Carew #212c46 painted #282848); a ground every page shares is the document's (per-page colour stripes one navy menu), and a ground in a panel's colour is the panels' (Gigi, step 4b, 2026-10-24).
 - Pick the focus colour per ground for its own 3:1: a mid-tone ground fails both palettes' rings (Stonehouse #a45a41: 1.31 and 2.48, 2026-10-24).
 - A shared-text exemption is scoped by where the shared word is printed (one block; on all or none of the sharers' lines), never by field kind alone; a finding for an approver names the dishes and quotes what we show (Scotts' olives with the fries' price; "blocks[18]…", double-cite rule, 2026-10-25).
-- A new price mark needs a sign or cents like its siblings: a bare number with a mark ("21+", "Serves 4+") is an age, count or size (Voci "$1200+", 2026-10-26).
-- Prices whose only meaning is punctuation ("+", "/") are checked by ear: where punctuation is not spoken, "from" and "for" disappear (Voci, Holiday Market, 2026-10-26).
-- A disagreement between two readers has three causes (reader A, reader B, the placement between them): sort them against the PDF before re-asking either (Durant's: model right on 8 of 9 prices, misplaced on neighbours' 82, 67, 59; 2026-10-26).
-- Re-asking one reader until it agrees with the other turns the second reader into a selector: a value that changes on retry is a doubt, never a proof (scan re-ask plan, 2026-10-26).
-- A hint from the reader being checked may rank or hold, never pass: trust the model's area only where an independent reading (OCR's name) falls inside it (scan areas, 2026-10-26).
-- Widen a search area by a printed line, never by a share of its own size: a tall dish's area then covers its neighbours (scan areas, 2026-10-26).
+- A new price mark needs a sign or cents like its siblings: a bare number with a mark ("21+", "Serves 4+") is an age, count or size; prices whose only meaning is punctuation ("+", "/") are checked by ear, where "from" and "for" may disappear (Voci, Holiday Market, 2026-10-26).
+- A disagreement between two readers has three causes (reader A, reader B, the placement between them): sort them against the PDF before re-asking either; re-asking one until it agrees with the other turns the second into a selector, so a value that changes on retry is a doubt, never a proof (Durant's, scan re-ask plan, 2026-10-26).
+- A hint from the reader being checked may rank or hold, never pass: trust the model's area only where an independent reading (OCR's name) falls inside it, widened by a printed line, never a share of its own size (scan areas, 2026-10-26).
